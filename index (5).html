@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>作業日報 | 株式会社濱崎組</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{background:#f4f6f8}
+#root{font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;color:#1c2530;max-width:480px;margin:0 auto;min-height:100vh}
+textarea:focus,input:focus,select:focus{outline:none;border-color:#1f4e7a;background:#fff}
+button:active{opacity:.7}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1c2530;color:#fff;padding:10px 20px;border-radius:24px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:100;white-space:nowrap}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="toast" class="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// ▼▼▼ ここをFirebaseの設定コードに書き換えてください ▼▼▼
+const firebaseConfig = {
+  apiKey: "AIzaSyCVkSQ6WUfkWI_m3CiK8PHlLV4z_U0MnA4",
+  authDomain: "hamasaki-nippo.firebaseapp.com",
+  databaseURL: "https://hamasaki-nippo-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "hamasaki-nippo",
+  storageBucket: "hamasaki-nippo.firebasestorage.app",
+  messagingSenderId: "870438510963",
+  appId: "1:870438510963:web:fe09b4ec1fe1c3ff196506"
+};
+// ▲▲▲ ここまで ▲▲▲
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const WX=["晴れ","曇り","雨","雪"];
+const COMMON={"屋根":["小屋組","母屋・棟木","野地板張り","ルーフィング"],"外部・サッシ":["サッシ取付","防水・透湿シート","外壁下地","バルコニー防水"],"ボード":["壁ボード張り","天井ボード張り","ボード割付・採寸"],"床":["2階床組","フローリング張り","捨て張り"],"造作・仕上げ":["階段","建具枠取付","巾木・廻縁","窓枠・額縁","収納・棚","無垢材の納まり"],"その他":["材料違い・寸法間違い","道具・段取り","安全・KY","その他"]};
+const BASE={zairai:{"基礎・土台まわり":["墨出し","土台敷き","アンカーボルト・ホールダウン","大引き・束","床下断熱"],"軸組・建て方":["刻み・加工","建て方（柱・梁）","建入れ直し","仮筋交い","本筋交い","金物取付（羽子板・かすがい等）"],"断熱・下地":["壁断熱（充填）","間柱・窓台・まぐさ","天井下地","壁下地（胴縁・受け材）"],...COMMON},se:{"基礎・土台まわり":["墨出し","土台敷き","SE用アンカーボルト設置","柱脚金物（ベースプレート）取付","大引き・束","床下断熱"],"建て方":["SE柱・梁の建て方","番付確認","接合部ボルト締め","トルク管理・締め忘れ確認","集成材の養生・傷防止","建入れ直し"],"金物":["SE金物・ドリフトピン打ち込み","接合部の隙間確認","羽子板・かすがい"],"耐力壁・下地":["耐力壁（外部）","耐力壁（内部）","耐力壁下地（受け材・間柱・胴縁）","釘ピッチ・釘の打ち込み"],"断熱":["壁断熱（充填）","付加断熱（外張り）","天井断熱"],...COMMON}};
+const METHOD_LABEL={zairai:"在来工法",se:"SE工法"};
+const REDO=[{label:"30分未満",max:30,sev:"軽微",color:"#2f7d4f",bg:"#eaf5ee"},{label:"30分〜2時間",max:120,sev:"中程度",color:"#c2710c",bg:"#fdf3e3"},{label:"2時間以上",max:99999,sev:"重大",color:"#c0392b",bg:"#fdecea"}];
+const C={ink:"#1c2530",sub:"#6b7785",faint:"#9aa5b1",line:"#e3e7ec",bg:"#f4f6f8",card:"#ffffff",navy:"#1f4e7a",navyBg:"#eef4fa",amber:"#c2710c",amberBg:"#fdf3e3",green:"#2f7d4f",greenBg:"#eaf5ee",red:"#c0392b"};
+
+function sevOf(min){const v=parseFloat(min);if(!v||v<=0)return null;for(const r of REDO)if(v<=r.max)return r;return REDO[REDO.length-1]}
+const pad=n=>String(n).padStart(2,"0");
+const todayKey=()=>{const d=new Date();return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
+const fmtFull=k=>{if(!k)return"";const[y,m,d]=k.split("-");const wd=["日","月","火","水","木","金","土"][new Date(k).getDay()];return`${y}年${+m}月${+d}日（${wd}）`};
+const fmtShort=k=>{const[,m,d]=k.split("-");return`${+m}/${+d}`};
+const wdOf=k=>["日","月","火","水","木","金","土"][new Date(k).getDay()];
+
+function showToast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2000)}
+function $(id){return document.getElementById(id)}
+function mk(tag,attrs={},children=[]){const el=document.createElement(tag);Object.entries(attrs).forEach(([k,v])=>{if(k==="style"&&typeof v==="object")Object.assign(el.style,v);else if(k.startsWith("on"))el.addEventListener(k.slice(2).toLowerCase(),v);else el.setAttribute(k,v)});if(!Array.isArray(children))children=[children];children.forEach(c=>el.appendChild(typeof c==="string"?document.createTextNode(c):c));return el}
+
+let currentUser=localStorage.getItem("nippo_user")||"";
+let currentSite=localStorage.getItem("nippo_site")||"";
+let sites=JSON.parse(localStorage.getItem("nippo_sites")||"[]");
+let customCats=JSON.parse(localStorage.getItem("nippo_customcats")||'{"zairai":{},"se":{}}');
+
+function catsFor(method){const base=BASE[method];const cust=customCats[method]||{};const out={};Object.keys(base).forEach(big=>{out[big]=[...base[big],...((cust[big]||[]).filter(x=>!base[big].includes(x)))]});Object.keys(cust).forEach(big=>{if(!out[big])out[big]=[...cust[big]]});return out}
+function methodOfSite(name){const s=sites.find(x=>x.name===name);return s?s.method:null}
+
+function renderApp(){
+  const root=document.getElementById("root");
+  root.innerHTML="";
+
+  if(!currentUser){
+    renderNameEntry(root);
+    return;
+  }
+  renderMain(root);
+}
+
+function renderNameEntry(root){
+  const wrap=mk("div",{style:{padding:"40px 20px",maxWidth:"400px",margin:"0 auto"}});
+  const logo=mk("div",{style:{fontSize:22,fontWeight:800,color:C.navy,marginBottom:6}},"作業日報");
+  const sub=mk("div",{style:{fontSize:13,color:C.faint,marginBottom:32}},"株式会社濱崎組");
+  const label=mk("div",{style:{fontSize:12,fontWeight:700,color:C.faint,letterSpacing:".05em",marginBottom:8}},"あなたの名前を入力");
+  const inp=mk("input",{type:"text",placeholder:"例：濱崎 太郎",style:{width:"100%",background:"#f8fafc",border:`1.5px solid ${C.line}`,borderRadius:"10px",padding:"12px 14px",fontSize:16,color:C.ink,fontFamily:"inherit",boxSizing:"border-box",marginBottom:16}});
+  const btn=mk("button",{style:{width:"100%",background:C.navy,color:"#fff",border:"none",borderRadius:12,padding:"15px 0",fontSize:16,fontWeight:800,cursor:"pointer",fontFamily:"inherit"},onClick:()=>{const v=inp.value.trim();if(!v)return;currentUser=v;localStorage.setItem("nippo_user",v);renderApp()}},"はじめる");
+  wrap.append(logo,sub,label,inp,btn);
+  root.appendChild(wrap);
+  inp.focus();
+}
+
+let editKey=null;
+let fWeather="晴れ",fSite="",fNinku="",fMembers="",fWork="",fMisses=[],fLearn="",fNext="";
+let mMethod="zairai",mBig="",mDetail="",mText="",mCause="",mRedo="";
+let cursor=new Date();
+let monthTab="cal";
+let recs={};
+
+async function loadMonthRecs(){
+  const y=cursor.getFullYear(),m=cursor.getMonth();
+  const prefix=`${y}-${pad(m+1)}`;
+  const snap=await get(ref(db,"reports"));
+  recs={};
+  if(snap.exists()){
+    const all=snap.val();
+    Object.entries(all).forEach(([uid,days])=>{
+      Object.entries(days).forEach(([dateKey,rec])=>{
+        if(dateKey.startsWith(prefix)){
+          const key=`${uid}__${dateKey}`;
+          recs[key]={...rec,_user:uid,_date:dateKey};
+        }
+      });
+    });
+  }
+}
+
+function renderMain(root){
+  const y=cursor.getFullYear(),m=cursor.getMonth();
+  const monthPrefix=`${y}-${pad(m+1)}`;
+
+  const myRecs={};
+  Object.entries(recs).forEach(([k,v])=>{if(v._user===currentUser)myRecs[v._date]=v});
+  const myEntries=Object.entries(myRecs).sort((a,b)=>a[0].localeCompare(b[0]));
+  const allMisses=[];myEntries.forEach(([,v])=>(v.misses||[]).forEach(ms=>allMisses.push({...ms,date:v._date})));
+  const monthLearn=myEntries.filter(([,v])=>v.learn&&v.learn.trim());
+  const totalNinku=myEntries.reduce((s,[,v])=>s+(parseFloat(v.ninku)||0),0);
+
+  const head=mk("div",{style:{background:C.card,padding:"16px 18px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`1px solid ${C.line}`}});
+  const headL=mk("div");
+  headL.appendChild(mk("div",{style:{fontSize:18,fontWeight:800,letterSpacing:".05em"}},"作業日報"));
+  headL.appendChild(mk("div",{style:{fontSize:11,color:C.faint,marginTop:2}},currentUser));
+  const headR=mk("div",{style:{display:"flex",gap:8}});
+  const todayBtn=mk("button",{style:{background:C.navy,color:"#fff",border:"none",borderRadius:10,padding:"10px 14px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"},onClick:()=>openEdit(todayKey())},"＋ 今日");
+  const logoutBtn=mk("button",{style:{background:C.navyBg,color:C.navy,border:"none",borderRadius:10,padding:"0 12px",height:42,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"},onClick:()=>{localStorage.removeItem("nippo_user");currentUser="";renderApp()}},"変更");
+  headR.append(logoutBtn,todayBtn);
+  head.append(headL,headR);
+
+  const monthBar=mk("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:24,padding:"14px 0 10px"}});
+  const prev=mk("button",{style:{background:C.card,border:`1px solid ${C.line}`,borderRadius:10,width:40,height:40,fontSize:20,color:C.navy,cursor:"pointer"},onClick:()=>{cursor=new Date(y,m-1,1);reloadMain()}},"‹");
+  const next=mk("button",{style:{background:C.card,border:`1px solid ${C.line}`,borderRadius:10,width:40,height:40,fontSize:20,color:C.navy,cursor:"pointer"},onClick:()=>{cursor=new Date(y,m+1,1);reloadMain()}},"›");
+  const mlabel=mk("div",{style:{fontSize:18,fontWeight:800,minWidth:110,textAlign:"center"}},`${y}年${m+1}月`);
+  monthBar.append(prev,mlabel,next);
+
+  const sumRow=mk("div",{style:{display:"flex",gap:8,padding:"0 14px 12px"}});
+  [[myEntries.length,"出勤日数",C.navy],[totalNinku,"のべ人工",C.ink],[allMisses.length,"ミス合計",C.amber],[monthLearn.length,"学び記録",C.green]].forEach(([v,l,c])=>{
+    const s=mk("div",{style:{flex:1,background:C.card,borderRadius:12,padding:"10px 4px",textAlign:"center",border:`1px solid ${C.line}`}});
+    s.appendChild(mk("div",{style:{fontSize:20,fontWeight:800,color:c}},String(v)));
+    s.appendChild(mk("div",{style:{fontSize:10,color:C.faint}},l));
+    sumRow.appendChild(s);
+  });
+
+  const tabs=mk("div",{style:{display:"flex",gap:6,padding:"0 14px 10px"}});
+  [["cal","カレンダー"],["analysis",`分析（${allMisses.length}）`],["learn",`学び（${monthLearn.length}）`]].forEach(([k,l])=>{
+    const b=mk("button",{style:{flex:1,background:monthTab===k?C.navy:"transparent",color:monthTab===k?"#fff":C.sub,border:`1.5px solid ${monthTab===k?C.navy:C.line}`,borderRadius:10,padding:"9px 0",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"},onClick:()=>{monthTab=k;reloadMain()}},l);
+    tabs.appendChild(b);
+  });
+
+  const body=mk("div",{style:{padding:"0 14px"}});
+
+  if(monthTab==="cal"){
+    const card=mk("div",{style:{background:C.card,borderRadius:14,padding:"14px 15px",marginBottom:12,border:`1px solid ${C.line}`}});
+    const wrow=mk("div",{style:{display:"grid",gridTemplateColumns:"repeat(7,1fr)",marginBottom:6}});
+    ["日","月","火","水","木","金","土"].forEach((d,i)=>{wrow.appendChild(mk("div",{style:{textAlign:"center",fontSize:11,fontWeight:700,padding:"2px 0",color:i===0?"#c0392b":i===6?C.navy:C.faint}},d))});
+    const grid=mk("div",{style:{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:5}});
+    const first=new Date(y,m,1).getDay();
+    const last=new Date(y,m+1,0).getDate();
+    for(let i=0;i<first;i++)grid.appendChild(mk("div"));
+    for(let d=1;d<=last;d++){
+      const key=`${y}-${pad(m+1)}-${pad(d)}`;
+      const r=myRecs[key];const isT=key===todayKey();const dow=(first+d-1)%7;
+      const nMiss=r&&r.misses?r.misses.length:0;
+      const cell=mk("button",{style:{aspectRatio:"1",borderRadius:10,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,position:"relative",padding:0,fontFamily:"inherit",background:isT?C.navy:r?C.navyBg:"transparent",border:r?"none":`1px solid ${C.line}`},onClick:()=>openEdit(key)});
+      cell.appendChild(mk("span",{style:{fontSize:14,fontWeight:r||isT?700:500,color:isT?"#fff":dow===0?"#c0392b":dow===6?C.navy:C.ink}},String(d)));
+      if(r&&r.ninku){cell.appendChild(mk("span",{style:{fontSize:9,color:isT?"#cfe0ef":C.sub,lineHeight:1}},`${r.ninku}人工`))}
+      else if(r){const dot=mk("span",{style:{width:5,height:5,borderRadius:"50%",background:isT?"#fff":C.navy}});cell.appendChild(dot)}
+      if(nMiss>0){const md=mk("span",{style:{position:"absolute",top:4,right:4,minWidth:14,height:14,borderRadius:7,fontSize:9,fontWeight:800,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px",background:isT?"#ffd9a8":C.amber}},String(nMiss));cell.appendChild(md)}
+      grid.appendChild(cell);
+    }
+    const legend=mk("div",{style:{display:"flex",gap:14,justifyContent:"center",marginTop:12,fontSize:11,color:C.sub}});
+    [["#eef4fa","記入済み"],["#c2710c","ミス件数"],["#1f4e7a","今日"]].forEach(([bg,l])=>{
+      const s=mk("span");const i=mk("i",{style:{display:"inline-block",width:11,height:11,borderRadius:3,marginRight:4,verticalAlign:"-1px",background:bg,borderRadius:l==="ミス件数"?"50%":"3px"}});s.append(i,l);legend.appendChild(s);
+    });
+    card.append(wrow,grid,legend);
+    body.appendChild(card);
+  }
+
+  if(monthTab==="analysis"){
+    if(allMisses.length===0){
+      const e=mk("div",{style:{textAlign:"center",padding:"48px 0",color:C.faint,fontSize:14}},"この月のミス記録はありません");
+      body.appendChild(e);
+    }else{
+      const bySev={};allMisses.forEach(x=>{if(x.sev)bySev[x.sev]=(bySev[x.sev]||0)+1});
+      const sevCard=mk("div",{style:{background:C.card,borderRadius:14,padding:"14px 15px",marginBottom:12,border:`1px solid ${C.line}`}});
+      sevCard.appendChild(mk("div",{style:{fontSize:13,fontWeight:700,color:C.sub,marginBottom:12}},"深刻度"));
+      const sevRow=mk("div",{style:{display:"flex",gap:8}});
+      REDO.forEach(r=>{const d=mk("div",{style:{flex:1,textAlign:"center",background:r.bg,borderRadius:10,padding:"10px 4px"}});d.appendChild(mk("div",{style:{fontSize:22,fontWeight:800,color:r.color}},String(bySev[r.sev]||0)));d.appendChild(mk("div",{style:{fontSize:10,color:r.color,fontWeight:700}},r.sev));sevRow.appendChild(d)});
+      sevCard.appendChild(sevRow);body.appendChild(sevCard);
+
+      const byBig={};allMisses.forEach(x=>{const k=x.big||"未分類";byBig[k]=(byBig[k]||0)+1});
+      const bigEntries=Object.entries(byBig).sort((a,b)=>b[1]-a[1]);
+      const maxB=Math.max(1,...bigEntries.map(x=>x[1]));
+      const bigCard=mk("div",{style:{background:C.card,borderRadius:14,padding:"14px 15px",marginBottom:12,border:`1px solid ${C.line}`}});
+      bigCard.appendChild(mk("div",{style:{fontSize:13,fontWeight:700,color:C.sub,marginBottom:12}},"作業別ミス"));
+      bigEntries.forEach(([t,c])=>{
+        const row=mk("div",{style:{marginBottom:9}});
+        const top=mk("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:3}});
+        top.append(mk("span",{style:{fontSize:12,color:C.ink,flex:1,paddingRight:8}},t),mk("span",{style:{fontSize:12,fontWeight:700,color:C.amber}},`${c}件`));
+        const bg=mk("div",{style:{background:"#f1f5f9",borderRadius:4,height:8}});
+        bg.appendChild(mk("div",{style:{background:C.amber,borderRadius:4,height:8,width:`${Math.round(c/maxB*100)}%`}}));
+        row.append(top,bg);bigCard.appendChild(row);
+      });
+      body.appendChild(bigCard);
+
+      body.appendChild(mk("div",{style:{fontSize:13,fontWeight:700,color:C.sub,margin:"4px 2px 8px"}},"ミスの記録"));
+      allMisses.forEach((ms,i)=>{
+        const sv=REDO.find(r=>r.sev===ms.sev);
+        const card=mk("button",{style:{display:"block",width:"100%",textAlign:"left",background:C.card,borderRadius:12,padding:"12px 14px",marginBottom:10,border:`1px solid ${C.line}`,borderLeft:`4px solid ${C.amber}`,cursor:"pointer",fontFamily:"inherit"},onClick:()=>openEdit(ms.date)});
+        const rhead=mk("div",{style:{display:"flex",alignItems:"center",gap:6,marginBottom:7,flexWrap:"wrap"}});
+        const db2=mk("span",{style:{fontSize:12,fontWeight:700,padding:"3px 9px",borderRadius:20,color:C.amber,background:C.amberBg}},`${fmtShort(ms.date)}（${wdOf(ms.date)}）`);
+        const tb=mk("span",{style:{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,color:C.sub,background:"#eef1f4"}},ms.detail||ms.big||"");
+        rhead.append(db2,tb);
+        if(ms.sev&&sv)rhead.appendChild(mk("span",{style:{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,color:sv.color,background:sv.bg}},ms.sev));
+        card.appendChild(rhead);
+        card.appendChild(mk("div",{style:{fontSize:14,color:C.ink,lineHeight:1.5,whiteSpace:"pre-wrap"}},ms.text));
+        if(ms.cause){const cb=mk("div",{style:{marginTop:8,paddingTop:8,borderTop:`1px dashed ${C.line}`,fontSize:13,color:C.sub,lineHeight:1.5}});const cl=mk("span",{style:{fontSize:10,fontWeight:700,color:C.amber,background:C.amberBg,padding:"2px 6px",borderRadius:4,marginRight:4}},"原因");cb.append(cl,ms.cause);card.appendChild(cb)}
+        body.appendChild(card);
+      });
+    }
+  }
+
+  if(monthTab==="learn"){
+    if(monthLearn.length===0){body.appendChild(mk("div",{style:{textAlign:"center",padding:"48px 0",color:C.faint,fontSize:14}},"この月の学び記録はありません"))}
+    else{
+      monthLearn.forEach(([k,v])=>{
+        const card=mk("button",{style:{display:"block",width:"100%",textAlign:"left",background:C.card,borderRadius:12,padding:"12px 14px",marginBottom:10,border:`1px solid ${C.line}`,borderLeft:`4px solid ${C.green}`,cursor:"pointer",fontFamily:"inherit"},onClick:()=>openEdit(k)});
+        const rhead=mk("div",{style:{display:"flex",alignItems:"center",gap:6,marginBottom:7}});
+        rhead.appendChild(mk("span",{style:{fontSize:12,fontWeight:700,padding:"3px 9px",borderRadius:20,color:C.green,background:C.greenBg}},`${fmtShort(k)}（${wdOf(k)}）`));
+        card.appendChild(rhead);
+        card.appendChild(mk("div",{style:{fontSize:14,color:C.ink,lineHeight:1.5,whiteSpace:"pre-wrap"}},v.learn));
+        body.appendChild(card);
+      });
+    }
+  }
+
+  const spacer=mk("div",{style:{height:30}});body.appendChild(spacer);
+  root.append(head,monthBar,sumRow,tabs,body);
+}
+
+async function reloadMain(){
+  await loadMonthRecs();
+  const root=document.getElementById("root");
+  root.innerHTML="";
+  renderMain(root);
+}
+
+function openEdit(key){
+  editKey=key;
+  const existing=null;
+  const dbRef=ref(db,`reports/${currentUser}/${key}`);
+  get(dbRef).then(snap=>{
+    const r=snap.exists()?snap.val():{};
+    fWeather=r.weather||"晴れ";fSite=r.site||currentSite;fNinku=r.ninku!=null?String(r.ninku):"";
+    fMembers=r.members||"";fWork=r.work||"";fMisses=Array.isArray(r.misses)?r.misses:[];
+    fLearn=r.learn||"";fNext=r.next||"";
+    const initM=methodOfSite(fSite)||"zairai";
+    mMethod=initM;const cats=catsFor(initM);const fb=Object.keys(cats)[0]||"";
+    mBig=fb;mDetail=(cats[fb]&&cats[fb][0])||"";mText="";mCause="";mRedo="";
+    renderEdit();
+  });
+}
+
+function renderEdit(){
+  const root=document.getElementById("root");root.innerHTML="";
+  const app=mk("div",{style:{minHeight:"100vh",background:C.bg}});
+
+  const head=mk("div",{style:{background:C.card,padding:"14px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`1px solid ${C.line}`,position:"sticky",top:0,zIndex:10}});
+  const back=mk("button",{style:{background:"transparent",border:"none",color:C.navy,fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",width:56,textAlign:"left"},onClick:()=>reloadMain()},"‹ もどる");
+  head.append(back,mk("div",{style:{fontSize:15,fontWeight:700}},fmtFull(editKey)),mk("div",{style:{width:56}}));
+
+  const body=mk("div",{style:{padding:"14px 14px 0"}});
+
+  function card(...children){const c=mk("div",{style:{background:C.card,borderRadius:14,padding:"14px 15px",marginBottom:12,border:`1px solid ${C.line}`}});children.forEach(x=>c.appendChild(x));return c}
+  function label(txt,color=C.faint){return mk("div",{style:{fontSize:11,fontWeight:700,color,letterSpacing:".05em",marginBottom:5}},txt)}
+  function input(val,ph,onChange){const el=mk("input",{type:"text",placeholder:ph,style:{width:"100%",background:"#f8fafc",border:`1.5px solid ${C.line}`,borderRadius:10,padding:"11px 12px",fontSize:15,color:C.ink,fontFamily:"inherit",boxSizing:"border-box"}});el.value=val;el.addEventListener("input",e=>onChange(e.target.value));return el}
+  function textarea(val,ph,rows,onChange){const el=mk("textarea",{placeholder:ph,rows:String(rows),style:{width:"100%",background:"#f8fafc",border:`1.5px solid ${C.line}`,borderRadius:10,padding:"11px 12px",fontSize:15,color:C.ink,fontFamily:"inherit",resize:"none",boxSizing:"border-box",lineHeight:1.5}});el.value=val;el.addEventListener("input",e=>onChange(e.target.value));return el}
+  function chipRow(options,selected,onChange){const row=mk("div",{style:{display:"flex",gap:6}});options.forEach(o=>{const b=mk("button",{style:{flex:1,background:selected===o?C.navyBg:"#fff",color:selected===o?C.navy:C.sub,border:`1.5px solid ${selected===o?C.navy:C.line}`,borderRadius:9,padding:"9px 0",fontSize:13,fontWeight:selected===o?700:600,cursor:"pointer",fontFamily:"inherit"},onClick:()=>onChange(o)},o);row.appendChild(b)});return row}
+
+  const wxRow=chipRow(WX,fWeather,v=>{fWeather=v;renderEdit()});
+  const ninEl=mk("input",{type:"number",inputMode:"decimal",placeholder:"3",style:{width:"100%",background:"#f8fafc",border:`1.5px solid ${C.line}`,borderRadius:10,padding:"11px 12px",fontSize:15,color:C.ink,fontFamily:"inherit",boxSizing:"border-box"}});
+  ninEl.value=fNinku;ninEl.addEventListener("input",e=>{fNinku=e.target.value});
+  const memEl=input(fMembers,"山田、田中",v=>{fMembers=v});
+  const siteEl=input(fSite,"○○様邸",v=>{fSite=v;currentSite=v;localStorage.setItem("nippo_site",v)});
+  body.appendChild(card(label("天候"),wxRow,mk("div",{style:{height:10}}),label("現場名"),siteEl,mk("div",{style:{height:10}}),label("人工数"),ninEl,mk("div",{style:{height:10}}),label("一緒に作業した人"),memEl));
+
+  function sectionCard(n,title,color,...children){
+    const c=mk("div",{style:{background:C.card,borderRadius:14,padding:"14px 15px",marginBottom:12,border:`1px solid ${C.line}`}});
+    const h=mk("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:10}});
+    const nb=mk("span",{style:{width:22,height:22,borderRadius:7,background:color,color:"#fff",fontSize:13,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},n);
+    h.append(nb,mk("span",{style:{fontSize:14,fontWeight:700,color:C.ink}},title));
+    c.appendChild(h);children.forEach(x=>c.appendChild(x));return c;
+  }
+
+  const workTA=textarea(fWork,"やったこと・進んだ工程",4,v=>{fWork=v});
+  body.appendChild(sectionCard("1","今日した仕事の内容",C.navy,workTA));
+
+  function renderMissSection(){
+    const sec=sectionCard("2","ミス・うまくいかなかったこと",C.amber);
+    if(fMisses.length>0){
+      const list=mk("div",{style:{marginBottom:12}});
+      fMisses.forEach((ms,i)=>{
+        const sv=REDO.find(r=>r.sev===ms.sev);
+        const mi=mk("div",{style:{background:"#f8fafc",border:`1px solid ${C.line}`,borderRadius:10,padding:"10px 12px",marginBottom:8}});
+        const mh=mk("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}});
+        const tags=mk("div",{style:{display:"flex",flexWrap:"wrap",gap:5,marginBottom:4}});
+        const mkTag=(t,tc,bg)=>mk("span",{style:{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,color:tc,background:bg}},t);
+        tags.append(mkTag(METHOD_LABEL[ms.method]||"在来",C.navy,C.navyBg),mkTag(ms.big,C.amber,C.amberBg),mkTag(ms.detail,C.sub,"#eef1f4"));
+        if(ms.sev&&sv)tags.appendChild(mkTag(ms.sev,sv.color,sv.bg));
+        const xb=mk("button",{style:{background:"none",border:"none",color:C.faint,fontSize:20,lineHeight:1,cursor:"pointer",padding:"0 2px"},onClick:()=>{fMisses.splice(i,1);const old=sec;old.replaceWith(renderMissSection())}},"×");
+        mh.append(tags,xb);mi.appendChild(mh);
+        mi.appendChild(mk("div",{style:{fontSize:14,color:C.ink}},ms.text));
+        if(ms.cause)mi.appendChild(mk("div",{style:{fontSize:12,color:C.sub,marginTop:3}},`原因: ${ms.cause}`));
+        list.appendChild(mi);
+      });
+      sec.appendChild(list);
+    }
+    const addBox=mk("div",{style:{background:"#fafbfc",border:`1.5px dashed ${C.line}`,borderRadius:12,padding:"12px"}});
+    const cats=catsFor(mMethod);const bigs=Object.keys(cats);const details=cats[mBig]||[];
+    addBox.appendChild(mk("div",{style:{fontSize:11,fontWeight:700,color:C.amber,marginBottom:5}},"工法"));
+    const methodRow=mk("div",{style:{display:"flex",gap:6,marginBottom:10}});
+    Object.keys(METHOD_LABEL).forEach(mk2=>{const b=mk("button",{style:{flex:1,background:mMethod===mk2?C.navyBg:"#fff",color:mMethod===mk2?C.navy:C.sub,border:`1.5px solid ${mMethod===mk2?C.navy:C.line}`,borderRadius:9,padding:"9px 0",fontSize:13,fontWeight:mMethod===mk2?700:600,cursor:"pointer",fontFamily:"inherit"},onClick:()=>{mMethod=mk2;const c2=catsFor(mk2);const fb=Object.keys(c2)[0]||"";mBig=fb;mDetail=(c2[fb]&&c2[fb][0])||"";const old=sec;old.replaceWith(renderMissSection())}},METHOD_LABEL[mk2]);methodRow.appendChild(b)});
+    addBox.appendChild(methodRow);
+    addBox.appendChild(mk("div",{style:{fontSize:11,fontWeight:700,color:C.amber,marginBottom:5}},"大まかな作業"));
+    const bigSel=mk("select",{style:{width:"100%",background:"#f8fafc",border:`1.5px solid ${C.line}`,borderRadius:10,padding:"11px 12px",fontSize:15,color:C.ink,fontFamily:"inherit",boxSizing:"border-box",marginBottom:8}});
+    bigs.forEach(b=>{const o=mk("option",{value:b},b);if(b===mBig)o.selected=true;bigSel.appendChild(o)});
+    bigSel.addEventListener("change",e=>{mBig=e.target.value;const c2=catsFor(mMethod);mDetail=(c2[mBig]&&c2[mBig][0])||"";const old=sec;old.replaceWith(renderMissSection())});
+    addBox.appendChild(bigSel);
+    addBox.appendChild(mk("div",{style:{fontSize:11,fontWeight:700,color:C.amber,marginBottom:5}},"詳しい作業"));
+    const detSel=mk("select",{style:{width:"100%",background:"#f8fafc",border:`1.5px solid ${C.line}`,borderRadius:10,padding:"11px 12px",fontSize:15,color:C.ink,fontFamily:"inherit",boxSizing:"border-box",marginBottom:8}});
+    details.forEach(d=>{const o=mk("option",{value:d},d);if(d===mDetail)o.selected=true;detSel.appendChild(o)});
+    detSel.addEventListener("change",e=>{mDetail=e.target.value});
+    addBox.appendChild(detSel);
+    const mTextEl=textarea(mText,"どんなミスがあったか",2,v=>{mText=v});
+    const mCauseEl=input(mCause,"原因（なぜ起きたか）",v=>{mCause=v});
+    addBox.append(mTextEl,mk("div",{style:{height:8}}),mCauseEl,mk("div",{style:{height:8}}));
+    addBox.appendChild(mk("div",{style:{fontSize:11,fontWeight:700,color:C.amber,marginBottom:5}},"やり直しにかかった時間（分）→ 深刻度が自動判定"));
+    const redoRow=mk("div",{style:{display:"flex",gap:8,alignItems:"center"}});
+    const redoEl=mk("input",{type:"number",inputMode:"numeric",placeholder:"例: 45",style:{flex:1,background:"#f8fafc",border:`1.5px solid ${C.line}`,borderRadius:10,padding:"11px 12px",fontSize:15,color:C.ink,fontFamily:"inherit",boxSizing:"border-box"}});
+    redoEl.value=mRedo;redoEl.addEventListener("input",e=>{mRedo=e.target.value;const s=sevOf(mRedo);if(sevSpan)sevSpan.textContent=s?s.sev:"—"});
+    const s0=sevOf(mRedo);
+    const sevSpan=mk("span",{style:{fontSize:12,color:s0?s0.color:C.faint,background:s0?s0.bg:"transparent",padding:s0?"2px 8px":"0",borderRadius:20,fontWeight:700,whiteSpace:"nowrap"}},s0?s0.sev:"—");
+    redoRow.append(redoEl,sevSpan);addBox.appendChild(redoRow);
+    const addBtn=mk("button",{style:{width:"100%",background:C.amber,color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginTop:10},onClick:()=>{
+      if(!mText.trim())return;
+      const sv=sevOf(mRedo);
+      fMisses.push({method:mMethod,big:mBig,detail:mDetail,text:mText.trim(),cause:mCause.trim(),redo:mRedo,sev:sv?sv.sev:""});
+      mText="";mCause="";mRedo="";
+      const old=sec;old.replaceWith(renderMissSection());
+    }},"＋ このミスを追加");
+    addBox.appendChild(addBtn);
+    sec.appendChild(addBox);
+    return sec;
+  }
+  body.appendChild(renderMissSection());
+
+  const learnTA=textarea(fLearn,"気づき・次への改善",3,v=>{fLearn=v});
+  body.appendChild(sectionCard("3","学んだこと・次はこうする",C.green,learnTA));
+  const nextTA=textarea(fNext,"明日やること・注意点",2,v=>{fNext=v});
+  body.appendChild(sectionCard("4","明日やること・申し送り",C.sub,nextTA));
+
+  const saveBtn=mk("button",{style:{width:"100%",background:C.navy,color:"#fff",border:"none",borderRadius:12,padding:"15px 0",fontSize:16,fontWeight:800,cursor:"pointer",fontFamily:"inherit",marginTop:4},onClick:async()=>{
+    const data={weather:fWeather,site:fSite,ninku:fNinku,members:fMembers,work:fWork,misses:fMisses,learn:fLearn,next:fNext,updated:Date.now(),name:currentUser};
+    await set(ref(db,`reports/${currentUser}/${editKey}`),data);
+    showToast("保存しました");
+    setTimeout(()=>reloadMain(),600);
+  }},"保存する");
+  body.appendChild(saveBtn);
+  body.appendChild(mk("div",{style:{height:30}}));
+  app.append(head,body);
+  root.appendChild(app);
+}
+
+async function init(){
+  await loadMonthRecs();
+  renderApp();
+}
+init();
+</script>
+</body>
+</html>
