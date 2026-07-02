@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -20,7 +21,7 @@ button:active{opacity:.7}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, get, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, set, get, push, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 // ▼▼▼ ここをFirebaseの設定コードに書き換えてください ▼▼▼
 const firebaseConfig = {
@@ -316,6 +317,30 @@ function renderEdit(){
         mh.append(tags,xb);mi.appendChild(mh);
         mi.appendChild(mk("div",{style:{fontSize:14,color:C.ink}},ms.text));
         if(ms.cause)mi.appendChild(mk("div",{style:{fontSize:12,color:C.sub,marginTop:3}},`原因: ${ms.cause}`));
+        // 対策（会議で記入・両方から書ける）
+        const taisakuWrap=mk("div",{style:{marginTop:8,paddingTop:8,borderTop:`1px dashed ${C.line}`}});
+        taisakuWrap.appendChild(mk("div",{style:{fontSize:11,fontWeight:700,color:C.green,marginBottom:4}},"対策（次はこうする）"));
+        const tEl=mk("textarea",{placeholder:"チームで決めた対策を書く",rows:"2",style:{width:"100%",background:"#fff",border:`1.5px solid ${C.line}`,borderRadius:8,padding:"8px 10px",fontSize:13,color:C.ink,fontFamily:"inherit",resize:"none",boxSizing:"border-box",lineHeight:1.5}});
+        tEl.value=ms.taisaku||"";
+        tEl.addEventListener("input",e=>{fMisses[i].taisaku=e.target.value});
+        taisakuWrap.appendChild(tEl);
+        // 手順書に登録ボタン
+        const regRow=mk("div",{style:{display:"flex",alignItems:"center",gap:8,marginTop:6}});
+        const regBtn=mk("button",{style:{background:ms.tejunReg?C.greenBg:"#fff",color:ms.tejunReg?C.green:C.navy,border:`1.5px solid ${ms.tejunReg?C.green:C.navy}`,borderRadius:8,padding:"7px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"},onClick:async()=>{
+          const t=(fMisses[i].taisaku||"").trim();
+          if(!t){showToast("先に対策を書いてください");return;}
+          try{
+            const tkey=`${ms.method||"zairai"}/${ms.big||"未分類"}/${ms.detail||"未分類"}`;
+            const listRef=ref(db,`tejun/${tkey}`);
+            await push(listRef,{text:t,by:currentUser,date:editKey,ts:Date.now()});
+            fMisses[i].tejunReg=true;
+            showToast("手順書に登録しました");
+            const old=sec;old.replaceWith(renderMissSection());
+          }catch(err){showToast("登録に失敗しました");}
+        }},ms.tejunReg?"✓ 手順書に登録済み":"手順書に登録");
+        regRow.appendChild(regBtn);
+        taisakuWrap.appendChild(regRow);
+        mi.appendChild(taisakuWrap);
         list.appendChild(mi);
       });
       sec.appendChild(list);
