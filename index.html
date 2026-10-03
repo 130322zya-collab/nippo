@@ -12,15 +12,25 @@ textarea:focus,input:focus,select:focus{outline:none;border-color:#1f4e7a;backgr
 button:active{opacity:.7}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1c2530;color:#fff;padding:10px 20px;border-radius:24px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:100;white-space:nowrap}
 .toast.show{opacity:1}
+.lb-overlay{display:none;position:fixed;inset:0;background:rgba(20,26,34,.9);z-index:999;align-items:center;justify-content:center;padding:20px}
+.lb-overlay.show{display:flex}
+.lb-overlay img{max-width:100%;max-height:88vh;border-radius:10px}
+.lb-close{position:absolute;top:18px;right:18px;background:#fff;color:#1c2530;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;font-weight:700;cursor:pointer}
+.photo-thumb-img{cursor:pointer}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <div id="toast" class="toast"></div>
+<div id="lb-overlay" class="lb-overlay">
+  <button class="lb-close" id="lb-close">×</button>
+  <img id="lb-img" src="" alt="写真">
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, get, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, set, get, push, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 // ▼▼▼ ここをFirebaseの設定コードに書き換えてください ▼▼▼
 const firebaseConfig = {
@@ -28,14 +38,21 @@ const firebaseConfig = {
   authDomain: "hamasaki-nippo.firebaseapp.com",
   databaseURL: "https://hamasaki-nippo-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "hamasaki-nippo",
-  storageBucket: "hamasaki-nippo.firebasestorage.app",
   messagingSenderId: "870438510963",
   appId: "1:870438510963:web:fe09b4ec1fe1c3ff196506"
 };
 // ▲▲▲ ここまで ▲▲▲
 
+// ▼▼▼ 写真の保存先（Cloudflare Worker）の設定 ▼▼▼
+// Workerをデプロイした後に表示されるURLに書き換える（例: https://hamasaki-nippo-photos.あなたのアカウント名.workers.dev）
+const PHOTO_API = "https://hamasaki-nippo-photos.zoza.workers.dev";
+// Worker側のシークレット（UPLOAD_KEY）と必ず同じ文字列にする
+const UPLOAD_KEY = "hamasaki1147";
+// ▲▲▲ ここまで ▲▲▲
+
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app);
 
 const WX=["晴れ","曇り","雨","雪"];
 const COMMON={"屋根":["小屋組","母屋・棟木","野地板張り","ルーフィング"],"外部・サッシ":["サッシ取付","防水・透湿シート","外壁下地","バルコニー防水"],"ボード":["壁ボード張り","天井ボード張り","ボード割付・採寸"],"床":["2階床組","フローリング張り","捨て張り"],"造作・仕上げ":["階段","建具枠取付","巾木・廻縁","窓枠・額縁","収納・棚","無垢材の納まり"],"その他":["材料違い・寸法間違い","道具・段取り","安全・KY","その他"]};
@@ -52,8 +69,98 @@ const fmtShort=k=>{const[,m,d]=k.split("-");return`${+m}/${+d}`};
 const wdOf=k=>["日","月","火","水","木","金","土"][new Date(k).getDay()];
 
 function showToast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2000)}
+// 写真タップで拡大表示（見たい時だけ大きく見られるように）
+function openLightbox(url){
+  const ov=document.getElementById("lb-overlay");const img=document.getElementById("lb-img");
+  if(!ov||!img)return;
+  img.src=url;ov.classList.add("show");
+}
+function closeLightbox(){
+  const ov=document.getElementById("lb-overlay");
+  if(ov)ov.classList.remove("show");
+}
+document.getElementById("lb-close").addEventListener("click",closeLightbox);
+document.getElementById("lb-overlay").addEventListener("click",(e)=>{if(e.target.id==="lb-overlay")closeLightbox()});
 function $(id){return document.getElementById(id)}
 function mk(tag,attrs={},children=[]){const el=document.createElement(tag);Object.entries(attrs).forEach(([k,v])=>{if(k==="style"&&typeof v==="object")Object.assign(el.style,v);else if(k.startsWith("on"))el.addEventListener(k.slice(2).toLowerCase(),v);else el.setAttribute(k,v)});if(!Array.isArray(children))children=[children];children.forEach(c=>el.appendChild(typeof c==="string"?document.createTextNode(c):c));return el}
+
+// ==== 写真：リサイズしてCloudflare Worker経由でR2にアップロード ====
+function resizeImageToBlob(file,maxDim=1280,quality=0.75){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        let w=img.width,h=img.height;
+        if(w>maxDim||h>maxDim){
+          if(w>h){h=Math.round(h*maxDim/w);w=maxDim}else{w=Math.round(w*maxDim/h);h=maxDim}
+        }
+        const canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;
+        const ctx=canvas.getContext("2d");ctx.drawImage(img,0,0,w,h);
+        canvas.toBlob(blob=>{blob?resolve(blob):reject(new Error("画像の変換に失敗しました"))},"image/jpeg",quality);
+      };
+      img.onerror=()=>reject(new Error("画像の読み込みに失敗しました"));
+      img.src=e.target.result;
+    };
+    reader.onerror=()=>reject(new Error("ファイルの読み込みに失敗しました"));
+    reader.readAsDataURL(file);
+  });
+}
+async function uploadPhoto(file,folder){
+  const blob=await resizeImageToBlob(file);
+  const key=`nippo_photos/${folder}/${Date.now()}_${Math.random().toString(36).slice(2,8)}.jpg`;
+  const res=await fetch(`${PHOTO_API}/upload?key=${encodeURIComponent(key)}`,{
+    method:"POST",
+    headers:{"Authorization":`Bearer ${UPLOAD_KEY}`,"Content-Type":"image/jpeg"},
+    body:blob
+  });
+  if(!res.ok){
+    const t=await res.text().catch(()=>"");
+    throw new Error(`status ${res.status} ${t}`);
+  }
+  const data=await res.json();
+  return data.url;
+}
+// 写真を削除するとき、記録から消すだけでなくR2上の実ファイルも削除する（消し忘れによる容量の積み上がりを防ぐ）
+async function deletePhotoByUrl(url){
+  if(!url)return;
+  try{
+    const path=new URL(url).pathname; // "/photo/xxxxx"（xxxxxはURLエンコード済みのkey）
+    const encodedKey=path.replace(/^\/photo\//,"");
+    if(!encodedKey)return;
+    await fetch(`${PHOTO_API}/delete?key=${encodedKey}`,{
+      method:"DELETE",
+      headers:{"Authorization":`Bearer ${UPLOAD_KEY}`}
+    });
+  }
+  catch(e){ /* 失敗しても記録側からは既に消えているので致命的ではない */ }
+}
+
+// 写真サムネイル一覧＋追加ボタンのUI部品
+// photos: 現在の写真URL配列 / onAdd(file): 選択されたファイルを受け取り非同期でアップロード処理 / onRemove(idx): 指定インデックスの写真を削除
+function renderPhotoPicker(photos,onAdd,onRemove){
+  const wrap=mk("div",{style:{marginTop:8}});
+  if(photos&&photos.length>0){
+    const row=mk("div",{style:{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}});
+    photos.forEach((url,idx)=>{
+      const box=mk("div",{style:{position:"relative",width:"72px",height:"72px",flexShrink:0}});
+      const img=mk("img",{class:"photo-thumb-img",src:url,style:{width:"100%",height:"100%",objectFit:"cover",borderRadius:8,border:`1px solid ${C.line}`},onClick:()=>openLightbox(url)});
+      const rm=mk("button",{type:"button",style:{position:"absolute",top:"-6px",right:"-6px",width:"20px",height:"20px",borderRadius:"50%",background:C.red,color:"#fff",border:"none",fontSize:12,lineHeight:1,cursor:"pointer",fontFamily:"inherit",padding:0},onClick:(e)=>{e.stopPropagation();onRemove(idx)}},"×");
+      box.append(img,rm);row.appendChild(box);
+    });
+    wrap.appendChild(row);
+  }
+  const fileInp=mk("input",{type:"file",accept:"image/*",style:{display:"none"}});
+  fileInp.addEventListener("change",async(e)=>{
+    const file=e.target.files[0];
+    if(!file)return;
+    fileInp.value="";
+    await onAdd(file);
+  });
+  const btn=mk("button",{type:"button",style:{background:"#fff",color:C.navy,border:`1.5px solid ${C.navy}`,borderRadius:8,padding:"7px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"},onClick:()=>fileInp.click()},"📷 写真を追加");
+  wrap.append(fileInp,btn);
+  return wrap;
+}
 
 let currentUser=localStorage.getItem("nippo_user")||"";
 let currentSite=localStorage.getItem("nippo_site")||"";
@@ -87,8 +194,8 @@ function renderNameEntry(root){
 }
 
 let editKey=null;
-let fWeather="晴れ",fSite="",fNinku="",fMembers="",fWork="",fMisses=[],fLearn="",fNext="";
-let mMethod="zairai",mBig="",mDetail="",mText="",mCause="",mRedo="";
+let fWeather="晴れ",fSite="",fNinku="",fMembers="",fWork="",fMisses=[],fLearn="",fNext="",fLearnPhotos=[];
+let mMethod="zairai",mBig="",mDetail="",mText="",mCause="",mRedo="",mPhotos=[];
 let cursor=new Date();
 let monthTab="cal";
 let recs={};
@@ -258,10 +365,10 @@ function openEdit(key){
     const r=snap.exists()?snap.val():{};
     fWeather=r.weather||"晴れ";fSite=r.site||currentSite;fNinku=r.ninku!=null?String(r.ninku):"";
     fMembers=r.members||"";fWork=r.work||"";fMisses=Array.isArray(r.misses)?r.misses:[];
-    fLearn=r.learn||"";fNext=r.next||"";
+    fLearn=r.learn||"";fNext=r.next||"";fLearnPhotos=Array.isArray(r.learnPhotos)?r.learnPhotos:[];
     const initM=methodOfSite(fSite)||"zairai";
     mMethod=initM;const cats=catsFor(initM);const fb=Object.keys(cats)[0]||"";
-    mBig=fb;mDetail=(cats[fb]&&cats[fb][0])||"";mText="";mCause="";mRedo="";
+    mBig=fb;mDetail=(cats[fb]&&cats[fb][0])||"";mText="";mCause="";mRedo="";mPhotos=[];
     renderEdit();
   });
 }
@@ -312,10 +419,51 @@ function renderEdit(){
         const mkTag=(t,tc,bg)=>mk("span",{style:{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,color:tc,background:bg}},t);
         tags.append(mkTag(METHOD_LABEL[ms.method]||"在来",C.navy,C.navyBg),mkTag(ms.big,C.amber,C.amberBg),mkTag(ms.detail,C.sub,"#eef1f4"));
         if(ms.sev&&sv)tags.appendChild(mkTag(ms.sev,sv.color,sv.bg));
-        const xb=mk("button",{style:{background:"none",border:"none",color:C.faint,fontSize:20,lineHeight:1,cursor:"pointer",padding:"0 2px"},onClick:()=>{fMisses.splice(i,1);const old=sec;old.replaceWith(renderMissSection())}},"×");
+        const xb=mk("button",{style:{background:"none",border:"none",color:C.faint,fontSize:20,lineHeight:1,cursor:"pointer",padding:"0 2px"},onClick:()=>{const removedPhotos=fMisses[i].photos||[];fMisses.splice(i,1);const old=sec;old.replaceWith(renderMissSection());removedPhotos.forEach(deletePhotoByUrl)}},"×");
         mh.append(tags,xb);mi.appendChild(mh);
         mi.appendChild(mk("div",{style:{fontSize:14,color:C.ink}},ms.text));
         if(ms.cause)mi.appendChild(mk("div",{style:{fontSize:12,color:C.sub,marginTop:3}},`原因: ${ms.cause}`));
+        // 対策（会議で記入・両方から書ける）
+        const taisakuWrap=mk("div",{style:{marginTop:8,paddingTop:8,borderTop:`1px dashed ${C.line}`}});
+        taisakuWrap.appendChild(mk("div",{style:{fontSize:11,fontWeight:700,color:C.green,marginBottom:4}},"対策（次はこうする）"));
+        const tEl=mk("textarea",{placeholder:"チームで決めた対策を書く",rows:"2",style:{width:"100%",background:"#fff",border:`1.5px solid ${C.line}`,borderRadius:8,padding:"8px 10px",fontSize:13,color:C.ink,fontFamily:"inherit",resize:"none",boxSizing:"border-box",lineHeight:1.5}});
+        tEl.value=ms.taisaku||"";
+        tEl.addEventListener("input",e=>{fMisses[i].taisaku=e.target.value});
+        taisakuWrap.appendChild(tEl);
+        // 手順書に登録ボタン
+        const regRow=mk("div",{style:{display:"flex",alignItems:"center",gap:8,marginTop:6}});
+        const regBtn=mk("button",{style:{background:ms.tejunReg?C.greenBg:"#fff",color:ms.tejunReg?C.green:C.navy,border:`1.5px solid ${ms.tejunReg?C.green:C.navy}`,borderRadius:8,padding:"7px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"},onClick:async()=>{
+          const t=(fMisses[i].taisaku||"").trim();
+          if(!t){showToast("先に対策を書いてください");return;}
+          try{
+            const tkey=`${ms.method||"zairai"}/${ms.big||"未分類"}/${ms.detail||"未分類"}`;
+            const listRef=ref(db,`tejun/${tkey}`);
+            await push(listRef,{text:t,by:currentUser,date:editKey,ts:Date.now()});
+            fMisses[i].tejunReg=true;
+            showToast("手順書に登録しました");
+            const old=sec;old.replaceWith(renderMissSection());
+          }catch(err){showToast("登録に失敗しました");}
+        }},ms.tejunReg?"✓ 手順書に登録済み":"手順書に登録");
+        regRow.appendChild(regBtn);
+        taisakuWrap.appendChild(regRow);
+        mi.appendChild(taisakuWrap);
+        // 写真
+        const missPhotoWrap=renderPhotoPicker(ms.photos||[],async(file)=>{
+          showToast("アップロード中…");
+          try{
+            const url=await uploadPhoto(file,`${currentUser}/${editKey}/miss`);
+            if(!fMisses[i].photos)fMisses[i].photos=[];
+            fMisses[i].photos.push(url);
+            showToast("写真を追加しました");
+          }catch(err){showToast("アップロードに失敗しました");}
+          const old=sec;old.replaceWith(renderMissSection());
+        },(idx)=>{
+          const url=fMisses[i].photos[idx];
+          fMisses[i].photos.splice(idx,1);
+          const old=sec;old.replaceWith(renderMissSection());
+          deletePhotoByUrl(url);
+        });
+        mi.appendChild(missPhotoWrap);
         list.appendChild(mi);
       });
       sec.appendChild(list);
@@ -346,11 +494,27 @@ function renderEdit(){
     const s0=sevOf(mRedo);
     const sevSpan=mk("span",{style:{fontSize:12,color:s0?s0.color:C.faint,background:s0?s0.bg:"transparent",padding:s0?"2px 8px":"0",borderRadius:20,fontWeight:700,whiteSpace:"nowrap"}},s0?s0.sev:"—");
     redoRow.append(redoEl,sevSpan);addBox.appendChild(redoRow);
+    addBox.appendChild(mk("div",{style:{fontSize:11,fontWeight:700,color:C.amber,marginBottom:5,marginTop:8}},"写真（任意）"));
+    const newMissPhotoWrap=renderPhotoPicker(mPhotos,async(file)=>{
+      showToast("アップロード中…");
+      try{
+        const url=await uploadPhoto(file,`${currentUser}/${editKey}/miss_new`);
+        mPhotos.push(url);
+        showToast("写真を追加しました");
+      }catch(err){showToast("アップロードに失敗しました");}
+      const old=sec;old.replaceWith(renderMissSection());
+    },(idx)=>{
+      const url=mPhotos[idx];
+      mPhotos.splice(idx,1);
+      const old=sec;old.replaceWith(renderMissSection());
+      deletePhotoByUrl(url);
+    });
+    addBox.appendChild(newMissPhotoWrap);
     const addBtn=mk("button",{style:{width:"100%",background:C.amber,color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginTop:10},onClick:()=>{
       if(!mText.trim())return;
       const sv=sevOf(mRedo);
-      fMisses.push({method:mMethod,big:mBig,detail:mDetail,text:mText.trim(),cause:mCause.trim(),redo:mRedo,sev:sv?sv.sev:""});
-      mText="";mCause="";mRedo="";
+      fMisses.push({method:mMethod,big:mBig,detail:mDetail,text:mText.trim(),cause:mCause.trim(),redo:mRedo,sev:sv?sv.sev:"",photos:mPhotos});
+      mText="";mCause="";mRedo="";mPhotos=[];
       const old=sec;old.replaceWith(renderMissSection());
     }},"＋ このミスを追加");
     addBox.appendChild(addBtn);
@@ -360,12 +524,31 @@ function renderEdit(){
   body.appendChild(renderMissSection());
 
   const learnTA=textarea(fLearn,"気づき・次への改善",3,v=>{fLearn=v});
-  body.appendChild(sectionCard("3","学んだこと・次はこうする",C.green,learnTA));
+  function renderLearnSection(){
+    const sec=sectionCard("3","学んだこと・次はこうする",C.green,learnTA);
+    const learnPhotoWrap=renderPhotoPicker(fLearnPhotos,async(file)=>{
+      showToast("アップロード中…");
+      try{
+        const url=await uploadPhoto(file,`${currentUser}/${editKey}/learn`);
+        fLearnPhotos.push(url);
+        showToast("写真を追加しました");
+      }catch(err){showToast("アップロードに失敗しました");}
+      const old=sec;old.replaceWith(renderLearnSection());
+    },(idx)=>{
+      const url=fLearnPhotos[idx];
+      fLearnPhotos.splice(idx,1);
+      const old=sec;old.replaceWith(renderLearnSection());
+      deletePhotoByUrl(url);
+    });
+    sec.appendChild(learnPhotoWrap);
+    return sec;
+  }
+  body.appendChild(renderLearnSection());
   const nextTA=textarea(fNext,"明日やること・注意点",2,v=>{fNext=v});
   body.appendChild(sectionCard("4","明日やること・申し送り",C.sub,nextTA));
 
   const saveBtn=mk("button",{style:{width:"100%",background:C.navy,color:"#fff",border:"none",borderRadius:12,padding:"15px 0",fontSize:16,fontWeight:800,cursor:"pointer",fontFamily:"inherit",marginTop:4},onClick:async()=>{
-    const data={weather:fWeather,site:fSite,ninku:fNinku,members:fMembers,work:fWork,misses:fMisses,learn:fLearn,next:fNext,updated:Date.now(),name:currentUser};
+    const data={weather:fWeather,site:fSite,ninku:fNinku,members:fMembers,work:fWork,misses:fMisses,learn:fLearn,learnPhotos:fLearnPhotos,next:fNext,updated:Date.now(),name:currentUser};
     await set(ref(db,`reports/${currentUser}/${editKey}`),data);
     showToast("保存しました");
     setTimeout(()=>reloadMain(),600);
@@ -376,11 +559,29 @@ function renderEdit(){
   root.appendChild(app);
 }
 
-async function init(){
+// ==== ログイン（会社のアカウントを知っている人だけ使える） ====
+function renderLogin(){
+  const root=document.getElementById("root");root.innerHTML="";
+  const wrap=mk("div",{style:{padding:"40px 20px",maxWidth:"400px",margin:"0 auto"}});
+  wrap.appendChild(mk("div",{style:{fontSize:"22px",fontWeight:"800",color:C.navy,marginBottom:"6px"}},"作業日報"));
+  wrap.appendChild(mk("div",{style:{fontSize:"13px",color:C.faint,marginBottom:"28px"}},"株式会社濱崎組　ログイン"));
+  const st={width:"100%",background:"#f8fafc",border:`1.5px solid ${C.line}`,borderRadius:"10px",padding:"12px 14px",fontSize:"16px",color:C.ink,fontFamily:"inherit",boxSizing:"border-box",marginBottom:"12px"};
+  const mail=mk("input",{type:"email",placeholder:"メールアドレス",autocomplete:"username",style:st});
+  const pass=mk("input",{type:"password",placeholder:"パスワード",autocomplete:"current-password",style:st});
+  const err=mk("div",{style:{color:C.red,fontSize:"13px",minHeight:"18px",marginBottom:"10px"}},"");
+  const btn=mk("button",{style:{width:"100%",background:C.navy,color:"#fff",border:"none",borderRadius:"12px",padding:"15px 0",fontSize:"16px",fontWeight:"800",cursor:"pointer",fontFamily:"inherit"},onClick:async()=>{
+    btn.disabled=true;btn.textContent="確認中…";
+    try{await signInWithEmailAndPassword(auth,mail.value.trim(),pass.value);}
+    catch(e){err.textContent="メールまたはパスワードが違います";btn.disabled=false;btn.textContent="ログイン";}
+  }},"ログイン");
+  wrap.append(mail,pass,err,btn);
+  root.appendChild(wrap);
+}
+onAuthStateChanged(auth,async u=>{
+  if(!u){renderLogin();return;}
   await loadMonthRecs();
   renderApp();
-}
-init();
+});
 </script>
 </body>
 </html>
