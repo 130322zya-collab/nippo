@@ -1,0 +1,1942 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<title>日報管理・月次ミーティング | 株式会社濱崎組</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;background:#f4f6f8;color:#1c2530;min-height:100vh}
+.container{max-width:960px;margin:0 auto;padding:20px 16px}
+.head{background:#1f4e7a;border-radius:14px;padding:20px 24px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.head-title{font-size:22px;font-weight:800;color:#fff}
+.head-sub{font-size:12px;color:#a8c4e0;margin-top:3px}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.controls select{background:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:13px;color:#1c2530;font-family:inherit}
+.reload-btn{background:#fff;color:#1f4e7a;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.search-box{position:relative;display:flex;align-items:center}
+.search-box input{background:#fff;border:none;border-radius:8px;padding:8px 12px 8px 32px;font-size:13px;color:#1c2530;font-family:inherit;width:200px}
+.search-box::before{content:"🔍";position:absolute;left:9px;font-size:12px;pointer-events:none}
+.search-clear{position:absolute;right:6px;background:none;border:none;color:#9aa5b1;font-size:14px;cursor:pointer;display:none;padding:2px 4px}
+.search-box.has-val .search-clear{display:block}
+.search-hit-count{font-size:11px;color:#9aa5b1;margin:-6px 0 12px 2px}
+mark.hl{background:#fff3b0;color:inherit;border-radius:2px;padding:0 1px}
+.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.tab-btn{padding:10px 20px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;background:#fff;color:#6b7785;border:1.5px solid #e3e7ec}
+.tab-btn.active{background:#1f4e7a;color:#fff;border-color:#1f4e7a}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:#fff;border-radius:12px;padding:14px 16px;border:1px solid #e3e7ec;text-align:center}
+.stat-num{font-size:28px;font-weight:800}
+.stat-lbl{font-size:11px;color:#9aa5b1;margin-top:3px}
+.card{background:#fff;border-radius:14px;padding:16px 20px;margin-bottom:12px;border:1px solid #e3e7ec}
+.card-title{font-size:14px;font-weight:700;color:#6b7785;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card-title-icon{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+/* グラフ */
+.chart-wrap{margin-bottom:8px}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.bar-label{font-size:12px;color:#1c2530;width:120px;flex-shrink:0;text-align:right}
+.bar-bg{flex:1;height:20px;background:#f1f5f9;border-radius:4px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:700;color:#fff;transition:width .4s}
+.bar-val{font-size:12px;font-weight:700;width:32px;text-align:right}
+/* 週トレンド */
+.trend-wrap{display:flex;align-items:flex-end;gap:6px;height:80px;padding-bottom:4px}
+.trend-col{display:flex;flex-direction:column;align-items:center;flex:1;gap:3px}
+.trend-bar-wrap{flex:1;display:flex;align-items:flex-end;width:100%}
+.trend-bar{width:100%;border-radius:4px 4px 0 0;min-height:2px;transition:height .4s}
+.trend-label{font-size:9px;color:#9aa5b1;white-space:nowrap}
+.trend-val{font-size:9px;font-weight:700;color:#6b7785}
+/* 深刻度 */
+.sev-row{display:flex;gap:10px}
+.sev-card{flex:1;text-align:center;border-radius:10px;padding:12px 6px}
+.sev-num{font-size:26px;font-weight:800}
+.sev-lbl{font-size:10px;font-weight:700;margin-top:2px}
+.sev-sub{font-size:9px;color:#9aa5b1;margin-top:2px}
+/* 日別ログ */
+.person-section{background:#fff;border-radius:14px;margin-bottom:10px;border:1px solid #e3e7ec;overflow:hidden}
+.person-header{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:#eef4fa}
+.person-name{font-size:15px;font-weight:700;color:#1f4e7a}
+.person-meta{display:flex;gap:12px;font-size:12px;color:#6b7785;flex-wrap:wrap}
+.person-body{display:none;padding:16px 20px}
+.person-body.open{display:block}
+.week-label{font-size:11px;font-weight:700;color:#9aa5b1;letter-spacing:.05em;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid #e3e7ec}
+.day-card{border:1px solid #e3e7ec;border-radius:10px;margin-bottom:8px;overflow:hidden}
+.day-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:#fafbfc}
+.day-date{font-size:13px;font-weight:700}
+.badges{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+.b-miss{background:#fdf3e3;color:#c2710c}
+.b-learn{background:#eaf5ee;color:#2f7d4f}
+.b-sev{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+.day-detail{display:none;padding:12px 14px;border-top:1px solid #e3e7ec}
+.day-detail.open{display:block}
+.detail-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-bottom:5px}
+.tag-work{background:#eef4fa;color:#1f4e7a}
+.tag-miss{background:#fdf3e3;color:#c2710c}
+.tag-learn{background:#eaf5ee;color:#2f7d4f}
+.tag-next{background:#eeeefe;color:#5349b7}
+.detail-block{margin-bottom:10px}
+.detail-text{font-size:13px;color:#1c2530;line-height:1.6;white-space:pre-wrap}
+.miss-item{background:#fafbfc;border:1px solid #e3e7ec;border-radius:8px;padding:10px 12px;margin-bottom:6px}
+.miss-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px}
+.miss-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px}
+.miss-text{font-size:13px;color:#1c2530;line-height:1.5}
+.miss-cause{font-size:12px;color:#6b7785;margin-top:4px}
+.photo-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.photo-thumb{width:64px;height:64px;border-radius:8px;object-fit:cover;border:1px solid #e3e7ec;cursor:pointer;transition:opacity .2s}
+.photo-thumb:hover{opacity:.8}
+.lightbox-overlay{display:none;position:fixed;inset:0;background:rgba(20,26,34,.88);z-index:999;align-items:center;justify-content:center;padding:24px}
+.lightbox-overlay.open{display:flex}
+.lightbox-overlay img{max-width:100%;max-height:90vh;border-radius:10px}
+.lightbox-close{position:absolute;top:18px;right:22px;background:#fff;color:#1c2530;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;font-weight:700;cursor:pointer;font-family:inherit}
+.meta-row{display:flex;gap:14px;font-size:12px;color:#6b7785;margin-bottom:10px;flex-wrap:wrap}
+.no-data{text-align:center;padding:48px;color:#9aa5b1;font-size:14px}
+/* ミーティング */
+.meeting-form .field{margin-bottom:14px}
+.meeting-form label{font-size:12px;font-weight:700;color:#9aa5b1;letter-spacing:.05em;display:block;margin-bottom:5px}
+.meeting-form textarea,.meeting-form input{width:100%;background:#f8fafc;border:1.5px solid #e3e7ec;border-radius:10px;padding:10px 12px;font-size:14px;color:#1c2530;font-family:inherit;resize:none;line-height:1.6}
+.meeting-form textarea:focus,.meeting-form input:focus{outline:none;border-color:#1f4e7a}
+.save-meeting-btn{background:#1f4e7a;color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.meeting-saved{background:#eaf5ee;border-radius:10px;padding:14px 16px;margin-bottom:12px;border:1px solid #b7e0c5}
+.meeting-saved-title{font-size:12px;font-weight:700;color:#2f7d4f;margin-bottom:6px}
+.meeting-saved-text{font-size:13px;color:#1c2530;line-height:1.6;white-space:pre-wrap}
+/* 印刷 */
+.print-btn{background:#2f7d4f;color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-left:auto;display:block}
+@media print{
+  .tabs,.controls,.reload-btn,.print-btn,.head{display:none!important}
+  body{background:#fff}
+  .container{padding:0}
+  .card,.person-section{break-inside:avoid;box-shadow:none}
+  .person-body{display:block!important}
+  .day-detail{display:block!important}
+}
+@media(max-width:600px){.head{padding:14px 16px}.bar-label{width:80px;font-size:11px}}
+</style>
+</head>
+<body>
+<div id="login" style="position:fixed;inset:0;background:#f4f6f8;z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px">
+ <div style="background:#fff;border-radius:14px;padding:24px;width:100%;max-width:340px;border:1px solid #e3e7ec">
+  <div style="font-size:18px;font-weight:800;color:#1f4e7a;margin-bottom:14px">日報管理ログイン</div>
+  <input id="login-mail" type="email" autocomplete="username" placeholder="メールアドレス" style="width:100%;padding:10px;margin-bottom:8px;border:1.5px solid #e3e7ec;border-radius:8px;font-size:16px">
+  <input id="login-pass" type="password" autocomplete="current-password" placeholder="パスワード" style="width:100%;padding:10px;margin-bottom:10px;border:1.5px solid #e3e7ec;border-radius:8px;font-size:16px">
+  <button id="login-btn" style="width:100%;background:#1f4e7a;color:#fff;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700">ログイン</button>
+  <div id="login-err" style="color:#c0392b;font-size:12px;margin-top:8px"></div>
+ </div>
+</div>
+<div id="err-box" style="display:none;position:fixed;top:0;left:0;right:0;background:#fee2e2;color:#991b1b;padding:14px;font-size:13px;font-family:monospace;white-space:pre-wrap;z-index:9999;max-height:60vh;overflow:auto;border-bottom:3px solid #dc2626"></div>
+<script>
+function showErr(msg){
+  var box = document.getElementById('err-box');
+  box.style.display = 'block';
+  box.textContent += msg + '\n\n';
+}
+window.addEventListener('error', function(e){
+  showErr('❌ JSエラー: ' + (e.message||e) + (e.filename?(' @ '+e.filename+':'+e.lineno):''));
+});
+window.addEventListener('unhandledrejection', function(e){
+  showErr('❌ 非同期エラー: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+});
+</script>
+<div class="container">
+  <div class="head">
+    <div>
+      <div class="head-title">日報管理・月次ミーティング</div>
+      <div class="head-sub">株式会社濱崎組 — 代表専用</div>
+    </div>
+    <div class="controls">
+      <select id="filter-period">
+        <option value="month">今月</option>
+        <option value="lastmonth">先月</option>
+        <option value="week">今週</option>
+        <option value="lastweek">先週</option>
+        <option value="all">全期間</option>
+      </select>
+      <select id="filter-person"><option value="">全員</option></select>
+      <div class="search-box" id="search-box">
+        <input type="text" id="search-input" placeholder="ミス・学びをキーワード検索">
+        <button class="search-clear" id="search-clear" title="クリア">✕</button>
+      </div>
+      <button class="reload-btn" id="reload-btn">更新</button>
+    </div>
+  </div>
+
+  <div class="search-hit-count" id="search-hit-count" style="display:none"></div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tbtn-summary">📊 月次サマリー</button>
+    <button class="tab-btn" id="tbtn-logs">📋 日別ログ</button>
+    <button class="tab-btn" id="tbtn-edu">🎓 育成チェック</button>
+    <button class="tab-btn" id="tbtn-karte">📈 成長カルテ</button>
+    <button class="tab-btn" id="tbtn-video">📹 動画ライブラリ</button>
+    <button class="tab-btn" id="tbtn-meeting">📝 ミーティング議事録</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num" id="s-members" style="color:#1f4e7a">—</div><div class="stat-lbl">出勤人数</div></div>
+    <div class="stat"><div class="stat-num" id="s-days" style="color:#1c2530">—</div><div class="stat-lbl">提出日数</div></div>
+    <div class="stat"><div class="stat-num" id="s-miss" style="color:#c2710c">—</div><div class="stat-lbl">ミス合計</div></div>
+    <div class="stat"><div class="stat-num" id="s-sev" style="color:#c0392b">—</div><div class="stat-lbl">重大ミス</div></div>
+    <div class="stat"><div class="stat-num" id="s-learn" style="color:#2f7d4f">—</div><div class="stat-lbl">学び記録</div></div>
+  </div>
+
+  <div id="tab-summary">
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon" style="background:#eef4fa">⏱️</span>やり直し時間（この期間の合計）
+        <button id="money-toggle" style="float:right;background:#eef4fa;color:#1f4e7a;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">金額を表示</button>
+      </div>
+      <div class="sev-row">
+        <div class="sev-card" style="background:#eef4fa">
+          <div class="sev-num" style="color:#1f4e7a" id="s-redo-hours">—</div>
+          <div class="sev-lbl" style="color:#1f4e7a">やり直し時間</div>
+          <div class="sev-sub">合計（時間）</div>
+        </div>
+        <div class="sev-card" id="money-card" style="background:#fdf3e3;display:none">
+          <div class="sev-num" style="color:#c2710c" id="s-redo-money">—</div>
+          <div class="sev-lbl" style="color:#c2710c">概算ロス額</div>
+          <div class="sev-sub" id="money-sub">管理者のみ</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#9aa5b1;margin-top:8px;line-height:1.5">※ やり直し時間そのものの増減で改善を見ます。金額は「余分にかかった人件費」の目安であり、材料の無駄や工期遅れは含みません。参考値です。</div>
+      <div id="rate-setting" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed #e3e7ec">
+        <div style="font-size:11px;font-weight:700;color:#1f4e7a;margin-bottom:6px">単価の設定（管理者のみ）</div>
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+          <div><div style="font-size:10px;color:#9aa5b1;margin-bottom:3px">一人工（円）</div><input id="in-ninku-yen" type="number" value="18000" style="width:100px;background:#f8fafc;border:1.5px solid #e3e7ec;border-radius:8px;padding:8px;font-size:14px;font-family:inherit"></div>
+          <div><div style="font-size:10px;color:#9aa5b1;margin-bottom:3px">1日の作業時間</div><input id="in-work-hours" type="number" value="8" style="width:80px;background:#f8fafc;border:1.5px solid #e3e7ec;border-radius:8px;padding:8px;font-size:14px;font-family:inherit"></div>
+          <button id="save-rate-btn" style="background:#1f4e7a;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">保存</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon" style="background:#eeeefe">📉</span>やり直し時間の月次推移</div>
+      <div class="trend-wrap" id="chart-redo-trend"></div>
+      <div style="font-size:11px;color:#9aa5b1;margin-top:6px">※ この棒が右へ下がっていけば改善が進んでいるサインです。</div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon" style="background:#fdecea">🔁</span>再発の候補（要・会議確認）</div>
+      <div id="recur-list"></div>
+      <div style="font-size:11px;color:#9aa5b1;margin-top:6px;line-height:1.5">※ 対策を立てた詳細作業で、その後また同じ作業のミスが出たものを「候補」として挙げています。本当に同じ原因の再発かは会議で確認してください。</div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon" style="background:#fdecea">🔴</span>深刻度別ミス件数</div>
+      <div class="sev-row" id="sev-row"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon" style="background:#fdf3e3">📊</span>作業別ミス件数</div>
+      <div class="chart-wrap" id="chart-big"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon" style="background:#eaf5ee">📈</span>詳細作業別ミス件数</div>
+      <div class="chart-wrap" id="chart-detail"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon" style="background:#eef4fa">🏗️</span>現場別ミス件数</div>
+      <div class="chart-wrap" id="chart-site"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon" style="background:#eeeefe">📅</span>週別ミス件数推移</div>
+      <div class="trend-wrap" id="chart-trend"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon" style="background:#eaf5ee">💡</span>今月の学び一覧</div>
+      <div id="learn-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon" style="background:#fdecea">⚠️</span>今月のミス内容一覧</div>
+      <div id="miss-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon" style="background:#eeeefe">📚</span>学びの傾向（似た内容のグループ）</div>
+      <div id="learn-trend"></div>
+      <div style="font-size:11px;color:#9aa5b1;margin-top:8px;line-height:1.5">※ キーワードで自動グループ化しています。同じグループに複数件あるものが「繰り返し出てきた学び」です。</div>
+    </div>
+    <button class="print-btn" id="print-btn">🖨️ 印刷する</button>
+    <button class="print-btn" id="export-ai-btn" style="background:#7c3aed;margin-top:8px">🤖 AI分析用にテキストをコピー</button>
+    <!-- ダウンロードボタン群 -->
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+      <button id="dl-pdf-btn" style="flex:1;background:#c0392b;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📄 PDFで保存</button>
+      <button id="dl-excel-btn" style="flex:1;background:#2f7d4f;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📊 Excelで保存</button>
+    </div>
+    <!-- 報告書・ミス記録 印刷ボタン -->
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+      <button id="print-report-btn" style="flex:1;background:#1f4e7a;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📋 月末報告書を印刷</button>
+      <button id="print-miss-btn" style="flex:1;background:#c2710c;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📸 ミス記録(写真つき)を印刷</button>
+    </div>
+    <div id="export-ai-result" style="display:none;margin-top:10px">
+      <textarea id="export-ai-text" readonly style="width:100%;min-height:200px;font-size:11px;font-family:monospace;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px;white-space:pre"></textarea>
+      <div style="font-size:11px;color:#9aa5b1;margin-top:6px">↑ このテキストをコピーして、ClaudeやChatGPTに貼り付けて分析を依頼してください</div>
+    </div>
+  </div>
+
+  <div id="tab-logs" style="display:none">
+    <div id="logs-body"></div>
+  </div>
+
+  <div id="tab-edu" style="display:none">
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon" style="background:#f5f3ff">🎓</span>チーム全体の習得状況</div>
+      <div id="edu-team-summary"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon" style="background:#eef4fa">📊</span>メンバー別 自己評価 vs 他者評価</div>
+      <div id="edu-member-list"></div>
+      <div style="font-size:11px;color:#9aa5b1;margin-top:6px;line-height:1.5">※ 青バーが自己評価、オレンジバーが他者評価（直近の評価者）。差が大きい工程は会議で認識合わせをしてください。</div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon" style="background:#fdf3e3">⚠️</span>自己評価と他者評価のズレ（要確認）</div>
+      <div id="edu-gap-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon" style="background:#eaf5ee">📈</span>工程カテゴリ別 習得率</div>
+      <div id="edu-cat-chart"></div>
+    </div>
+  </div>
+
+  <div id="tab-karte" style="display:none">
+    <div style="margin-bottom:12px">
+      <select id="karte-person" style="background:#fff;border:1.5px solid #e3e7ec;border-radius:10px;padding:10px 14px;font-size:14px;font-family:inherit;width:100%">
+        <option value="">メンバーを選んでください</option>
+      </select>
+    </div>
+    <div id="karte-body"></div>
+  </div>
+
+  <div id="tab-video" style="display:none">
+    <!-- 動画検索・表示エリア -->
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">🔍 動画を探す</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <select id="video-filter-method" style="background:#fff;border:1.5px solid #e3e7ec;border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;flex:1">
+          <option value="">工法（すべて）</option>
+          <option value="zairai">在来工法</option>
+          <option value="se">SE工法</option>
+        </select>
+        <select id="video-filter-kind" style="background:#fff;border:1.5px solid #e3e7ec;border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;flex:1">
+          <option value="">種別（すべて）</option>
+          <option value="miss">⚠️ ミス例</option>
+          <option value="correct">✅ 正しいやり方</option>
+        </select>
+      </div>
+      <input id="video-search" type="text" placeholder="作業名・タイトルで検索" style="width:100%;background:#f8fafc;border:1.5px solid #e3e7ec;border-radius:8px;padding:10px 12px;font-size:14px;font-family:inherit;box-sizing:border-box">
+    </div>
+    <div id="video-list"></div>
+
+    <!-- 動画登録フォーム（管理者のみ） -->
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">➕ 動画を登録する</div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:11px;font-weight:700;color:#9aa5b1;display:block;margin-bottom:4px">YouTube URL</label>
+        <input id="v-url" type="text" placeholder="https://www.youtube.com/watch?v=..." style="width:100%;background:#f8fafc;border:1.5px solid #e3e7ec;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:11px;font-weight:700;color:#9aa5b1;display:block;margin-bottom:4px">タイトル</label>
+        <input id="v-title" type="text" placeholder="例：耐力壁の釘ピッチ ミス例" style="width:100%;background:#f8fafc;border:1.5px solid #e3e7ec;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;box-sizing:border-box">
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:140px">
+          <label style="font-size:11px;font-weight:700;color:#9aa5b1;display:block;margin-bottom:4px">工法</label>
+          <select id="v-method" style="width:100%;background:#f8fafc;border:1.5px solid #e3e7ec;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit">
+            <option value="zairai">在来工法</option>
+            <option value="se">SE工法</option>
+            <option value="common">共通</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:140px">
+          <label style="font-size:11px;font-weight:700;color:#9aa5b1;display:block;margin-bottom:4px">種別</label>
+          <select id="v-kind" style="width:100%;background:#f8fafc;border:1.5px solid #e3e7ec;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit">
+            <option value="miss">⚠️ ミス例（こうすると失敗）</option>
+            <option value="correct">✅ 正しいやり方（こうすればいい）</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:140px">
+          <label style="font-size:11px;font-weight:700;color:#9aa5b1;display:block;margin-bottom:4px">大まかな作業</label>
+          <input id="v-big" type="text" placeholder="例：耐力壁・下地、屋根" style="width:100%;background:#f8fafc;border:1.5px solid #e3e7ec;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;box-sizing:border-box">
+        </div>
+        <div style="flex:1;min-width:140px">
+          <label style="font-size:11px;font-weight:700;color:#9aa5b1;display:block;margin-bottom:4px">詳しい作業</label>
+          <input id="v-detail" type="text" placeholder="例：釘ピッチ・釘の打ち込み" style="width:100%;background:#f8fafc;border:1.5px solid #e3e7ec;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;box-sizing:border-box">
+        </div>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:11px;font-weight:700;color:#9aa5b1;display:block;margin-bottom:4px">一言メモ（注意点・ポイント）</label>
+        <textarea id="v-memo" rows="2" placeholder="この動画で伝えたいポイントを一言で" style="width:100%;background:#f8fafc;border:1.5px solid #e3e7ec;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;resize:none;box-sizing:border-box;line-height:1.5"></textarea>
+      </div>
+      <button id="save-video-btn" style="background:#1f4e7a;color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">動画を登録する</button>
+    </div>
+  </div>
+
+  <div id="tab-meeting" style="display:none">
+    <div id="saved-meetings"></div>
+    <!-- 議事録ダウンロードボタン -->
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <button id="meeting-dl-pdf-btn" style="flex:1;background:#c0392b;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📄 議事録をPDFで保存</button>
+      <button id="meeting-dl-excel-btn" style="flex:1;background:#2f7d4f;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📊 議事録をExcelで保存</button>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon" style="background:#eef4fa">✏️</span>新しい議事録を追加</div>
+      <div class="meeting-form">
+        <div class="field">
+          <label>開催日</label>
+          <input type="date" id="m-date">
+        </div>
+        <div class="field">
+          <label>周知事項・共有内容</label>
+          <textarea id="m-notice" rows="4" placeholder="今月のミスの傾向、全員への周知事項など"></textarea>
+        </div>
+        <div class="field">
+          <label>ミス対策・予防策</label>
+          <textarea id="m-countermeasure" rows="4" placeholder="話し合って決めた対策、チェックリストなど"></textarea>
+        </div>
+        <div class="field">
+          <label>来月の目標・取り組み</label>
+          <textarea id="m-goal" rows="3" placeholder="来月意識すること、改善目標など"></textarea>
+        </div>
+        <div class="field">
+          <label>参加者</label>
+          <input type="text" id="m-members" placeholder="全員、田中・山田・濱崎 など">
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="save-meeting-btn" id="save-meeting-btn">議事録を保存する</button>
+          <button id="cancel-edit-btn" style="display:none;background:transparent;color:#6b7785;border:1px solid #e3e7ec;border-radius:10px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox-overlay" id="lightbox-overlay">
+  <button class="lightbox-close" id="lightbox-close">✕</button>
+  <img id="lightbox-img" src="" alt="写真">
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCVkSQ6WUfkWI_m3CiK8PHlLV4z_U0MnA4",
+  authDomain: "hamasaki-nippo.firebaseapp.com",
+  databaseURL: "https://hamasaki-nippo-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "hamasaki-nippo",
+  storageBucket: "hamasaki-nippo.firebasestorage.app",
+  messagingSenderId: "870438510963",
+  appId: "1:870438510963:web:fe09b4ec1fe1c3ff196506"
+};
+
+let db = null;
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+} catch(e) {
+  console.error("Firebase初期化に失敗しました:", e);
+}
+// 以降のコードは今まで通り ref(db,path) / get(refObj) / set(refObj,val) / remove(refObj) の形で呼べるようにするラッパー
+// Firebaseが使えない状態でも呼び出し元でエラーにならないよう、失敗時はrejectするだけにする
+function ref(dbInst, path){ if(!dbInst) return null; return dbInst.ref(path); }
+function get(refObj){ if(!refObj) return Promise.reject(new Error("Firebaseに接続できていません")); return refObj.once('value'); }
+function set(refObj, val){ if(!refObj) return Promise.reject(new Error("Firebaseに接続できていません")); return refObj.set(val); }
+function remove(refObj){ if(!refObj) return Promise.reject(new Error("Firebaseに接続できていません")); return refObj.remove(); }
+function push(refObj, val){ if(!refObj) return Promise.reject(new Error("Firebaseに接続できていません")); return refObj.push(val); }
+
+const REDO=[{sev:"軽微",color:"#2f7d4f",bg:"#eaf5ee",label:"30分未満"},{sev:"中程度",color:"#c2710c",bg:"#fdf3e3",label:"30分〜2時間"},{sev:"重大",color:"#c0392b",bg:"#fdecea",label:"2時間以上"}];
+// 一人工の金額（円）と1日の作業時間。初期は18,000円・8時間 → 時給2,250円。画面で変更可。
+let NINKU_YEN=Number(localStorage.getItem("nippo_ninku_yen")||18000);
+let WORK_HOURS=Number(localStorage.getItem("nippo_work_hours")||8);
+function hourlyRate(){return WORK_HOURS>0?NINKU_YEN/WORK_HOURS:0;}
+// 管理者のみ金額を見るための合言葉
+const MONEY_PASS=localStorage.getItem("nippo_money_pass")||"Daiku";
+let moneyShown=false;
+let lastRedoMinutes=0;
+const METHOD_LABEL={zairai:"在来工法",se:"SE工法"};
+
+// ==== 育成チェック（大工スキルチェックアプリと同じ定義） ====
+const EDU_SKILLS=[
+  {id:"s01",name:"墨出し",cat:"基礎・土台"},{id:"s02",name:"土台敷き・防蟻処理",cat:"基礎・土台"},{id:"s03",name:"床下地組み",cat:"基礎・土台"},
+  {id:"s04",name:"柱建て",cat:"軸組・上棟"},{id:"s05",name:"梁組み・上棟",cat:"軸組・上棟"},{id:"s06",name:"仮筋交い・建て入れ直し",cat:"軸組・上棟"},{id:"s07",name:"金物取付",cat:"軸組・上棟"},
+  {id:"s08",name:"屋根野地板・ルーフィング",cat:"屋根・外部"},{id:"s09",name:"外部サッシ取付",cat:"屋根・外部"},{id:"s10",name:"外壁下地・透湿シート",cat:"屋根・外部"},
+  {id:"s11",name:"断熱充填",cat:"断熱"},
+  {id:"s12",name:"間柱・窓台・まぐさ",cat:"内装下地"},{id:"s13",name:"天井下地組み",cat:"内装下地"},
+  {id:"s14",name:"壁ボード貼り",cat:"内装仕上"},{id:"s15",name:"天井ボード貼り",cat:"内装仕上"},{id:"s16",name:"床フローリング貼り",cat:"内装仕上"},
+  {id:"s17",name:"建具取付（内部）",cat:"建具・造作"},{id:"s18",name:"造作工事（枠・巾木・廻縁）",cat:"建具・造作"},{id:"s19",name:"収納・棚工事",cat:"建具・造作"},{id:"s20",name:"階段工事",cat:"建具・造作"}
+];
+const EDU_CATS=["基礎・土台","軸組・上棟","屋根・外部","断熱","内装下地","内装仕上","建具・造作"];
+const EDU_LEVELS=[
+  {val:0,label:"未経験",color:"#94a3b8"},{val:1,label:"見学のみ",color:"#60a5fa"},{val:2,label:"補助経験あり",color:"#c2710c"},
+  {val:3,label:"一人でできる",color:"#2f7d4f"},{val:4,label:"指導できる",color:"#7c3aed"}
+];
+const eduScore=(ratings={})=>Math.round(EDU_SKILLS.reduce((s,sk)=>s+(ratings[sk.id]||0),0)/(EDU_SKILLS.length*4)*100);
+
+// ==== 検索機能 ====
+function getSearchTerm(){
+  const el=document.getElementById("search-input");
+  return el?el.value.trim().toLowerCase():"";
+}
+function escapeRegExp(s){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
+function highlight(text,term){
+  if(!text)return text||"";
+  if(!term)return text;
+  try{
+    const re=new RegExp(`(${escapeRegExp(term)})`,"gi");
+    return String(text).replace(re,'<mark class="hl">$1</mark>');
+  }catch(e){return text}
+}
+// ミス1件が検索語にマッチするか
+function missMatches(ms,term){
+  if(!term)return true;
+  const fields=[ms.text,ms.cause,ms.big,ms.detail,ms.sev,ms.taisaku];
+  return fields.some(f=>f&&String(f).toLowerCase().includes(term));
+}
+// 日1件（作業内容・現場・学び・次回・氏名・ミス群）が検索語にマッチするか
+function dayMatches(v,displayName,term){
+  if(!term)return true;
+  const misses=v.misses||[];
+  if(misses.some(ms=>missMatches(ms,term)))return true;
+  const fields=[v.work,v.learn,v.next,v.site,displayName];
+  return fields.some(f=>f&&String(f).toLowerCase().includes(term));
+}
+
+// ==== 写真表示 ====
+// データ側のフィールド名が複数パターンあり得るため、防御的に拾う
+function collectPhotos(obj){
+  if(!obj)return[];
+  const single=obj.photo||obj.photoUrl||obj.image||obj.imageUrl||obj.learnPhoto||obj.learnPhotoUrl;
+  const arr=obj.photos||obj.images||obj.learnPhotos||obj.photoUrls||obj.imageUrls;
+  const list=[];
+  if(single)list.push(single);
+  if(Array.isArray(arr))list.push(...arr);
+  return list.filter(Boolean);
+}
+function renderPhotoRow(obj){
+  const photos=collectPhotos(obj);
+  if(photos.length===0)return"";
+  return `<div class="photo-row">${photos.map(src=>`<img class="photo-thumb" src="${src}" loading="lazy" onclick="openLightbox('${String(src).replace(/'/g,"\\'")}')">`).join('')}</div>`;
+}
+window.openLightbox=function(src){
+  const ov=document.getElementById("lightbox-overlay");
+  const img=document.getElementById("lightbox-img");
+  if(!ov||!img)return;
+  img.src=src;ov.classList.add("open");
+}
+function closeLightbox(){
+  const ov=document.getElementById("lightbox-overlay");
+  if(ov)ov.classList.remove("open");
+}
+
+// 金額表示の切替（管理者の合言葉）
+function updateMoneyDisplay(){
+  const card=document.getElementById("money-card");
+  const el=document.getElementById("s-redo-money");
+  if(!card||!el)return;
+  if(moneyShown){
+    card.style.display="";
+    const yen=Math.round(lastRedoMinutes/60*hourlyRate());
+    el.textContent="¥"+yen.toLocaleString();
+    const sub=document.getElementById("money-sub");
+    if(sub)sub.textContent=`一人工${NINKU_YEN.toLocaleString()}円÷${WORK_HOURS}時間=時給${Math.round(hourlyRate()).toLocaleString()}円`;
+    const setBox=document.getElementById("rate-setting");if(setBox){setBox.style.display="";const iy=document.getElementById("in-ninku-yen");const ih=document.getElementById("in-work-hours");if(iy)iy.value=NINKU_YEN;if(ih)ih.value=WORK_HOURS;}
+  }else{
+    card.style.display="none";
+    const setBox=document.getElementById("rate-setting");if(setBox)setBox.style.display="none";
+  }
+}
+function saveRate(){
+  const y=Number(document.getElementById("in-ninku-yen").value);
+  const h=Number(document.getElementById("in-work-hours").value);
+  if(y>0)NINKU_YEN=y;
+  if(h>0)WORK_HOURS=h;
+  localStorage.setItem("nippo_ninku_yen",String(NINKU_YEN));
+  localStorage.setItem("nippo_work_hours",String(WORK_HOURS));
+  updateMoneyDisplay();
+  alert("単価を保存しました");
+};
+function toggleMoney(){
+  if(moneyShown){moneyShown=false;updateMoneyDisplay();document.getElementById("money-toggle").textContent="金額を表示";return;}
+  const p=prompt("管理者パスワードを入力してください");
+  if(p===MONEY_PASS){moneyShown=true;updateMoneyDisplay();document.getElementById("money-toggle").textContent="金額を隠す";}
+  else if(p!==null){alert("パスワードが違います");}
+};
+const pad=n=>String(n).padStart(2,"0");
+const fmtDate=k=>{const[y,m,d]=k.split("-");const wd=["日","月","火","水","木","金","土"][new Date(k).getDay()];return`${+m}月${+d}日（${wd}）`};
+const fmtShort=k=>{const[,m,d]=k.split("-");return`${+m}/${+d}`};
+
+function getRange(){
+  const now=new Date();const period=document.getElementById("filter-period").value;
+  let from,to;
+  if(period==="month"){from=new Date(now.getFullYear(),now.getMonth(),1);to=new Date(now.getFullYear(),now.getMonth()+1,0)}
+  else if(period==="lastmonth"){from=new Date(now.getFullYear(),now.getMonth()-1,1);to=new Date(now.getFullYear(),now.getMonth(),0)}
+  else if(period==="week"){const d=now.getDay();from=new Date(now);from.setDate(now.getDate()-d);to=new Date(now)}
+  else if(period==="lastweek"){const d=now.getDay();from=new Date(now);from.setDate(now.getDate()-d-7);to=new Date(now);to.setDate(now.getDate()-d-1)}
+  else{from=new Date(2020,0,1);to=new Date(2099,11,31)}
+  from.setHours(0,0,0,0);to.setHours(23,59,59,999);
+  return{from,to};
+}
+function inRange(dateKey,from,to){const d=new Date(dateKey);return d>=from&&d<=to}
+function getWeekLabel(dateKey){
+  const d=new Date(dateKey);const day=d.getDay();
+  const sun=new Date(d);sun.setDate(d.getDate()-day);
+  const sat=new Date(d);sat.setDate(d.getDate()+(6-day));
+  return`${sun.getMonth()+1}/${sun.getDate()}〜${sat.getMonth()+1}/${sat.getDate()}`;
+}
+
+function renderBar(containerId,entries,color){
+  const el=document.getElementById(containerId);if(!el)return;
+  if(entries.length===0){el.innerHTML='<div style="color:#9aa5b1;font-size:13px">データなし</div>';return}
+  const max=Math.max(1,...entries.map(x=>x[1]));
+  el.innerHTML=entries.map(([label,val])=>`
+    <div class="bar-row">
+      <div class="bar-label">${label}</div>
+      <div class="bar-bg">
+        <div class="bar-fill" style="width:${Math.round(val/max*100)}%;background:${color}">${val>=2?val+'件':''}</div>
+      </div>
+      <div class="bar-val" style="color:${color}">${val}件</div>
+    </div>`).join('');
+}
+
+let allEntriesCache=[];
+let allMissesCache=[];
+let allLearnsCache=[];
+let currentRangeCache={from:null,to:null};
+let checklistCache={};
+
+window.loadData=async function(){
+  const{from,to}=getRange();
+  const filterPerson=document.getElementById("filter-person").value;
+  const searchTerm=getSearchTerm();
+  let snap;
+  try{
+    snap=await get(ref(db,"reports"));
+  }catch(e){
+    ["chart-big","chart-detail","chart-site","chart-trend","learn-list","logs-body","sev-row"].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.innerHTML='<div class="no-data">データベースに接続できません。通信環境を確認するか、時間をおいて更新ボタンを押してください</div>';
+    });
+    return;
+  }
+  if(!snap.exists()){
+    ["chart-big","chart-detail","chart-site","chart-trend","learn-list","logs-body","sev-row"].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.innerHTML='<div class="no-data">データがありません</div>';
+    });
+    return;
+  }
+  const allData=snap.val();
+  const personSel=document.getElementById("filter-person");
+  const curVal=personSel.value;
+  personSel.innerHTML='<option value="">全員</option>';
+  Object.keys(allData).sort().forEach(uid=>{
+    const days=allData[uid];const firstDay=Object.values(days)[0];
+    const o=document.createElement("option");o.value=uid;o.textContent=firstDay?.name||uid;personSel.appendChild(o);
+  });
+  if(curVal)personSel.value=curVal;
+
+  allEntriesCache=[];
+  let totalDays=0,totalMiss=0,totalSev=0,totalLearn=0;
+  const activePersons=new Set();
+  const personData={};
+  const allMisses=[];
+  const allLearns=[];
+
+  Object.entries(allData).forEach(([uid,days])=>{
+    if(filterPerson&&uid!==filterPerson)return;
+    const filtered=Object.entries(days).filter(([k])=>inRange(k,from,to)).sort((a,b)=>b[0].localeCompare(a[0]));
+    if(filtered.length===0)return;
+    activePersons.add(uid);
+    totalDays+=filtered.length;
+    const displayName=filtered[0][1].name||uid;
+    filtered.forEach(([dateKey,v])=>{
+      const misses=v.misses||[];
+      totalMiss+=misses.length;
+      misses.forEach(ms=>{if(ms.sev==="重大")totalSev++;allMisses.push({...ms,date:dateKey,personName:displayName,site:v.site})});
+      if(v.learn&&v.learn.trim()){totalLearn++;allLearns.push({date:dateKey,learn:v.learn,personName:displayName,rec:v})}
+      allEntriesCache.push({uid,displayName,dateKey,rec:v});
+    });
+    personData[uid]={displayName,entries:filtered};
+  });
+  allMissesCache=allMisses;
+  allLearnsCache=allLearns;
+  currentRangeCache={from,to};
+
+  document.getElementById("s-members").textContent=activePersons.size;
+  document.getElementById("s-days").textContent=totalDays;
+  document.getElementById("s-miss").textContent=totalMiss;
+  document.getElementById("s-sev").textContent=totalSev;
+  document.getElementById("s-learn").textContent=totalLearn;
+
+  // やり直し時間の合計（分→時間）
+  const totalRedoMin=allMisses.reduce((s,x)=>s+(parseFloat(x.redo)||0),0);
+  lastRedoMinutes=totalRedoMin;
+  const totalRedoHours=Math.round(totalRedoMin/60*10)/10;
+  document.getElementById("s-redo-hours").textContent=totalRedoHours;
+  updateMoneyDisplay();
+
+  // やり直し時間の月次推移（年月ごとに分を合計→時間）
+  const byMonthRedo={};
+  allMisses.forEach(x=>{const ym=(x.date||"").slice(0,7);if(!ym)return;byMonthRedo[ym]=(byMonthRedo[ym]||0)+(parseFloat(x.redo)||0)});
+  const monthEntries=Object.entries(byMonthRedo).sort((a,b)=>a[0].localeCompare(b[0]));
+  const maxM=Math.max(1,...monthEntries.map(x=>x[1]));
+  const rt=document.getElementById("chart-redo-trend");
+  if(monthEntries.length===0){rt.innerHTML='<div style="color:#9aa5b1;font-size:13px">データなし</div>'}
+  else{
+    rt.innerHTML=monthEntries.map(([ym,min])=>{
+      const h=Math.round(min/60*10)/10;
+      const [yy,mm]=ym.split("-");
+      return `<div class="trend-col">
+        <div class="trend-val">${h}h</div>
+        <div class="trend-bar-wrap"><div class="trend-bar" style="height:${Math.round(min/maxM*60)+4}px;background:#1f4e7a"></div></div>
+        <div class="trend-label">${+mm}月</div>
+      </div>`;
+    }).join('');
+  }
+
+  // 再発の候補：対策(taisaku)を立てた詳細作業で、その後また同じ詳細作業のミスが出たもの
+  // 詳細作業ごとに、最初に対策が立った日付を調べ、それより後に同じ詳細作業のミスがあれば候補
+  const missSorted=[...allMisses].sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  const firstTaisakuDate={}; // detailキー → 最初に対策を立てた日
+  missSorted.forEach(x=>{
+    const key=`${x.method||"zairai"}/${x.big||""}/${x.detail||""}`;
+    if((x.taisaku&&x.taisaku.trim())||x.tejunReg){
+      if(!firstTaisakuDate[key])firstTaisakuDate[key]=x.date;
+    }
+  });
+  const recurItems=[];
+  missSorted.forEach(x=>{
+    const key=`${x.method||"zairai"}/${x.big||""}/${x.detail||""}`;
+    const fd=firstTaisakuDate[key];
+    if(fd&&x.date>fd){ recurItems.push(x); }
+  });
+  const recurEl=document.getElementById("recur-list");
+  if(recurItems.length===0){recurEl.innerHTML='<div style="color:#9aa5b1;font-size:13px">再発の候補はありません</div>'}
+  else{
+    recurEl.innerHTML=recurItems.map(x=>`
+      <div style="border-left:3px solid #c0392b;background:#fdecea;border-radius:6px;padding:8px 10px;margin-bottom:6px">
+        <div style="font-size:11px;color:#c0392b;font-weight:700;margin-bottom:2px">${(x.date||"").slice(5)}　${METHOD_LABEL[x.method]||"在来"}／${x.detail||x.big||""}</div>
+        <div style="font-size:13px;color:#1c2530">${x.text||""}</div>
+      </div>`).join('');
+  }
+
+  // 深刻度
+  const bySev={};allMisses.forEach(x=>{if(x.sev)bySev[x.sev]=(bySev[x.sev]||0)+1});
+  document.getElementById("sev-row").innerHTML=REDO.map(r=>`
+    <div class="sev-card" style="background:${r.bg}">
+      <div class="sev-num" style="color:${r.color}">${bySev[r.sev]||0}</div>
+      <div class="sev-lbl" style="color:${r.color}">${r.sev}</div>
+      <div class="sev-sub">${r.label}</div>
+    </div>`).join('');
+
+  // 作業別
+  const byBig={};allMisses.forEach(x=>{const k=x.big||"未分類";byBig[k]=(byBig[k]||0)+1});
+  renderBar("chart-big",Object.entries(byBig).sort((a,b)=>b[1]-a[1]),"#c2710c");
+
+  // 詳細作業別
+  const byDetail={};allMisses.forEach(x=>{const k=x.detail||"未分類";byDetail[k]=(byDetail[k]||0)+1});
+  renderBar("chart-detail",Object.entries(byDetail).sort((a,b)=>b[1]-a[1]),"#2f7d4f");
+
+  // 現場別
+  const bySite={};allMisses.forEach(x=>{const k=x.site||"（現場なし）";bySite[k]=(bySite[k]||0)+1});
+  renderBar("chart-site",Object.entries(bySite).sort((a,b)=>b[1]-a[1]),"#1f4e7a");
+
+  // 週別トレンド
+  const byWeek={};
+  allMisses.forEach(x=>{const w=getWeekLabel(x.date);byWeek[w]=(byWeek[w]||0)+1});
+  const weekEntries=Object.entries(byWeek).sort((a,b)=>a[0].localeCompare(b[0]));
+  const maxW=Math.max(1,...weekEntries.map(x=>x[1]));
+  const trendEl=document.getElementById("chart-trend");
+  if(weekEntries.length===0){trendEl.innerHTML='<div style="color:#9aa5b1;font-size:13px">データなし</div>'}
+  else{
+    trendEl.innerHTML=weekEntries.map(([w,c])=>`
+      <div class="trend-col">
+        <div class="trend-val">${c}</div>
+        <div class="trend-bar-wrap"><div class="trend-bar" style="height:${Math.round(c/maxW*60)+4}px;background:#c2710c"></div></div>
+        <div class="trend-label">${w.split('〜')[0]}</div>
+      </div>`).join('');
+  }
+
+  // 学び一覧（検索語でフィルタ）
+  const learnEl=document.getElementById("learn-list");
+  const learnsShown=allLearns.filter(x=>!searchTerm||(x.learn&&x.learn.toLowerCase().includes(searchTerm))||(x.personName&&x.personName.toLowerCase().includes(searchTerm)));
+  if(learnsShown.length===0){learnEl.innerHTML=`<div style="color:#9aa5b1;font-size:13px">${searchTerm?'検索語に一致する学び記録はありません':'この期間の学び記録はありません'}</div>`}
+  else{
+    learnEl.innerHTML=learnsShown.sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`
+      <div style="border-left:3px solid #2f7d4f;padding:8px 12px;margin-bottom:10px;background:#f8faf9;border-radius:0 8px 8px 0">
+        <div style="font-size:11px;color:#2f7d4f;font-weight:700;margin-bottom:3px">${fmtDate(x.date)} ${x.personName}</div>
+        <div style="font-size:13px;color:#1c2530;line-height:1.6;white-space:pre-wrap">${highlight(x.learn,searchTerm)}</div>
+        ${renderPhotoRow(x.rec)}
+      </div>`).join('');
+  }
+
+  // ── ミス内容一覧 ──
+  const missListEl=document.getElementById("miss-list");
+  if(missListEl){
+    const missesShown=allMisses.filter(x=>!searchTerm||missMatches(x,searchTerm));
+    if(missesShown.length===0){
+      missListEl.innerHTML=`<div style="color:#9aa5b1;font-size:13px">${searchTerm?'検索語に一致するミスはありません':'この期間のミス記録はありません'}</div>`;
+    }else{
+      const SEV_COLOR={軽微:"#2f7d4f",中程度:"#c2710c",重大:"#c0392b"};
+      const SEV_BG={軽微:"#eaf5ee",中程度:"#fdf3e3",重大:"#fdecea"};
+      missListEl.innerHTML=missesShown.sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`
+        <div style="border-left:3px solid ${SEV_COLOR[x.sev]||"#c2710c"};padding:8px 12px;margin-bottom:10px;background:${SEV_BG[x.sev]||"#fdf8f4"};border-radius:0 8px 8px 0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+            <span style="font-size:11px;color:${SEV_COLOR[x.sev]||"#c2710c"};font-weight:700">${fmtDate(x.date)} ${x.personName}</span>
+            ${x.big?`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#fdf3e3;color:#c2710c">${x.big}</span>`:''}
+            ${x.detail?`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#eef1f4;color:#6b7785">${x.detail}</span>`:''}
+            ${x.sev?`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:${SEV_BG[x.sev]};color:${SEV_COLOR[x.sev]}">${x.sev}</span>`:''}
+          </div>
+          <div style="font-size:13px;color:#1c2530;line-height:1.6;white-space:pre-wrap">${highlight(x.text||"",searchTerm)}</div>
+          ${x.cause?`<div style="font-size:12px;color:#6b7785;margin-top:4px">原因: ${highlight(x.cause,searchTerm)}</div>`:''}
+          ${x.taisaku?`<div style="font-size:12px;color:#2f7d4f;margin-top:4px;padding:3px 8px;background:#eaf5ee;border-radius:4px">✅ 対策: ${x.taisaku}</div>`:''}
+        </div>`).join('');
+    }
+  }
+
+  // ── 学びの傾向（キーワードでグループ化） ──
+  const learnTrendEl=document.getElementById("learn-trend");
+  if(learnTrendEl && allLearns.length>0){
+    // キーワードカテゴリ定義（現場で出やすい学びに合わせて設定）
+    const LEARN_CATS=[
+      {label:"確認・チェック",  keys:["確認","チェック","見落とし","忘れ","見直し","ダブルチェック"]},
+      {label:"墨出し・採寸",    keys:["墨","採寸","寸法","墨出し","測り","計測"]},
+      {label:"段取り・準備",    keys:["段取り","準備","事前","計画","材料","搬入","段取"]},
+      {label:"金物・ビス",      keys:["金物","ビス","ボルト","釘","ドリフト","締め","打ち込み"]},
+      {label:"納まり・仕上げ",  keys:["納まり","仕上げ","取付","建具","サッシ","額縁","巾木"]},
+      {label:"コミュニケーション",keys:["聞く","報告","伝える","共有","相談","声かけ","確認する"]},
+      {label:"安全・KY",        keys:["安全","危険","KY","ヒヤリ","転落","墜落","足場"]},
+      {label:"工具・道具",      keys:["工具","道具","刃","切れ味","メンテ","掃除","片付け"]},
+      {label:"図面・仕様",      keys:["図面","仕様","設計","CAD","詳細","断面"]},
+    ];
+
+    // 各学びをカテゴリに振り分け（複数マッチは最初のカテゴリ）
+    const grouped={};
+    const others=[];
+    LEARN_CATS.forEach(c=>grouped[c.label]=[]);
+
+    allLearns.forEach(x=>{
+      const t=(x.learn||"").toLowerCase();
+      let matched=false;
+      for(const cat of LEARN_CATS){
+        if(cat.keys.some(k=>t.includes(k))){
+          grouped[cat.label].push(x);
+          matched=true;
+          break;
+        }
+      }
+      if(!matched) others.push(x);
+    });
+    if(others.length>0) grouped["その他"]=others;
+
+    // 件数が多い順に並べ、1件以上のカテゴリだけ表示
+    const entries=Object.entries(grouped).filter(([,v])=>v.length>0).sort((a,b)=>b[1].length-a[1].length);
+    const maxLG=Math.max(1,...entries.map(x=>x[1].length));
+
+    if(entries.length===0){
+      learnTrendEl.innerHTML='<div style="color:#9aa5b1;font-size:13px">データなし</div>';
+    }else{
+      learnTrendEl.innerHTML=entries.map(([label,items])=>`
+        <div style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+            <div style="font-size:12px;font-weight:700;color:#1c2530;min-width:160px">${label}</div>
+            <div style="flex:1;background:#e8f0fe;border-radius:4px;height:12px;overflow:hidden">
+              <div style="height:100%;border-radius:4px;background:#5b4cdb;width:${Math.round(items.length/maxLG*100)}%"></div>
+            </div>
+            <div style="font-size:12px;font-weight:700;color:#5b4cdb;min-width:28px;text-align:right">${items.length}件</div>
+          </div>
+          <div style="padding-left:4px">
+            ${items.slice(0,3).map(x=>`
+              <div style="font-size:11px;color:#6b7785;padding:3px 0;border-bottom:1px dashed #e3e7ec;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                <span style="color:#9aa5b1;margin-right:6px">${fmtShort(x.date)} ${x.personName}</span>${(x.learn||"").split('\n')[0].slice(0,40)}${(x.learn||"").length>40?'…':''}
+              </div>`).join('')}
+            ${items.length>3?`<div style="font-size:11px;color:#9aa5b1;padding-top:3px">他 ${items.length-3}件</div>`:''}
+          </div>
+        </div>`).join('');
+    }
+  }
+
+  // 検索結果件数の表示
+  const hitEl=document.getElementById("search-hit-count");
+  if(hitEl){
+    if(searchTerm){
+      const missHits=allMisses.filter(m=>missMatches(m,searchTerm)).length;
+      hitEl.style.display="";
+      hitEl.textContent=`検索結果：ミス${missHits}件／学び${learnsShown.length}件`;
+    }else{
+      hitEl.style.display="none";
+    }
+  }
+
+  // 日別ログ
+  renderLogs(personData,searchTerm);
+
+  // 議事録
+  renderMeetings();
+}
+
+function renderLogs(personData,searchTerm){
+  searchTerm=searchTerm||"";
+  const body=document.getElementById("logs-body");body.innerHTML="";
+  if(Object.keys(personData).length===0){body.innerHTML='<div class="no-data">この期間の日報はありません</div>';return}
+  let anyPersonShown=false;
+  Object.entries(personData).sort((a,b)=>a[1].displayName.localeCompare(b[1].displayName)).forEach(([uid,{displayName,entries}])=>{
+    // 検索語がある場合は一致する日だけに絞り込む
+    const visibleEntries=entries.filter(([,v])=>dayMatches(v,displayName,searchTerm));
+    if(searchTerm&&visibleEntries.length===0)return;
+    anyPersonShown=true;
+    const personMiss=entries.reduce((s,[,v])=>s+(v.misses||[]).length,0);
+    const personLearn=entries.filter(([,v])=>v.learn&&v.learn.trim()).length;
+    const personSev=entries.reduce((s,[,v])=>s+(v.misses||[]).filter(m=>m.sev==="重大").length,0);
+    const sec=document.createElement("div");sec.className="person-section";
+    const ph=document.createElement("div");ph.className="person-header";
+    ph.innerHTML=`<div class="person-name">${displayName}</div>
+      <div class="person-meta">
+        <span>${entries.length}日${searchTerm?`（一致${visibleEntries.length}日）`:''}</span>
+        <span style="color:#c2710c">ミス${personMiss}件</span>
+        <span style="color:#2f7d4f">学び${personLearn}件</span>
+        ${personSev>0?`<span style="color:#c0392b">重大${personSev}件</span>`:''}
+        <span style="color:#9aa5b1">▾</span>
+      </div>`;
+    const pb=document.createElement("div");pb.className="person-body open";
+    const byWeek={};
+    visibleEntries.forEach(([dateKey,v])=>{const w=getWeekLabel(dateKey);if(!byWeek[w])byWeek[w]=[];byWeek[w].push([dateKey,v])});
+    Object.entries(byWeek).forEach(([wl,days])=>{
+      const ws=document.createElement("div");ws.style.marginBottom="16px";
+      ws.innerHTML=`<div class="week-label">${wl}の週</div>`;
+      days.forEach(([dateKey,v])=>{
+        const misses=v.misses||[];
+        const dc=document.createElement("div");dc.className="day-card";
+        const dh=document.createElement("div");dh.className="day-head";
+        const sevMiss=misses.find(m=>m.sev==="重大");
+        dh.innerHTML=`<div class="day-date">${fmtDate(dateKey)}</div>
+          <div class="badges">
+            ${misses.length>0?`<span class="badge b-miss">ミス${misses.length}件</span>`:''}
+            ${v.learn?`<span class="badge b-learn">学び</span>`:''}
+            ${sevMiss?`<span class="b-sev" style="background:#fdecea;color:#c0392b">重大</span>`:''}
+            <span style="font-size:14px;color:#9aa5b1">▾</span>
+          </div>`;
+        const dd=document.createElement("div");dd.className="day-detail open";
+        let html="";
+        if(v.weather||v.site||v.ninku||v.members){
+          html+=`<div class="meta-row">
+            ${v.weather?`<span>天候: ${v.weather}</span>`:''}
+            ${v.site?`<span>現場: ${highlight(v.site,searchTerm)}</span>`:''}
+            ${v.ninku?`<span>人工: ${v.ninku}</span>`:''}
+            ${v.members?`<span>メンバー: ${v.members}</span>`:''}
+          </div>`;
+        }
+        if(v.work)html+=`<div class="detail-block"><span class="detail-tag tag-work">WORK</span><div class="detail-text">${highlight(v.work,searchTerm)}</div></div>`;
+        if(misses.length>0){
+          html+=`<div class="detail-block"><span class="detail-tag tag-miss">MISS</span>`;
+          misses.forEach(ms=>{
+            const sv=REDO.find(r=>r.sev===ms.sev);
+            html+=`<div class="miss-item"><div class="miss-tags">
+              ${ms.big?`<span class="miss-tag" style="background:#fdf3e3;color:#c2710c">${ms.big}</span>`:''}
+              ${ms.detail?`<span class="miss-tag" style="background:#eef1f4;color:#6b7785">${ms.detail}</span>`:''}
+              ${ms.sev&&sv?`<span class="miss-tag" style="background:${sv.bg};color:${sv.color}">${ms.sev}</span>`:''}
+            </div>
+            <div class="miss-text">${highlight(ms.text,searchTerm)}</div>
+            ${ms.cause?`<div class="miss-cause">原因: ${highlight(ms.cause,searchTerm)}</div>`:''}
+            ${renderPhotoRow(ms)}
+            </div>`;
+          });
+          html+=`</div>`;
+        }
+        if(v.learn)html+=`<div class="detail-block"><span class="detail-tag tag-learn">LEARN</span><div class="detail-text">${highlight(v.learn,searchTerm)}</div>${renderPhotoRow(v)}</div>`;
+        if(v.next)html+=`<div class="detail-block"><span class="detail-tag tag-next">NEXT</span><div class="detail-text">${v.next}</div></div>`;
+        dd.innerHTML=html;
+        dh.addEventListener("click",()=>{dd.classList.toggle("open")});
+        dc.append(dh,dd);ws.appendChild(dc);
+      });
+      pb.appendChild(ws);
+    });
+    ph.addEventListener("click",()=>pb.classList.toggle("open"));
+    sec.append(ph,pb);body.appendChild(sec);
+  });
+  if(searchTerm&&!anyPersonShown){body.innerHTML='<div class="no-data">検索語に一致する日報はありません</div>'}
+}
+
+// 議事録はFirebaseの meetings/ ノードに保存（他のパソコンでも共有される）
+let meetingsCache=[];
+// ==== 育成チェックタブ描画（checklist/ ノードを読み込み） ====
+async function renderEdu(){
+  const teamEl=document.getElementById("edu-team-summary");
+  const listEl=document.getElementById("edu-member-list");
+  const gapEl=document.getElementById("edu-gap-list");
+  const catEl=document.getElementById("edu-cat-chart");
+  [teamEl,listEl,gapEl,catEl].forEach(el=>{if(el)el.innerHTML='<div style="color:#9aa5b1;font-size:13px">読み込み中...</div>'});
+
+  let checklist={};
+  try{
+    const snap=await get(ref(db,"checklist"));
+    if(snap.exists())checklist=snap.val();
+    checklistCache=checklist;
+  }catch(e){
+    [teamEl,listEl,gapEl,catEl].forEach(el=>{if(el)el.innerHTML='<div style="color:#c0392b;font-size:13px">育成データの読み込みに失敗しました</div>'});
+    return;
+  }
+  const members=Object.keys(checklist);
+  if(members.length===0){
+    [teamEl,listEl,gapEl,catEl].forEach(el=>{if(el)el.innerHTML='<div style="color:#9aa5b1;font-size:13px">育成チェックのデータがまだありません（大工スキルチェックアプリで記録すると表示されます）</div>'});
+    return;
+  }
+
+  // チーム全体サマリー
+  const scores=members.map(m=>eduScore(checklist[m]?.self?.ratings));
+  const avgScore=Math.round(scores.reduce((s,v)=>s+v,0)/scores.length);
+  const fullMastered=EDU_SKILLS.filter(sk=>members.every(m=>{
+    const r=checklist[m]?.self?.ratings||{};
+    return (r[sk.id]||0)>=3;
+  }));
+  teamEl.innerHTML=`
+    <div style="display:flex;gap:16px;text-align:center;margin-bottom:10px">
+      <div style="flex:1"><div style="font-size:26px;font-weight:800;color:#1f4e7a">${members.length}</div><div style="font-size:11px;color:#9aa5b1">評価済み人数</div></div>
+      <div style="flex:1"><div style="font-size:26px;font-weight:800;color:#2f7d4f">${avgScore}</div><div style="font-size:11px;color:#9aa5b1">平均習得スコア</div></div>
+      <div style="flex:1"><div style="font-size:26px;font-weight:800;color:#7c3aed">${fullMastered.length}/${EDU_SKILLS.length}</div><div style="font-size:11px;color:#9aa5b1">全員一人でできる工程</div></div>
+    </div>`;
+
+  // メンバー別 自己評価 vs 他者評価（直近の評価者）
+  listEl.innerHTML=members.map(m=>{
+    const d=checklist[m]||{};
+    const selfR=d.self?.ratings||{};
+    const evals=d.evals||[];
+    const latestEval=evals.length?evals[evals.length-1]:null;
+    const evalR=latestEval?.ratings||{};
+    const sPct=eduScore(selfR);
+    const ePct=latestEval?eduScore(evalR):null;
+    return `
+      <div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #eef1f4">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:14px;font-weight:700;color:#1f4e7a">${m}</span>
+          <span style="font-size:11px;color:#9aa5b1">${d.self?`自己評価 ${d.self.date}`:'自己評価なし'}${latestEval?` ／ ${latestEval.name}が評価`:''}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <div style="font-size:11px;color:#1f4e7a;width:56px;flex-shrink:0">自己</div>
+          <div style="flex:1;background:#f1f5f9;border-radius:4px;height:12px;overflow:hidden"><div style="width:${sPct}%;height:12px;background:#60a5fa"></div></div>
+          <div style="font-size:11px;font-weight:700;color:#1f4e7a;width:32px;text-align:right">${sPct}</div>
+        </div>
+        ${ePct!==null?`
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="font-size:11px;color:#c2710c;width:56px;flex-shrink:0">他者</div>
+          <div style="flex:1;background:#f1f5f9;border-radius:4px;height:12px;overflow:hidden"><div style="width:${ePct}%;height:12px;background:#f59e0b"></div></div>
+          <div style="font-size:11px;font-weight:700;color:#c2710c;width:32px;text-align:right">${ePct}</div>
+        </div>`:''}
+      </div>`;
+  }).join('');
+
+  // ズレ一覧（自己評価と直近他者評価の差が2以上）
+  const gaps=[];
+  members.forEach(m=>{
+    const d=checklist[m]||{};
+    const selfR=d.self?.ratings||{};
+    const evals=d.evals||[];
+    if(!evals.length)return;
+    const latestEval=evals[evals.length-1];
+    EDU_SKILLS.forEach(sk=>{
+      const sv=selfR[sk.id]||0;
+      const ev=latestEval.ratings?.[sk.id];
+      if(ev===undefined)return;
+      if(Math.abs(sv-ev)>=2){
+        gaps.push({member:m,skill:sk.name,cat:sk.cat,self:sv,evaluator:latestEval.name,evalVal:ev});
+      }
+    });
+  });
+  if(gaps.length===0){
+    gapEl.innerHTML='<div style="color:#9aa5b1;font-size:13px">大きなズレはありません</div>';
+  }else{
+    gapEl.innerHTML=gaps.map(g=>`
+      <div style="border-left:3px solid #c2710c;background:#fdf3e3;border-radius:6px;padding:8px 10px;margin-bottom:6px">
+        <div style="font-size:12px;font-weight:700;color:#c2710c">${g.member}／${g.skill}（${g.cat}）</div>
+        <div style="font-size:12px;color:#1c2530;margin-top:2px">本人：${EDU_LEVELS[g.self].label}　⇔　${g.evaluator}：${EDU_LEVELS[g.evalVal].label}</div>
+      </div>`).join('');
+  }
+
+  // 工程カテゴリ別 習得率（一人でできる以上の割合、全メンバー平均）
+  catEl.innerHTML=EDU_CATS.map(cat=>{
+    const skills=EDU_SKILLS.filter(sk=>sk.cat===cat);
+    let masteredTotal=0,possibleTotal=0;
+    members.forEach(m=>{
+      const r=checklist[m]?.self?.ratings||{};
+      skills.forEach(sk=>{ possibleTotal++; if((r[sk.id]||0)>=3)masteredTotal++; });
+    });
+    const pct=possibleTotal>0?Math.round(masteredTotal/possibleTotal*100):0;
+    return `
+      <div class="bar-row">
+        <div class="bar-label">${cat}</div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:#7c3aed">${pct>=15?pct+'%':''}</div></div>
+        <div class="bar-val" style="color:#7c3aed">${pct}%</div>
+      </div>`;
+  }).join('');
+}
+
+
+// ── 成長カルテ ────────────────────────────────────
+function renderKarte(){
+  const sel=document.getElementById("karte-person");
+  const body=document.getElementById("karte-body");
+  if(!sel||!body)return;
+  const members={};
+  (allEntriesCache||[]).forEach(({uid,displayName,dateKey,rec})=>{
+    if(!members[uid])members[uid]={name:displayName,months:{}};
+    const ym=dateKey.slice(0,7);
+    if(!members[uid].months[ym])members[uid].months[ym]={miss:0,learn:0,redoMin:0,sev:0,missList:[],learnList:[]};
+    const m=members[uid].months[ym];
+    const misses=rec.misses||[];
+    m.miss+=misses.length;
+    misses.forEach(ms=>{m.redoMin+=parseFloat(ms.redo)||0;if(ms.sev==="重大")m.sev++;m.missList.push(ms);});
+    if(rec.learn&&rec.learn.trim()){m.learn++;m.learnList.push({date:dateKey,text:rec.learn});}
+  });
+  const curVal=sel.value;
+  sel.innerHTML='<option value="">メンバーを選んでください</option>';
+  Object.entries(members).sort((a,b)=>a[1].name.localeCompare(b[1].name)).forEach(([uid,d])=>{
+    const o=document.createElement("option");o.value=uid;o.textContent=d.name;sel.appendChild(o);
+  });
+  if(curVal)sel.value=curVal;
+  const selectedUid=sel.value;
+  if(!selectedUid){body.innerHTML='<div style="color:#9aa5b1;font-size:14px;text-align:center;padding:40px 0">上のリストからメンバーを選んでください</div>';return;}
+  const member=members[selectedUid];
+  if(!member){body.innerHTML='';return;}
+  const monthList=Object.keys(member.months).sort();
+  if(monthList.length===0){body.innerHTML='<div style="color:#9aa5b1;font-size:14px;text-align:center;padding:40px 0">記録がありません</div>';return;}
+  const maxMiss=Math.max(1,...monthList.map(ym=>member.months[ym].miss));
+  const maxLearn=Math.max(1,...monthList.map(ym=>member.months[ym].learn));
+  const recent=monthList.slice(-6);
+  const totalMiss=recent.reduce((s,ym)=>s+member.months[ym].miss,0);
+  const totalLearn=recent.reduce((s,ym)=>s+member.months[ym].learn,0);
+  const totalRedo=recent.reduce((s,ym)=>s+member.months[ym].redoMin,0);
+  const totalSev=recent.reduce((s,ym)=>s+member.months[ym].sev,0);
+  const byDetail={};
+  monthList.forEach(ym=>{member.months[ym].missList.forEach(ms=>{const k=ms.detail||ms.big||"未分類";byDetail[k]=(byDetail[k]||0)+1;});});
+  const detailEntries=Object.entries(byDetail).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxDet=Math.max(1,...detailEntries.map(x=>x[1]));
+  const lastYm=monthList[monthList.length-1];
+  const prevYm=monthList.length>=2?monthList[monthList.length-2]:null;
+  const last=member.months[lastYm];
+  const prev=prevYm?member.months[prevYm]:null;
+  function diff(cur,pre,key){
+    if(!pre)return"";
+    const d=cur[key]-pre[key];
+    if(d===0)return'<span style="color:#9aa5b1">±0</span>';
+    if(d<0)return`<span style="color:#2f7d4f">▼${Math.abs(d)}</span>`;
+    return`<span style="color:#c0392b">▲${d}</span>`;
+  }
+  body.innerHTML=`
+    <div style="background:#fff;border:1px solid #e3e7ec;border-radius:14px;padding:16px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#6b7785;margin-bottom:12px">直近6ヶ月のサマリー</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        <div style="text-align:center;background:#fdf3e3;border-radius:10px;padding:10px 4px"><div style="font-size:22px;font-weight:800;color:#c2710c">${totalMiss}</div><div style="font-size:10px;color:#c2710c">ミス合計</div></div>
+        <div style="text-align:center;background:#fdecea;border-radius:10px;padding:10px 4px"><div style="font-size:22px;font-weight:800;color:#c0392b">${totalSev}</div><div style="font-size:10px;color:#c0392b">重大ミス</div></div>
+        <div style="text-align:center;background:#eef4fa;border-radius:10px;padding:10px 4px"><div style="font-size:22px;font-weight:800;color:#1f4e7a">${Math.round(totalRedo/60*10)/10}h</div><div style="font-size:10px;color:#1f4e7a">やり直し時間</div></div>
+        <div style="text-align:center;background:#eaf5ee;border-radius:10px;padding:10px 4px"><div style="font-size:22px;font-weight:800;color:#2f7d4f">${totalLearn}</div><div style="font-size:10px;color:#2f7d4f">学び記録</div></div>
+      </div>
+      ${prev?`<div style="margin-top:10px;padding-top:10px;border-top:1px dashed #e3e7ec;font-size:12px;color:#6b7785;display:flex;gap:16px;flex-wrap:wrap"><span>前月比 ミス：${diff(last,prev,'miss')}</span><span>学び：${diff(last,prev,'learn')}</span><span>重大：${diff(last,prev,'sev')}</span></div>`:''}
+    </div>
+    <div style="background:#fff;border:1px solid #e3e7ec;border-radius:14px;padding:16px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#6b7785;margin-bottom:12px">📉 月別ミス件数の推移</div>
+      <div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding-bottom:4px">
+        ${monthList.map(ym=>{const d=member.months[ym];const pct=Math.round(d.miss/maxMiss*60)+4;const [,mm]=ym.split("-");return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="font-size:10px;font-weight:700;color:#c2710c">${d.miss}</div><div style="width:100%;border-radius:4px 4px 0 0;background:${d.miss===0?"#e3e7ec":"#c2710c"};height:${pct}px"></div><div style="font-size:9px;color:#9aa5b1">${+mm}月</div></div>`;}).join('')}
+      </div>
+      <div style="font-size:11px;color:#9aa5b1;margin-top:4px">棒が右へ下がれば改善のサインです</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e3e7ec;border-radius:14px;padding:16px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#6b7785;margin-bottom:12px">📗 月別学び記録の推移</div>
+      <div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding-bottom:4px">
+        ${monthList.map(ym=>{const d=member.months[ym];const pct=Math.round(d.learn/maxLearn*60)+4;const [,mm]=ym.split("-");return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="font-size:10px;font-weight:700;color:#2f7d4f">${d.learn}</div><div style="width:100%;border-radius:4px 4px 0 0;background:${d.learn===0?"#e3e7ec":"#2f7d4f"};height:${pct}px"></div><div style="font-size:9px;color:#9aa5b1">${+mm}月</div></div>`;}).join('')}
+      </div>
+      <div style="font-size:11px;color:#9aa5b1;margin-top:4px">記録が多いほど振り返りが習慣になっています</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e3e7ec;border-radius:14px;padding:16px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#6b7785;margin-bottom:12px">🎯 ミスが多い作業（全期間）</div>
+      ${detailEntries.length===0?'<div style="color:#9aa5b1;font-size:13px">ミス記録なし</div>':detailEntries.map(([k,v])=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><div style="font-size:12px;color:#1c2530;min-width:140px">${k}</div><div style="flex:1;background:#f1f5f9;border-radius:4px;height:10px"><div style="background:#c2710c;border-radius:4px;height:10px;width:${Math.round(v/maxDet*100)}%"></div></div><div style="font-size:12px;font-weight:700;color:#c2710c;min-width:28px;text-align:right">${v}件</div></div>`).join('')}
+      <div style="font-size:11px;color:#9aa5b1;margin-top:6px">この作業を次の会議で重点確認するか、手順書に注意点を追加することを検討してください</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e3e7ec;border-radius:14px;padding:16px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#6b7785;margin-bottom:10px">💡 最近の学び（直近5件）</div>
+      ${(()=>{const all=[];monthList.slice().reverse().forEach(ym=>all.push(...member.months[ym].learnList));if(all.length===0)return'<div style="color:#9aa5b1;font-size:13px">学び記録なし</div>';return all.slice(0,5).map(x=>`<div style="border-left:3px solid #2f7d4f;padding:7px 12px;margin-bottom:8px;background:#f8faf9;border-radius:0 8px 8px 0"><div style="font-size:10px;color:#2f7d4f;font-weight:700;margin-bottom:3px">${fmtDate(x.date)}</div><div style="font-size:13px;color:#1c2530;line-height:1.5;white-space:pre-wrap">${(x.text||"").slice(0,120)}${(x.text||"").length>120?"…":""}</div></div>`).join('');})()}
+    </div>
+  `;
+}
+
+
+// ── 動画ライブラリ ──────────────────────────────────
+// YouTubeのURLからIDを抽出
+function getYouTubeId(url){
+  const m=url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);
+  return m?m[1]:null;
+}
+// YouTubeのサムネイル取得
+function getThumb(vid){ return `https://img.youtube.com/vi/${vid}/mqdefault.jpg`; }
+// 埋め込みURL
+function getEmbed(vid){ return `https://www.youtube.com/embed/${vid}`; }
+
+let videosCache=[];
+
+async function renderVideoLib(){
+  const listEl=document.getElementById("video-list");
+  listEl.innerHTML='<div style="color:#9aa5b1;font-size:13px;padding:8px 2px">読み込み中...</div>';
+  try{
+    const snap=await get(ref(db,"videos"));
+    if(snap.exists()){
+      const val=snap.val();
+      videosCache=Object.entries(val).map(([k,v])=>({...v,_key:k}));
+    }else{ videosCache=[]; }
+  }catch(e){
+    listEl.innerHTML='<div style="color:#c0392b;font-size:13px">読み込みに失敗しました</div>';
+    return;
+  }
+  filterAndRenderVideos();
+}
+
+function filterAndRenderVideos(){
+  const listEl=document.getElementById("video-list");
+  const methodF=document.getElementById("video-filter-method").value;
+  const kindF=document.getElementById("video-filter-kind").value;
+  const q=(document.getElementById("video-search").value||"").trim().toLowerCase();
+
+  let filtered=videosCache.filter(v=>{
+    if(methodF&&v.method!==methodF&&v.method!=="common")return false;
+    if(kindF&&v.kind!==kindF)return false;
+    if(q){
+      const hay=`${v.title||""} ${v.big||""} ${v.detail||""} ${v.memo||""}`.toLowerCase();
+      if(!hay.includes(q))return false;
+    }
+    return true;
+  });
+
+  if(filtered.length===0){
+    listEl.innerHTML='<div style="color:#9aa5b1;font-size:14px;text-align:center;padding:40px 0">該当する動画がありません</div>';
+    return;
+  }
+
+  // 大分類でグループ化
+  const groups={};
+  filtered.forEach(v=>{
+    const key=v.big||"未分類";
+    if(!groups[key])groups[key]=[];
+    groups[key].push(v);
+  });
+
+  listEl.innerHTML="";
+  Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([big,vids])=>{
+    const sec=document.createElement("div");
+    sec.style.marginBottom="16px";
+    sec.innerHTML=`<div style="font-size:13px;font-weight:700;color:#1f4e7a;background:#eef4fa;padding:8px 12px;border-radius:8px;margin-bottom:8px;border-left:4px solid #1f4e7a">${big}</div>`;
+
+    vids.forEach(v=>{
+      const vid=getYouTubeId(v.url||"");
+      const isCorrect=v.kind==="correct";
+      const card=document.createElement("div");
+      card.style.cssText="background:#fff;border:1px solid #e3e7ec;border-radius:12px;margin-bottom:10px;overflow:hidden";
+      card.innerHTML=`
+        <div style="display:flex;gap:12px;padding:12px;align-items:flex-start">
+          ${vid?`<div style="flex-shrink:0;position:relative;cursor:pointer;width:120px" onclick="openVideoModal('${vid}','${(v.title||"").replace(/'/g,"\'")}')">
+            <img src="${getThumb(vid)}" style="width:120px;height:68px;object-fit:cover;border-radius:6px;display:block">
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+              <div style="background:rgba(0,0,0,0.65);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center">
+                <span style="color:#fff;font-size:14px;margin-left:3px">▶</span>
+              </div>
+            </div>
+          </div>`:'<div style="width:120px;height:68px;background:#f1f5f9;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#9aa5b1;flex-shrink:0">URL無効</div>'}
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px">
+              <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:${isCorrect?"#eaf5ee":"#fdf3e3"};color:${isCorrect?"#2f7d4f":"#c2710c"}">${isCorrect?"✅ 正しいやり方":"⚠️ ミス例"}</span>
+              <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:#eef4fa;color:#1f4e7a">${METHOD_LABEL[v.method]||"共通"}</span>
+              ${v.detail?`<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#eef1f4;color:#6b7785">${v.detail}</span>`:""}
+            </div>
+            <div style="font-size:14px;font-weight:700;color:#1c2530;margin-bottom:4px">${v.title||"（タイトルなし）"}</div>
+            ${v.memo?`<div style="font-size:12px;color:#6b7785;line-height:1.5">${v.memo}</div>`:""}
+          </div>
+          <button onclick="deleteVideo('${v._key}')" style="background:none;border:none;color:#9aa5b1;font-size:18px;cursor:pointer;padding:0;flex-shrink:0;line-height:1">🗑️</button>
+        </div>
+      `;
+      sec.appendChild(card);
+    });
+    listEl.appendChild(sec);
+  });
+}
+
+// 動画モーダル再生
+window.openVideoModal=function(vid,title){
+  const ov=document.getElementById("lightbox-overlay");
+  const img=document.getElementById("lightbox-img");
+  if(!ov||!img)return;
+  // 既存のlightboxをiframeに転用
+  img.style.display="none";
+  let iframe=document.getElementById("video-iframe");
+  if(!iframe){
+    iframe=document.createElement("iframe");
+    iframe.id="video-iframe";
+    iframe.style.cssText="width:min(640px,90vw);height:min(360px,50vw);border:none;border-radius:8px";
+    iframe.allow="autoplay;encrypted-media";
+    iframe.allowFullscreen=true;
+    ov.appendChild(iframe);
+  }
+  iframe.src=`https://www.youtube.com/embed/${vid}?autoplay=1`;
+  ov.classList.add("open");
+};
+
+// lightboxを閉じたときiframeも止める
+document.getElementById("lightbox-close").addEventListener("click",()=>{
+  const iframe=document.getElementById("video-iframe");
+  if(iframe)iframe.src="";
+  const img=document.getElementById("lightbox-img");
+  if(img)img.style.display="";
+  document.getElementById("lightbox-overlay").classList.remove("open");
+});
+document.getElementById("lightbox-overlay").addEventListener("click",(e)=>{
+  if(e.target.id==="lightbox-overlay"){
+    const iframe=document.getElementById("video-iframe");
+    if(iframe)iframe.src="";
+    const img=document.getElementById("lightbox-img");
+    if(img)img.style.display="";
+    document.getElementById("lightbox-overlay").classList.remove("open");
+  }
+});
+
+// 動画削除
+window.deleteVideo=async function(key){
+  if(!confirm("この動画の登録を削除しますか？\n（YouTubeの動画は削除されません）"))return;
+  try{
+    await remove(ref(db,`videos/${key}`));
+    await renderVideoLib();
+  }catch(e){ alert("削除に失敗しました"); }
+};
+
+// 動画保存
+async function saveVideo(){
+  const url=(document.getElementById("v-url").value||"").trim();
+  const title=(document.getElementById("v-title").value||"").trim();
+  if(!url){alert("YouTube URLを入力してください");return;}
+  if(!getYouTubeId(url)){alert("有効なYouTube URLを入力してください\n例: https://www.youtube.com/watch?v=...");return;}
+  if(!title){alert("タイトルを入力してください");return;}
+  const btn=document.getElementById("save-video-btn");
+  btn.disabled=true;btn.textContent="登録中...";
+  const video={
+    url,title,
+    method:document.getElementById("v-method").value,
+    kind:document.getElementById("v-kind").value,
+    big:(document.getElementById("v-big").value||"").trim(),
+    detail:(document.getElementById("v-detail").value||"").trim(),
+    memo:(document.getElementById("v-memo").value||"").trim(),
+    createdAt:Date.now()
+  };
+  try{
+    await push(ref(db,"videos"),video);
+    document.getElementById("v-url").value="";
+    document.getElementById("v-title").value="";
+    document.getElementById("v-big").value="";
+    document.getElementById("v-detail").value="";
+    document.getElementById("v-memo").value="";
+    await renderVideoLib();
+    alert("動画を登録しました");
+  }catch(e){ alert("登録に失敗しました。通信環境を確認してください"); }
+  btn.disabled=false;btn.textContent="動画を登録する";
+}
+
+async function renderMeetings(){
+  const el=document.getElementById("saved-meetings");
+  el.innerHTML='<div style="color:#9aa5b1;font-size:13px;padding:8px 2px">読み込み中...</div>';
+  let saved=[];
+  try{
+    const snap=await get(ref(db,"meetings"));
+    if(snap.exists()){
+      const val=snap.val();
+      saved=Object.entries(val).map(([key,m])=>({...m,_key:key}));
+    }
+  }catch(e){
+    el.innerHTML='<div style="color:#c0392b;font-size:13px">議事録の読み込みに失敗しました</div>';
+    return;
+  }
+  meetingsCache=saved.sort((a,b)=>b.date.localeCompare(a.date));
+  el.innerHTML="";
+  if(saved.length===0)return;
+  meetingsCache.forEach((m)=>{
+    const card=document.createElement("div");
+    card.className="meeting-saved";
+    card.style.position="relative";
+    card.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
+        <div class="meeting-saved-title" style="margin-bottom:0">📝 ${m.date} のミーティング議事録 ${m.members?`（${m.members}）`:''}</div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button data-key="${m._key}" class="meeting-edit-btn" style="background:#eef4fa;color:#1f4e7a;border:1px solid #1f4e7a;border-radius:7px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✏️ 編集</button>
+          <button data-key="${m._key}" class="meeting-del-btn" style="background:#fdecea;color:#c0392b;border:1px solid #c0392b;border-radius:7px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🗑️ 削除</button>
+        </div>
+      </div>
+      ${m.notice?`<div style="margin-bottom:8px"><strong style="font-size:11px;color:#1f4e7a">周知事項</strong><div class="meeting-saved-text">${m.notice}</div></div>`:''}
+      ${m.countermeasure?`<div style="margin-bottom:8px"><strong style="font-size:11px;color:#c2710c">ミス対策・予防策</strong><div class="meeting-saved-text">${m.countermeasure}</div></div>`:''}
+      ${m.goal?`<div style="margin-bottom:8px"><strong style="font-size:11px;color:#2f7d4f">来月の目標</strong><div class="meeting-saved-text">${m.goal}</div></div>`:''}
+    `;
+
+    // 編集ボタン
+    card.querySelector(".meeting-edit-btn").addEventListener("click",()=>{
+      // フォームに値をセット
+      document.getElementById("m-date").value=m.date||"";
+      document.getElementById("m-notice").value=m.notice||"";
+      document.getElementById("m-countermeasure").value=m.countermeasure||"";
+      document.getElementById("m-goal").value=m.goal||"";
+      document.getElementById("m-members").value=m.members||"";
+      // 保存ボタンを「更新」モードにする
+      const saveBtn=document.getElementById("save-meeting-btn");
+      saveBtn.textContent="この議事録を更新する";
+      saveBtn.style.background="#c2710c";
+      saveBtn.dataset.editKey=m._key;
+      // フォームまでスクロール
+      document.getElementById("m-date").scrollIntoView({behavior:"smooth",block:"center"});
+    });
+
+    // 削除ボタン
+    card.querySelector(".meeting-del-btn").addEventListener("click",async()=>{
+      if(!confirm(`${m.date} の議事録を削除しますか？\nこの操作は元に戻せません。`))return;
+      try{
+        await remove(ref(db,`meetings/${m._key}`));
+        await renderMeetings();
+      }catch(e){
+        alert("削除に失敗しました。通信環境を確認してください");
+      }
+    });
+
+    el.appendChild(card);
+  });
+}
+
+async function saveMeeting(){
+  const date=document.getElementById("m-date").value;
+  if(!date){alert("開催日を入力してください");return}
+  const btn=document.getElementById("save-meeting-btn");
+  const editKey=btn.dataset.editKey||""; // 編集モードのときはkeyがある
+  const meeting={
+    date,
+    notice:document.getElementById("m-notice").value.trim(),
+    countermeasure:document.getElementById("m-countermeasure").value.trim(),
+    goal:document.getElementById("m-goal").value.trim(),
+    members:document.getElementById("m-members").value.trim(),
+    savedAt:Date.now()
+  };
+  btn.disabled=true;btn.textContent="保存中...";
+  try{
+    const key=editKey||`m_${date}_${Date.now()}`;
+    await set(ref(db,`meetings/${key}`),meeting);
+    // フォームをリセット
+    document.getElementById("m-date").value="";
+    document.getElementById("m-notice").value="";
+    document.getElementById("m-countermeasure").value="";
+    document.getElementById("m-goal").value="";
+    document.getElementById("m-members").value="";
+    // ボタンを新規モードに戻す
+    btn.style.background="";
+    btn.dataset.editKey="";
+    await renderMeetings();
+    alert(editKey?"議事録を更新しました":"議事録を保存しました（他のパソコンからも見れます）");
+  }catch(e){
+    alert("保存に失敗しました。通信環境を確認してください");
+  }
+  btn.disabled=false;btn.textContent="議事録を保存する";
+}
+
+let eduLoaded=false;
+function switchTab(tab){
+  ["summary","logs","edu","karte","video","meeting"].forEach(t=>{
+    document.getElementById("tab-"+t).style.display=t===tab?"block":"none";
+  });
+  ["summary","logs","edu","karte","video","meeting"].forEach(t=>{
+    const b=document.getElementById("tbtn-"+t);
+    if(b)b.classList.toggle("active",t===tab);
+  });
+  if(tab==="edu"&&!eduLoaded){eduLoaded=true;renderEdu();}
+  if(tab==="karte")renderKarte();
+  if(tab==="video")renderVideoLib();
+}
+
+document.getElementById("reload-btn").addEventListener("click",()=>{
+  loadData();
+  eduLoaded=false;
+  if(document.getElementById("tab-edu").style.display!=="none")renderEdu();
+});
+document.getElementById("money-toggle").addEventListener("click",toggleMoney);
+document.getElementById("save-rate-btn").addEventListener("click",saveRate);
+document.getElementById("tbtn-summary").addEventListener("click",()=>switchTab("summary"));
+document.getElementById("tbtn-logs").addEventListener("click",()=>switchTab("logs"));
+document.getElementById("tbtn-edu").addEventListener("click",()=>switchTab("edu"));
+document.getElementById("tbtn-karte").addEventListener("click",()=>switchTab("karte"));
+document.getElementById("karte-person").addEventListener("change",()=>renderKarte());
+document.getElementById("tbtn-video").addEventListener("click",()=>switchTab("video"));
+document.getElementById("save-video-btn").addEventListener("click",saveVideo);
+document.getElementById("video-filter-method").addEventListener("change",filterAndRenderVideos);
+document.getElementById("video-filter-kind").addEventListener("change",filterAndRenderVideos);
+let videoSearchTimer=null;
+document.getElementById("video-search").addEventListener("input",()=>{
+  clearTimeout(videoSearchTimer);
+  videoSearchTimer=setTimeout(filterAndRenderVideos,250);
+});
+document.getElementById("tbtn-meeting").addEventListener("click",()=>switchTab("meeting"));
+document.getElementById("print-btn").addEventListener("click",()=>window.print());
+
+// ==== AI分析用エクスポート ====
+function buildAiExportText(){
+  const period=document.getElementById("filter-period").selectedOptions[0]?.textContent||"";
+  const {from,to}=currentRangeCache.from?currentRangeCache:getRange();
+  const fmtD=d=>d?`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`:"";
+  let t="";
+  t+=`【株式会社濱崎組 会議資料用データ（AI分析依頼）】\n`;
+  t+=`対象期間: ${period}（${fmtD(from)} 〜 ${fmtD(to)}）\n`;
+  t+=`\n----- 概況 -----\n`;
+  t+=`ミス合計: ${document.getElementById("s-miss")?.textContent||"-"}件\n`;
+  t+=`うち重大: ${document.getElementById("s-sev")?.textContent||"-"}件\n`;
+  t+=`学び記録: ${document.getElementById("s-learn")?.textContent||"-"}件\n`;
+  t+=`やり直し時間合計: ${document.getElementById("s-redo-hours")?.textContent||"-"}時間\n`;
+
+  const misses=allMissesCache||[];
+  if(misses.length){
+    const bySev={};misses.forEach(m=>{if(m.sev)bySev[m.sev]=(bySev[m.sev]||0)+1});
+    t+=`\n----- 深刻度別件数 -----\n`;
+    Object.entries(bySev).forEach(([k,v])=>t+=`${k}: ${v}件\n`);
+
+    const byBig={};misses.forEach(m=>{const k=m.big||"未分類";byBig[k]=(byBig[k]||0)+1});
+    t+=`\n----- 作業別ミス件数（多い順） -----\n`;
+    Object.entries(byBig).sort((a,b)=>b[1]-a[1]).forEach(([k,v])=>t+=`${k}: ${v}件\n`);
+
+    const bySite={};misses.forEach(m=>{const k=m.site||"（現場なし）";bySite[k]=(bySite[k]||0)+1});
+    t+=`\n----- 現場別ミス件数 -----\n`;
+    Object.entries(bySite).sort((a,b)=>b[1]-a[1]).forEach(([k,v])=>t+=`${k}: ${v}件\n`);
+
+    const byPerson={};
+    misses.forEach(m=>{
+      const k=m.personName||"（不明）";
+      if(!byPerson[k])byPerson[k]={total:0,軽微:0,中程度:0,重大:0,items:[]};
+      byPerson[k].total++;
+      if(m.sev)byPerson[k][m.sev]=(byPerson[k][m.sev]||0)+1;
+      byPerson[k].items.push(m);
+    });
+    t+=`\n----- 個人別ミス内訳 -----\n`;
+    Object.entries(byPerson).sort((a,b)=>b[1].total-a[1].total).forEach(([name,d])=>{
+      t+=`◆${name}（計${d.total}件／軽微${d.軽微||0}・中程度${d.中程度||0}・重大${d.重大||0}）\n`;
+      d.items.sort((a,b)=>a.date.localeCompare(b.date)).forEach(m=>{
+        t+=`　・${m.date} ${m.big||""}${m.detail?"-"+m.detail:""}: ${m.text||""}${m.cause?`（原因: ${m.cause}）`:""}\n`;
+      });
+    });
+
+    t+=`\n----- 重大ミスの詳細（会議で個別確認すべきもの） -----\n`;
+    misses.filter(m=>m.sev==="重大").forEach(m=>{
+      t+=`・${m.date} ${m.personName} / ${m.big||""}${m.detail?"-"+m.detail:""}: ${m.text||""}${m.cause?`（原因: ${m.cause}）`:""}\n`;
+    });
+  }else{
+    t+=`\n（この期間のミス記録はありません）\n`;
+  }
+
+  const learns=allLearnsCache||[];
+  if(learns.length){
+    t+=`\n----- 今月の学び一覧 -----\n`;
+    learns.forEach(l=>{ t+=`・${l.date} ${l.personName}: ${l.learn}\n`; });
+  }
+
+  const checklist=checklistCache||{};
+  const members=Object.keys(checklist);
+  if(members.length){
+    t+=`\n----- 育成チェック（自己評価 vs 他者評価） -----\n`;
+    members.forEach(m=>{
+      const d=checklist[m]||{};
+      const selfScore=d.self?eduScore(d.self.ratings):null;
+      const evals=d.evals||[];
+      const latest=evals.length?evals[evals.length-1]:null;
+      const evalScore=latest?eduScore(latest.ratings):null;
+      t+=`・${m}: 自己評価${selfScore!==null?selfScore+"点":"未評価"}${evalScore!==null?`／他者評価(${latest.name})${evalScore}点`:""}\n`;
+    });
+  }else{
+    t+=`\n（育成チェックのデータはまだありません）\n`;
+  }
+
+  t+=`\n----- AIへの依頼 -----\n`;
+  t+=`上記データをもとに、月一の定例会議（60分）で話す内容を整理してください。\n`;
+  t+=`①先月の振り返り（ミス傾向）②再発防止の論点 ③育成の進捗と自己評価とのズレ ④来月の目標案\n`;
+  t+=`の4点を、会議でそのまま使える形（要点箇条書き）でまとめてください。\n`;
+  return t;
+}
+
+document.getElementById("export-ai-btn").addEventListener("click",()=>{
+  const text=buildAiExportText();
+  document.getElementById("export-ai-text").value=text;
+  document.getElementById("export-ai-result").style.display="block";
+  document.getElementById("export-ai-text").select();
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text)
+      .then(()=>{ alert("テキストを生成してコピーしました。ClaudeやChatGPTに貼り付けてください。"); })
+      .catch(()=>{ alert("自動コピーができませんでした。下の欄が選択状態になっているので、そのままコピー（Ctrl+C／⌘+C）してください。"); });
+  }else{
+    alert("テキストを生成しました。下の欄が選択状態になっているので、そのままコピー（Ctrl+C／⌘+C）してください。");
+  }
+});
+document.getElementById("save-meeting-btn").addEventListener("click",saveMeeting);
+document.getElementById("cancel-edit-btn").addEventListener("click",()=>{
+  const btn=document.getElementById("save-meeting-btn");
+  btn.textContent="議事録を保存する";
+  btn.style.background="";
+  btn.dataset.editKey="";
+  document.getElementById("m-date").value="";
+  document.getElementById("m-notice").value="";
+  document.getElementById("m-countermeasure").value="";
+  document.getElementById("m-goal").value="";
+  document.getElementById("m-members").value="";
+  document.getElementById("cancel-edit-btn").style.display="none";
+});
+// 編集モードになったときキャンセルボタンを表示
+const saveBtn=document.getElementById("save-meeting-btn");
+const cancelBtn=document.getElementById("cancel-edit-btn");
+const observer=new MutationObserver(()=>{
+  cancelBtn.style.display=saveBtn.dataset.editKey?"inline-block":"none";
+});
+observer.observe(saveBtn,{attributes:true,attributeFilter:["data-edit-key"]});
+document.getElementById("filter-period").addEventListener("change",loadData);
+document.getElementById("filter-person").addEventListener("change",loadData);
+
+// 検索ボックス
+let searchDebounce=null;
+const searchInputEl=document.getElementById("search-input");
+const searchBoxEl=document.getElementById("search-box");
+searchInputEl.addEventListener("input",()=>{
+  searchBoxEl.classList.toggle("has-val",searchInputEl.value.trim().length>0);
+  clearTimeout(searchDebounce);
+  searchDebounce=setTimeout(loadData,250);
+});
+document.getElementById("search-clear").addEventListener("click",()=>{
+  searchInputEl.value="";
+  searchBoxEl.classList.remove("has-val");
+  loadData();
+});
+
+// 写真のライトボックス
+document.getElementById("lightbox-close").addEventListener("click",closeLightbox);
+document.getElementById("lightbox-overlay").addEventListener("click",(e)=>{
+  if(e.target.id==="lightbox-overlay")closeLightbox();
+});
+
+const today=new Date();
+document.getElementById("m-date").value=`${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+
+// ── ダウンロード機能 ──────────────────────────────
+// 現在の期間ラベルを取得
+function getPeriodLabel(){
+  const v=document.getElementById("filter-period").value;
+  const now=new Date();
+  const y=now.getFullYear(),m=now.getMonth()+1;
+  if(v==="month")return `${y}年${m}月`;
+  if(v==="lastmonth"){const lm=m===1?12:m-1;const ly=m===1?y-1:y;return `${ly}年${lm}月`;}
+  if(v==="week")return `${y}年${m}月_今週`;
+  if(v==="lastweek")return `${y}年${m}月_先週`;
+  return "全期間";
+}
+
+// ── PDF保存 ──
+// ブラウザの印刷ダイアログを「PDFに保存」で使う方式。
+// 印刷時のCSSで余計なボタンを非表示にして、月次サマリーをきれいに出力する。
+document.getElementById("dl-pdf-btn").addEventListener("click",()=>{
+  // 印刷前に一時的にタイトルを変更してファイル名のヒントにする
+  const orig=document.title;
+  document.title=`日報サマリー_${getPeriodLabel()}`;
+  window.print();
+  setTimeout(()=>{ document.title=orig; },2000);
+});
+
+// ── Excel保存 ──
+document.getElementById("dl-excel-btn").addEventListener("click",async()=>{
+  const btn=document.getElementById("dl-excel-btn");
+  if(!window.XLSX){
+    btn.textContent="準備中...";btn.disabled=true;
+    await new Promise(r=>setTimeout(r,1500));
+    if(!window.XLSX){btn.textContent="📊 Excelで保存";btn.disabled=false;alert("Excelライブラリが読み込まれていません。ページを再読み込みしてください。");return;}
+  }
+  btn.textContent="生成中...";btn.disabled=true;
+  await new Promise(r=>setTimeout(r,50));
+  try{
+  const label=getPeriodLabel();
+  const wb=XLSX.utils.book_new();
+
+  // ① ミス一覧シート
+  const missRows=[["日付","氏名","現場","工法","大分類","詳細作業","深刻度","ミス内容","原因","やり直し時間(分)","対策"]];
+  (allMissesCache||[]).forEach(ms=>{
+    missRows.push([
+      ms.date||"",ms.personName||"",ms.site||"",
+      ms.method==="se"?"SE工法":"在来工法",
+      ms.big||"",ms.detail||"",ms.sev||"",
+      ms.text||"",ms.cause||"",ms.redo||"",ms.taisaku||""
+    ]);
+  });
+  const wsMiss=XLSX.utils.aoa_to_sheet(missRows);
+  // 列幅設定
+  wsMiss["!cols"]=[{wch:12},{wch:10},{wch:14},{wch:10},{wch:14},{wch:16},{wch:8},{wch:30},{wch:24},{wch:12},{wch:24}];
+  XLSX.utils.book_append_sheet(wb,wsMiss,"ミス一覧");
+
+  // ② 学び一覧シート
+  const learnRows=[["日付","氏名","現場","学び・気づき"]];
+  (allLearnsCache||[]).forEach(x=>{
+    learnRows.push([x.date||"",x.personName||"",x.rec&&x.rec.site||"",x.learn||""]);
+  });
+  const wsLearn=XLSX.utils.aoa_to_sheet(learnRows);
+  wsLearn["!cols"]=[{wch:12},{wch:10},{wch:14},{wch:40}];
+  XLSX.utils.book_append_sheet(wb,wsLearn,"学び一覧");
+
+  // ③ 作業別ミス件数シート
+  const byDetail={};
+  (allMissesCache||[]).forEach(x=>{
+    const k=`${x.method==="se"?"SE":"在来"}／${x.big||"未分類"}／${x.detail||"未分類"}`;
+    byDetail[k]=(byDetail[k]||0)+1;
+  });
+  const detailRows=[["工法／大分類／詳細作業","件数"]];
+  Object.entries(byDetail).sort((a,b)=>b[1]-a[1]).forEach(([k,v])=>detailRows.push([k,v]));
+  const wsDet=XLSX.utils.aoa_to_sheet(detailRows);
+  wsDet["!cols"]=[{wch:36},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,wsDet,"作業別件数");
+
+  // ファイル名：日報サマリー_2026年7月.xlsx
+  XLSX.writeFile(wb,`日報サマリー_${label}.xlsx`);
+  }catch(e){alert("Excelの生成に失敗しました。");}
+  btn.textContent="📊 Excelで保存";btn.disabled=false;
+});
+
+// ── 議事録ダウンロード ──
+document.getElementById("meeting-dl-pdf-btn").addEventListener("click",()=>{
+  if(!meetingsCache||meetingsCache.length===0){
+    alert("議事録がありません。先に議事録タブを開いて読み込んでください。");return;
+  }
+  const y=new Date().getFullYear();
+  const html=`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">
+<title>議事録_濱崎組_${y}年</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Hiragino Sans','Noto Sans JP',sans-serif;color:#1c2530;padding:24px 32px;font-size:13px}
+h1{font-size:20px;font-weight:800;color:#1f4e7a;border-bottom:3px solid #1f4e7a;padding-bottom:8px;margin-bottom:6px}
+.meta{font-size:11px;color:#9aa5b1;margin-bottom:20px}
+.record{border:1px solid #e3e7ec;border-radius:10px;margin-bottom:16px;overflow:hidden;page-break-inside:avoid}
+.record-head{background:#eef4fa;padding:10px 16px;display:flex;align-items:center;gap:16px;border-bottom:1px solid #e3e7ec}
+.record-date{font-size:15px;font-weight:800;color:#1f4e7a}
+.record-members{font-size:12px;color:#6b7785}
+.record-body{padding:12px 16px}
+.section{margin-bottom:12px}
+.section-label{font-size:10px;font-weight:800;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:5px}
+.section-text{font-size:13px;line-height:1.7;white-space:pre-wrap;color:#1c2530}
+.sign-row{display:flex;gap:12px;margin-top:28px}
+.sign-box{border:1px solid #ccc;border-radius:6px;padding:8px 14px;min-width:110px;text-align:center;font-size:11px;color:#9aa5b1}
+.sign-inner{height:32px}
+@media print{body{padding:14px 18px}.record{break-inside:avoid}}
+</style></head><body>
+<h1>月次ミーティング議事録　株式会社濱崎組</h1>
+<div class="meta">出力日：${new Date().toLocaleDateString("ja-JP")}　全${meetingsCache.length}件</div>
+${meetingsCache.map(m=>`
+<div class="record">
+  <div class="record-head">
+    <span class="record-date">📝 ${m.date}</span>
+    ${m.members?`<span class="record-members">参加者：${m.members}</span>`:''}
+  </div>
+  <div class="record-body">
+    ${m.notice?`<div class="section"><span class="section-label" style="background:#eef4fa;color:#1f4e7a">周知事項・共有内容</span><div class="section-text">${m.notice}</div></div>`:''}
+    ${m.countermeasure?`<div class="section"><span class="section-label" style="background:#fdf3e3;color:#c2710c">ミス対策・予防策</span><div class="section-text">${m.countermeasure}</div></div>`:''}
+    ${m.goal?`<div class="section"><span class="section-label" style="background:#eaf5ee;color:#2f7d4f">来月の目標・取り組み</span><div class="section-text">${m.goal}</div></div>`:''}
+  </div>
+</div>`).join('')}
+<div class="sign-row">
+  <div class="sign-box"><div class="sign-inner"></div>作成者</div>
+  <div class="sign-box"><div class="sign-inner"></div>確認者</div>
+  <div class="sign-box"><div class="sign-inner"></div>代表</div>
+</div>
+<script>window.onload=()=>window.print();<\/script>
+</body></html>`;
+  const w=window.open("","_blank");
+  w.document.write(html);
+  w.document.close();
+});
+
+document.getElementById("meeting-dl-excel-btn").addEventListener("click",async()=>{
+  const btn=document.getElementById("meeting-dl-excel-btn");
+  if(!meetingsCache||meetingsCache.length===0){alert("議事録がありません。先に議事録タブを開いて読み込んでください。");return;}
+  // XLSXがまだ読み込まれていない場合は少し待つ
+  if(!window.XLSX){
+    btn.textContent="準備中...";btn.disabled=true;
+    await new Promise(r=>setTimeout(r,1500));
+    if(!window.XLSX){btn.textContent="📊 議事録をExcelで保存";btn.disabled=false;alert("Excelライブラリが読み込まれていません。ページを再読み込みしてください。");return;}
+  }
+  btn.textContent="生成中...";btn.disabled=true;
+  // 重い処理をUIスレッドに返してから実行
+  await new Promise(r=>setTimeout(r,50));
+  try{
+    const wb=XLSX.utils.book_new();
+    // 全件一覧シート
+    const rows=[["開催日","参加者","周知事項・共有内容","ミス対策・予防策","来月の目標・取り組み"]];
+    meetingsCache.forEach(m=>{
+      rows.push([m.date||"",m.members||"",m.notice||"",m.countermeasure||"",m.goal||""]);
+    });
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"]=[{wch:14},{wch:18},{wch:40},{wch:40},{wch:30}];
+    XLSX.utils.book_append_sheet(wb,ws,"議事録一覧");
+    // 年ごとシート
+    const byYear={};
+    meetingsCache.forEach(m=>{
+      const yr=(m.date||"").slice(0,4)||"不明";
+      if(!byYear[yr])byYear[yr]=[];
+      byYear[yr].push(m);
+    });
+    Object.entries(byYear).sort().forEach(([yr,list])=>{
+      const yrows=[["開催日","参加者","周知事項・共有内容","ミス対策・予防策","来月の目標・取り組み"]];
+      list.forEach(m=>{yrows.push([m.date||"",m.members||"",m.notice||"",m.countermeasure||"",m.goal||""]);});
+      const yw=XLSX.utils.aoa_to_sheet(yrows);
+      yw["!cols"]=[{wch:14},{wch:18},{wch:40},{wch:40},{wch:30}];
+      XLSX.utils.book_append_sheet(wb,yw,`${yr}年`);
+    });
+    XLSX.writeFile(wb,`議事録_濱崎組_${new Date().getFullYear()}年.xlsx`);
+  }catch(e){
+    alert("Excelの生成に失敗しました。ページを再読み込みして試してください。");
+  }
+  btn.textContent="📊 議事録をExcelで保存";btn.disabled=false;
+});
+
+// ── 月末報告書 印刷（新しいタブで開く） ──
+document.getElementById("print-report-btn").addEventListener("click",()=>{
+  const label=getPeriodLabel();
+  const misses=allMissesCache||[];
+  const learns=allLearnsCache||[];
+  const byBig={};
+  misses.forEach(x=>{const k=(x.method==="se"?"SE工法":"在来工法")+"／"+(x.big||"未分類");byBig[k]=(byBig[k]||0)+1;});
+  const byBigRows=Object.entries(byBig).sort((a,b)=>b[1]-a[1]);
+  const maxBig=Math.max(1,...byBigRows.map(x=>x[1]));
+  const bySev={軽微:0,中程度:0,重大:0};
+  misses.forEach(x=>{if(x.sev&&bySev[x.sev]!==undefined)bySev[x.sev]++;});
+  const totalMin=misses.reduce((s,x)=>s+(parseFloat(x.redo)||0),0);
+  const totalH=Math.round(totalMin/60*10)/10;
+  const html=`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">
+<title>月末報告書_${label}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Hiragino Sans','Noto Sans JP',sans-serif;color:#1c2530;padding:20px 28px;font-size:13px}
+h1{font-size:20px;font-weight:800;color:#1f4e7a;border-bottom:3px solid #1f4e7a;padding-bottom:8px;margin-bottom:16px}
+h2{font-size:14px;font-weight:700;color:#1f4e7a;background:#eef4fa;padding:6px 10px;border-radius:6px;margin:20px 0 10px}
+.meta{display:flex;gap:24px;font-size:12px;color:#6b7785;margin-bottom:16px}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:4px}
+.stat{text-align:center;background:#f4f6f8;border-radius:8px;padding:10px 4px}
+.stat-n{font-size:22px;font-weight:800;color:#1f4e7a}
+.stat-l{font-size:10px;color:#9aa5b1;margin-top:2px}
+.sev-row{display:flex;gap:8px;margin-bottom:4px}
+.sev{flex:1;text-align:center;border-radius:8px;padding:8px 4px}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.bar-label{font-size:11px;width:160px;flex-shrink:0;text-align:right;color:#1c2530}
+.bar-bg{flex:1;height:14px;background:#e3e7ec;border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;background:#1f4e7a}
+.bar-val{font-size:11px;font-weight:700;color:#1f4e7a;width:28px;text-align:right}
+.learn-item{border-left:3px solid #2f7d4f;padding:5px 10px;margin-bottom:6px;background:#f8faf9;border-radius:0 6px 6px 0}
+.learn-date{font-size:10px;color:#2f7d4f;font-weight:700;margin-bottom:2px}
+.learn-text{font-size:12px;line-height:1.5;white-space:pre-wrap}
+.sign-row{display:flex;gap:16px;margin-top:28px}
+.sign-box{border:1px solid #ccc;border-radius:6px;padding:10px 16px;width:120px;text-align:center;font-size:11px;color:#9aa5b1}
+.sign-inner{height:36px}
+@media print{body{padding:12px 16px}}
+</style></head><body>
+<h1>月次業務報告書 — ${label}</h1>
+<div class="meta"><span>株式会社濱崎組</span><span>出力日：${new Date().toLocaleDateString("ja-JP")}</span></div>
+<h2>① 今月の概況</h2>
+<div class="stats">
+  <div class="stat"><div class="stat-n">${misses.length}</div><div class="stat-l">ミス合計</div></div>
+  <div class="stat"><div class="stat-n" style="color:#c0392b">${bySev["重大"]}</div><div class="stat-l">重大ミス</div></div>
+  <div class="stat"><div class="stat-n" style="color:#c2710c">${totalH}h</div><div class="stat-l">やり直し時間</div></div>
+  <div class="stat"><div class="stat-n" style="color:#2f7d4f">${learns.length}</div><div class="stat-l">学び記録</div></div>
+  <div class="stat"><div class="stat-n" style="color:#6b7785">${[...new Set(misses.map(x=>x.personName))].length}</div><div class="stat-l">記録者数</div></div>
+</div>
+<h2>② 深刻度別ミス件数</h2>
+<div class="sev-row">
+  <div class="sev" style="background:#eaf5ee"><div style="font-size:20px;font-weight:800;color:#2f7d4f">${bySev["軽微"]}</div><div style="font-size:10px;color:#2f7d4f">軽微（30分未満）</div></div>
+  <div class="sev" style="background:#fdf3e3"><div style="font-size:20px;font-weight:800;color:#c2710c">${bySev["中程度"]}</div><div style="font-size:10px;color:#c2710c">中程度（30分〜2時間）</div></div>
+  <div class="sev" style="background:#fdecea"><div style="font-size:20px;font-weight:800;color:#c0392b">${bySev["重大"]}</div><div style="font-size:10px;color:#c0392b">重大（2時間以上）</div></div>
+</div>
+<h2>③ 作業別ミス件数</h2>
+${byBigRows.slice(0,10).map(([k,v])=>`<div class="bar-row"><div class="bar-label">${k}</div><div class="bar-bg"><div class="bar-fill" style="width:${Math.round(v/maxBig*100)}%"></div></div><div class="bar-val">${v}件</div></div>`).join('')}
+<h2>④ 今月の学び・気づき</h2>
+${learns.length===0?'<div style="color:#9aa5b1;font-size:12px">この期間の学び記録はありません</div>':learns.slice(0,15).map(x=>`<div class="learn-item"><div class="learn-date">${x.date} ${x.personName}</div><div class="learn-text">${x.learn}</div></div>`).join('')}
+<div class="sign-row">
+  <div class="sign-box"><div class="sign-inner"></div>作成者</div>
+  <div class="sign-box"><div class="sign-inner"></div>確認者</div>
+  <div class="sign-box"><div class="sign-inner"></div>代表</div>
+</div>
+<script>window.onload=()=>window.print();<\/script>
+</body></html>`;
+  const w=window.open("","_blank");w.document.write(html);w.document.close();
+});
+
+// ── ミス記録（写真つき）印刷 ──
+document.getElementById("print-miss-btn").addEventListener("click",()=>{
+  const label=getPeriodLabel();
+  const SEV_COLOR={軽微:"#2f7d4f",中程度:"#c2710c",重大:"#c0392b"};
+  function getPhotos(obj){
+    if(!obj)return[];
+    const s=obj.photo||obj.photoUrl||obj.image||obj.imageUrl;
+    const a=obj.photos||obj.images||obj.photoUrls||obj.imageUrls;
+    const r=[];if(s)r.push(s);if(Array.isArray(a))r.push(...a);return r;
+  }
+  const entries=(allEntriesCache||[]).filter(({rec})=>(rec.misses&&rec.misses.length>0)||getPhotos(rec).length>0);
+  const html=`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">
+<title>ミス記録_${label}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Hiragino Sans','Noto Sans JP',sans-serif;color:#1c2530;padding:20px 24px;font-size:13px}
+h1{font-size:18px;font-weight:800;color:#c2710c;border-bottom:3px solid #c2710c;padding-bottom:8px;margin-bottom:16px}
+.day-block{border:1px solid #e3e7ec;border-radius:10px;margin-bottom:14px;overflow:hidden;page-break-inside:avoid}
+.day-head{background:#f4f6f8;padding:8px 14px;display:flex;gap:12px;align-items:center;border-bottom:1px solid #e3e7ec}
+.day-date{font-size:14px;font-weight:800;color:#1f4e7a}
+.day-person{font-size:12px;color:#6b7785}
+.day-site{font-size:12px;color:#9aa5b1}
+.day-body{padding:10px 14px}
+.miss-item{background:#fdf8f4;border-left:3px solid #c2710c;border-radius:0 8px 8px 0;padding:8px 12px;margin-bottom:8px}
+.miss-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:4px}
+.tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#fdf3e3;color:#c2710c}
+.miss-text{font-size:13px;line-height:1.5}
+.miss-cause{font-size:11px;color:#6b7785;margin-top:3px}
+.miss-taisaku{font-size:11px;color:#2f7d4f;margin-top:4px;padding:4px 8px;background:#eaf5ee;border-radius:4px}
+.photo-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.photo-grid img{width:100px;height:100px;object-fit:cover;border-radius:6px;border:1px solid #e3e7ec}
+@media print{body{padding:10px 14px}.day-block{break-inside:avoid}}
+</style></head><body>
+<h1>ミス記録（写真つき）— ${label}</h1>
+<div style="font-size:11px;color:#9aa5b1;margin-bottom:16px">株式会社濱崎組 ／ 出力日：${new Date().toLocaleDateString("ja-JP")}</div>
+${entries.length===0?'<div style="color:#9aa5b1;text-align:center;padding:40px">この期間のミス記録はありません</div>':
+entries.sort((a,b)=>b.dateKey.localeCompare(a.dateKey)).map(({displayName,dateKey,rec})=>{
+  const misses=rec.misses||[];
+  const wd=["日","月","火","水","木","金","土"][new Date(dateKey).getDay()];
+  const [,mm,dd]=dateKey.split("-");
+  const recPhotos=getPhotos(rec);
+  return `<div class="day-block">
+    <div class="day-head">
+      <span class="day-date">${+mm}月${+dd}日（${wd}）</span>
+      <span class="day-person">${displayName}</span>
+      ${rec.site?`<span class="day-site">${rec.site}</span>`:''}
+    </div>
+    <div class="day-body">
+      ${misses.map(ms=>{
+        const sc=SEV_COLOR[ms.sev]||"#c2710c";
+        const msp=getPhotos(ms);
+        return `<div class="miss-item">
+          <div class="miss-tags">
+            ${ms.big?`<span class="tag">${ms.big}</span>`:''}
+            ${ms.detail?`<span class="tag" style="background:#eef1f4;color:#6b7785">${ms.detail}</span>`:''}
+            ${ms.sev?`<span class="tag" style="color:${sc};background:${sc}22">${ms.sev}</span>`:''}
+          </div>
+          <div class="miss-text">${ms.text||""}</div>
+          ${ms.cause?`<div class="miss-cause">原因: ${ms.cause}</div>`:''}
+          ${ms.taisaku?`<div class="miss-taisaku">✅ 対策: ${ms.taisaku}</div>`:''}
+          ${msp.length>0?`<div class="photo-grid">${msp.map(src=>`<img src="${src}" onerror="this.style.display='none'">`).join('')}</div>`:''}
+        </div>`;
+      }).join('')}
+      ${recPhotos.length>0?`<div style="margin-top:6px;font-size:11px;color:#9aa5b1;margin-bottom:4px">📷 学び写真</div><div class="photo-grid">${recPhotos.map(src=>`<img src="${src}" onerror="this.style.display='none'">`).join('')}</div>`:''}
+    </div>
+  </div>`;
+}).join('')}
+<script>window.onload=()=>window.print();<\/script>
+</body></html>`;
+  const w=window.open("","_blank");w.document.write(html);w.document.close();
+});
+
+// ==== ログイン（会社のアカウントを知っている人だけ見られる） ====
+document.getElementById("login-btn").addEventListener("click",async()=>{
+  try{
+    await firebase.auth().signInWithEmailAndPassword(
+      document.getElementById("login-mail").value.trim(),
+      document.getElementById("login-pass").value);
+  }catch(e){
+    document.getElementById("login-err").textContent="メールまたはパスワードが違います";
+  }
+});
+firebase.auth().onAuthStateChanged(u=>{
+  document.getElementById("login").style.display=u?"none":"flex";
+  if(u)loadData();
+});
+</script>
+</body>
+</html>
