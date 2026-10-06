@@ -49,6 +49,16 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--navy);ba
 .cell .pc{font-size:10px;font-weight:800;color:#fff;background:var(--navy);border-radius:8px;padding:0 5px;line-height:15px}
 .cell .ok{font-size:10px;color:var(--green);font-weight:800}
 .cell .warn{position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--red)}
+/* チェックリスト */
+.chk-sum{display:block;width:100%;text-align:left;margin-top:8px;background:var(--navyBg);color:var(--navy);border:none;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:700}
+.chk-sum.late{background:var(--redBg);color:var(--red)}
+.chk-body{margin-top:6px;padding:8px 10px;background:#fff;border:1px solid var(--line);border-radius:8px}
+.chk-h{font-size:12px;font-weight:800;color:var(--sub);margin:8px 0 4px}
+.chk-h:first-child{margin-top:0}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:13px;padding:5px 0;font-weight:500;color:var(--ink);letter-spacing:0;margin:0}
+.chk input{width:20px;height:20px;flex-shrink:0;margin-top:1px}
+.chk.on>span{color:var(--faint);text-decoration:line-through}
+.rules{margin:0 0 0 18px;font-size:13px;line-height:1.7}
 /* 年間 */
 .ygrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .ym{background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 6px}
@@ -134,6 +144,46 @@ const WX = ["晴れ","曇り","雨","雪","強風"];
 const MISS_CATS = ["現場管理","安全","工程","資材","職人とのやり取り","その他"];
 const TRADES = ["大工","基礎","プレカット搬入","足場","屋根","板金","外壁","サッシ","防蟻","断熱","電気","設備","内装（クロス）","左官","塗装","美装","検査・立会い","その他"];
 const STATUSES = ["未連絡","連絡済","確定","中止"];
+// 工程ごとの「材料・ルール・事前の段取り」の標準例（参考。工程マスタ画面で自社のやり方に直して使う）
+// prep の d は「何日前までにやるか」（0＝当日）
+const DEFAULT_TPL = {
+  "基礎": { materials:["鉄筋（径・ピッチを図面で確認）","アンカーボルト・ホールダウン金物","型枠・セパ","スペーサー","生コン（配合・数量は業者と確認）"],
+    rules:["配筋検査が終わるまで打設しない","アンカーボルトの位置・高さを図面と照合する","雨の日の打設可否は前日に決める"],
+    prep:[{d:14,t:"配筋検査の予約"},{d:7,t:"生コン・ポンプ車の手配確認"},{d:3,t:"天気予報を見て打設日を最終決定"},{d:1,t:"近隣へ車両出入りの連絡"}] },
+  "プレカット搬入": { materials:["構造材・羽柄材（納品書と照合）","金物（SE金物・ボルト類）","養生シート・ブルーシート"],
+    rules:["搬入順と置き場を事前に決めておく","番付を確認してから荷下ろしする","雨養生を必ずする"],
+    prep:[{d:21,t:"プレカット図の承認"},{d:7,t:"搬入日時・車両サイズの確認"},{d:3,t:"置き場の確保・地面の養生"},{d:1,t:"クレーン・誘導員の手配確認"}] },
+  "足場": { materials:["養生シート・メッシュシート"],
+    rules:["始業前に作業床・手すりを点検する","隣地境界との離れを確認する"],
+    prep:[{d:7,t:"近隣挨拶（工事のお知らせ）"},{d:3,t:"搬入車両の駐車位置を確保"},{d:1,t:"電線・障害物の確認"}] },
+  "大工": { materials:["構造材・金物","仮筋交い材","釘・ビス類"],
+    rules:["建入れを確認してから本締めする","金物の締め忘れをチェックする","高所はフルハーネス（安全帯）を使う"],
+    prep:[{d:14,t:"上棟日を施主に連絡"},{d:7,t:"クレーンの手配"},{d:3,t:"天気予報の確認"},{d:1,t:"人員の最終確認"}] },
+  "屋根": { materials:["ルーフィング","屋根材","役物・雪止め"],
+    rules:["ルーフィングの重ね幅を守る","雨の前に防水まで終わらせる","高所はフルハーネスを使う"],
+    prep:[{d:14,t:"屋根材の色・品番を施主と確定"},{d:7,t:"材料の発注・搬入日の確認"},{d:1,t:"天気予報の確認"}] },
+  "サッシ": { materials:["サッシ本体（品番・サイズを照合）","防水テープ","水切り"],
+    rules:["取り付け前に開口寸法を確認する","防水テープは下→横→上の順に貼る"],
+    prep:[{d:21,t:"サッシの発注（納期確認）"},{d:3,t:"搬入日・置き場の確認"}] },
+  "電気": { materials:["配線計画図（コンセント・スイッチ位置）","分電盤"],
+    rules:["断熱・ボードの前に配線位置を確認する","構造材への穴あけは監督の承認を取る"],
+    prep:[{d:7,t:"施主とコンセント位置の最終確認"},{d:1,t:"前工程（下地）の完了確認"}] },
+  "設備": { materials:["配管材","設備機器（品番を照合）"],
+    rules:["構造材の欠き込み・穴あけは事前に相談","配管の勾配を確認する"],
+    prep:[{d:7,t:"機器の品番・納期確認"},{d:1,t:"前工程の完了確認"}] },
+  "防蟻": { materials:["薬剤"],
+    rules:["施工範囲を確認する","施工後に保証書を受け取る"],
+    prep:[{d:3,t:"施工範囲の下地が出ているか確認"}] },
+  "断熱": { materials:["断熱材（厚み・品番を照合）","気密テープ"],
+    rules:["隙間なく充填する","電気配線・設備配管が終わってから施工する"],
+    prep:[{d:3,t:"前工程（配線・配管）の完了確認"}] },
+  "内装（クロス）": { materials:["クロス（施主決定の品番）","パテ"],
+    rules:["ボードのビス頭・継ぎ目の処理を確認する"],
+    prep:[{d:14,t:"クロス品番を施主と確定"},{d:3,t:"ボード工事の完了確認"},{d:1,t:"室内の清掃"}] },
+  "検査・立会い": { materials:["図面一式","検査チェックリスト","カメラ"],
+    rules:["指摘事項は写真付きで記録する"],
+    prep:[{d:7,t:"検査日の予約・確認"},{d:1,t:"検査箇所の事前確認"}] }
+};
 const REDO = [{max:30,sev:"軽微"},{max:120,sev:"中程度"},{max:Infinity,sev:"重大"}]; // 大工日報と同じ基準
 const WD = ["日","月","火","水","木","金","土"];
 
@@ -166,6 +216,9 @@ const S = {
   cursor: new Date(),
   selDate: today(),
   site: lsGet("kantoku_site_filter", ""),
+  tpls: {},                           // 工程マスタ（Firebase）
+  openChk: {},                        // チェックリストを開いている手配
+  tplEdit: null,                      // 編集中の工程名
   planEdit: null,                     // 編集中の手配（id か "new"）
   planCopy: null,                     // 複製元の手配
   onlyPending: false,                 // 今後の段取り：未連絡だけ表示
@@ -206,6 +259,10 @@ function startData(){
     S.plans = snap.exists() ? snap.val() : {};
     refreshLists();
     if(S.view !== "report" && !S.planEdit) render(); // 入力中は画面を作り直さない（入力が消えないように）
+  }, err => showDbError(err));
+  onValue(ref(db, "kantoku_templates"), snap => {
+    S.tpls = snap.exists() ? snap.val() : {};
+    if(S.view !== "report" && !S.planEdit && S.view !== "master") render();
   }, err => showDbError(err));
   onValue(ref(db, "kantoku_meta/names"), async snap => {
     S.names = snap.exists() ? snap.val() : {};
@@ -251,7 +308,7 @@ function header(){
     <div><div class="head-title">現場監督日報・段取り</div><div class="head-sub">株式会社濱崎組</div></div>
     <button class="name-chip" data-act="names">${S.me ? "👤 " + esc(S.me) : "名前を選ぶ"}</button>
   </div>
-  <div class="links"><a href="../">大工日報 →</a><a href="../kanri/">日報管理 →</a></div>`;
+  <div class="links"><a href="../">大工日報 →</a><a href="../kanri/">日報管理 →</a><a href="#" data-act="master">⚙ 工程ごとの材料・ルール</a></div>`;
 }
 function tabs(){
   const t = (v,l) => `<button class="tab ${S.view===v||(v==="cal"&&S.view==="day")?"on":""}" data-act="view" data-v="${v}">${l}</button>`;
@@ -266,6 +323,129 @@ function plansOn(d){
     .filter(([,p]) => covers(p, d) && (!S.site || p.site === S.site))
     .sort((a,b) => (a[1].site||"").localeCompare(b[1].site||"") || (a[1].time||"").localeCompare(b[1].time||""));
 }
+// ===== 工程マスタ =====
+function getTpl(trade){
+  if(!trade) return null;
+  const saved = S.tpls[uidOf(trade)];
+  if(saved) return { name:trade, materials:toArr(saved.materials), rules:toArr(saved.rules), prep:toArr(saved.prep), custom:true };
+  const d = DEFAULT_TPL[trade];
+  return d ? { name:trade, ...d, custom:false } : null;
+}
+const doneOf = p => toArr(p.done);
+// アラート：事前段取りの期限切れ／3日以内、2日以内の手配で材料未確認
+function computeAlerts(){
+  const t = today(), soon = addDays(t,3), end = monthLater(t), out = [];
+  Object.entries(S.plans).forEach(([id,p]) => {
+    if(p.status === "中止" || (S.site && p.site !== S.site)) return;
+    if(p.date < t || p.date > end) return;
+    const tpl = getTpl(p.trade); if(!tpl) return;
+    const done = doneOf(p);
+    tpl.prep.forEach(x => {
+      if(done.includes("p:"+x.t)) return;
+      const due = addDays(p.date, -(Number(x.d)||0));
+      if(due < t) out.push({ id, p, lv:"over", due, text:x.t });
+      else if(due <= soon) out.push({ id, p, lv:"soon", due, text:x.t });
+    });
+    if(p.date <= addDays(t,2)){
+      const left = tpl.materials.filter(m => !done.includes("m:"+m)).length;
+      if(left) out.push({ id, p, lv:"mat", due:p.date, text:`材料の確認が ${left} 件残っています` });
+    }
+  });
+  return out.sort((a,b) => a.due.localeCompare(b.due));
+}
+function alertBanner(){
+  const al = computeAlerts();
+  if(!al.length) return "";
+  const over = al.filter(a => a.lv === "over").length, rest = al.length - over;
+  return `<div class="alert" data-act="view" data-v="upcoming" style="cursor:pointer">⚠ 段取りのアラート：${over ? `期限切れ ${over} 件　` : ""}${rest ? `まもなく・材料 ${rest} 件` : ""} →</div>`;
+}
+function alertList(){
+  const al = computeAlerts();
+  if(!al.length) return `<div class="info">✓ 事前の段取り・材料の確認に漏れはありません</div>`;
+  return `<div class="card" style="border:2px solid var(--red)">
+    <div class="card-title" style="color:var(--red)">⚠ 段取りのアラート（${al.length}件）</div>
+    ${al.map(a => `<div style="padding:7px 0;border-bottom:1px dashed var(--line);display:flex;justify-content:space-between;gap:8px;align-items:center">
+      <div style="font-size:13px;line-height:1.5"><b style="color:${a.lv==="over"?"var(--red)":"var(--amber)"}">${a.lv==="over"?"期限切れ":a.lv==="soon"?"まもなく":"材料"}</b>　${esc(a.text)}<br>
+      <span class="small">${a.lv==="mat"?"":fmtDay(a.due)+"まで／"}${esc(a.p.trade||"")} ${esc(a.p.company||"")}（${fmtDay(a.p.date)}・${esc(a.p.site||"")}）</span></div>
+      <button class="btn btn-light" style="padding:5px 10px;font-size:12px;white-space:nowrap" data-act="openchk" data-id="${a.id}">確認</button>
+    </div>`).join("")}
+  </div>`;
+}
+// 手配カードの中のチェックリスト
+function checkBlock(id, p){
+  const tpl = getTpl(p.trade);
+  if(!tpl) return p.trade ? `<div class="small" style="margin-top:6px">「${esc(p.trade)}」の材料・ルールは未登録です　<a href="#" data-act="edittpl" data-t="${esc(p.trade)}">登録する</a></div>` : "";
+  const done = doneOf(p), t = today();
+  const pd2 = tpl.prep.filter(x => done.includes("p:"+x.t)).length, md = tpl.materials.filter(m => done.includes("m:"+m)).length;
+  const late = tpl.prep.some(x => !done.includes("p:"+x.t) && addDays(p.date, -(Number(x.d)||0)) < t) && p.date >= t;
+  const open = !!S.openChk[id];
+  let html = `<button class="chk-sum ${late?"late":""}" data-act="togglechk" data-id="${id}">
+    ⏰ 事前段取り ${pd2}/${tpl.prep.length}　📦 材料 ${md}/${tpl.materials.length}　⚠ ルール ${tpl.rules.length}${late?"　<b>期限切れあり</b>":""}<span style="float:right">${open?"▲":"▼"}</span></button>`;
+  if(!open) return html;
+  const box = (k, label, sub) => `<label class="chk ${done.includes(k)?"on":""}"><input type="checkbox" data-act="chk" data-id="${id}" data-k="${esc(k)}" ${done.includes(k)?"checked":""}><span>${esc(label)}${sub?`<span class="small"> ${sub}</span>`:""}</span></label>`;
+  html += `<div class="chk-body">`;
+  if(tpl.prep.length) html += `<div class="chk-h">⏰ 事前の段取り</div>` + tpl.prep.map(x => {
+    const due = addDays(p.date, -(Number(x.d)||0)), k = "p:"+x.t, over = !done.includes(k) && due < t;
+    return box(k, x.t, `<span style="color:${over?"var(--red)":"var(--faint)"}">（${fmtDay(due)}まで${over?"・期限切れ":""}）</span>`);
+  }).join("");
+  if(tpl.materials.length) html += `<div class="chk-h">📦 必要な材料</div>` + tpl.materials.map(m => box("m:"+m, m)).join("");
+  if(tpl.rules.length) html += `<div class="chk-h">⚠ 気を付けるルール</div><ul class="rules">${tpl.rules.map(r => `<li>${esc(r)}</li>`).join("")}</ul>`;
+  html += `<div class="small" style="margin-top:6px">${tpl.custom?"":"※標準の例です。"}<a href="#" data-act="edittpl" data-t="${esc(p.trade)}">「${esc(p.trade)}」の内容を直す</a></div></div>`;
+  return html;
+}
+async function toggleCheck(id, k){
+  const p = S.plans[id]; if(!p) return;
+  const done = doneOf(p), i = done.indexOf(k);
+  if(i >= 0) done.splice(i,1); else done.push(k);
+  try{ await set(ref(db, `kantoku_plans/${id}/done`), done); }
+  catch(e){ alert("保存に失敗しました：" + e.message); }
+}
+
+// ----- 工程マスタ画面 -----
+function viewMaster(){
+  if(S.tplEdit) return viewTplEdit();
+  const names = new Set([...Object.keys(DEFAULT_TPL), ...Object.values(S.tpls).map(x => x.name).filter(Boolean), ...Object.values(S.plans).map(p => p.trade).filter(Boolean)]);
+  return `
+  <button class="btn btn-light btn-block" style="margin-bottom:10px" data-act="view" data-v="cal">← カレンダーに戻る</button>
+  <div class="card">
+    <div class="card-title">⚙ 工程ごとの材料・ルール・事前の段取り</div>
+    <div class="small" style="margin-bottom:10px">ここで登録した内容が、その業種の手配にチェックリストとして出ます。監督全員で共有されます。「標準の例」は参考なので、自社のやり方に合わせて直してください。</div>
+    ${[...names].sort().map(n => { const t = getTpl(n); return `<button class="btn btn-ghost btn-block" style="margin-bottom:6px;text-align:left;display:flex;justify-content:space-between" data-act="edittpl" data-t="${esc(n)}">
+      <span>${esc(n)}</span><span class="small">${!t ? "未登録" : t.custom ? `登録済み（材料${t.materials.length}・ルール${t.rules.length}・段取り${t.prep.length}）` : "標準の例"}</span></button>`; }).join("")}
+    <div style="display:flex;gap:6px;margin-top:10px">
+      <input id="new-tpl" list="dl-trades" placeholder="工程を追加（例：大工（造作））">
+      <button class="btn btn-light" data-act="addtpl" style="white-space:nowrap">追加</button>
+    </div>
+  </div>`;
+}
+function viewTplEdit(){
+  const n = S.tplEdit, t = getTpl(n) || { materials:[], rules:[], prep:[], custom:false };
+  return `
+  <button class="btn btn-light btn-block" style="margin-bottom:10px" data-act="tplback">← ${S.tplFrom ? "戻る" : "工程の一覧に戻る"}</button>
+  <div class="card">
+    <div class="card-title">✏️ 「${esc(n)}」の材料・ルール・段取り</div>
+    ${t.custom ? "" : `<div class="info" style="font-weight:600">${getTpl(n) ? "今は標準の例です。保存すると自社用になります。" : "まだ登録がありません。"}</div>`}
+    <div class="field"><label>📦 必要な材料（1行に1つ）</label><textarea id="te-mat" rows="5">${esc(t.materials.join("\n"))}</textarea></div>
+    <div class="field"><label>⚠ 気を付けるルール（1行に1つ）</label><textarea id="te-rule" rows="4">${esc(t.rules.join("\n"))}</textarea></div>
+    <div class="field"><label>⏰ 事前の段取り（1行に1つ。「7日前：近隣挨拶」の形で）</label><textarea id="te-prep" rows="5">${esc(t.prep.map(x => `${x.d}日前：${x.t}`).join("\n"))}</textarea>
+      <div class="small" style="margin-top:4px">日数を書かないと「当日」になります。手配の日から逆算して期限を出し、過ぎたらアラートを出します。</div></div>
+    <div style="display:flex;gap:8px">
+      ${t.custom ? `<button class="btn btn-red" style="flex:1" data-act="resettpl">${DEFAULT_TPL[n]?"標準に戻す":"削除"}</button>` : ""}
+      <button class="btn btn-navy" style="flex:2" data-act="savetpl">保存</button>
+    </div>
+  </div>`;
+}
+function parsePrep(line){
+  const m = line.match(/^\s*(\d+)\s*日?\s*前?\s*[:：|｜、,]?\s*(.+)$/);
+  return m ? { d:Number(m[1]), t:m[2].trim() } : { d:0, t:line.trim() };
+}
+async function saveTpl(){
+  const lines = id => $(id).value.split("\n").map(x => x.trim()).filter(Boolean);
+  const rec = { name:S.tplEdit, materials:lines("#te-mat"), rules:lines("#te-rule"), prep:lines("#te-prep").map(parsePrep), updatedBy:S.me, updatedAt:Date.now() };
+  try{ await set(ref(db, `kantoku_templates/${uidOf(S.tplEdit)}`), rec); toast("保存しました"); S.tplEdit = null; if(S.tplFrom){ S.view = S.tplFrom; S.tplFrom = null; } render(); }
+  catch(e){ alert("保存に失敗しました：" + e.message); }
+}
+
 function pendingCount(){
   const t = today(), end = monthLater(t);
   return Object.values(S.plans).filter(p => p.status === "未連絡" && (p.dateTo || p.date) >= t && p.date <= end && (!S.site || p.site === S.site)).length;
@@ -288,6 +468,7 @@ function render(){
   else if(v === "day") body = viewDay();
   else if(v === "upcoming") body = viewUpcoming();
   else if(v === "year") body = viewYear();
+  else if(v === "master") body = viewMaster();
   else if(v === "report") return renderReport();
   $("#app").innerHTML = `<div class="wrap">${header()}${v==="names"?"":tabs()}${body}</div>`;
 }
@@ -329,6 +510,7 @@ function viewCal(){
   const n = pendingCount();
   return `
   ${n ? `<div class="alert" data-act="view" data-v="upcoming" style="cursor:pointer">📞 1か月以内に未連絡の手配が ${n} 件あります →</div>` : ""}
+  ${alertBanner()}
   ${siteFilter()}
   <div class="card">
     <div class="monthbar">
@@ -405,6 +587,7 @@ function planCard(id, p, showDate){
       ${p.contact ? `<br>📞 ${esc(p.contact)}` : ""}
     </div>
     ${p.memo ? `<div class="p-memo">${esc(p.memo)}</div>` : ""}
+    ${p.status !== "中止" ? checkBlock(id, p) : ""}
     <div class="sts">${STATUSES.map(s => `<button class="st s-${s} ${ (p.status||"未連絡")===s?"on":""}" data-act="status" data-id="${id}" data-s="${s}">${s}</button>`).join("")}</div>
     <div class="p-acts">
       ${tel ? `<a class="a-tel" href="tel:${esc(tel)}">📞 電話</a>` : ""}
@@ -486,6 +669,7 @@ function viewUpcoming(){
   const n = pendingCount();
   let html = `<div class="small" style="margin:0 2px 8px">今日から1か月後（${fmtDay(end)}）までの手配</div>`;
   html += n ? `<div class="alert">📞 未連絡が ${n} 件あります。早めに連絡を。</div>` : `<div class="info">✓ 1か月以内の手配はすべて連絡済みです</div>`;
+  html += alertList();
   html += siteFilter();
   html += `<div style="display:flex;gap:6px;margin-bottom:10px">
     <button class="btn ${S.onlyPending?"btn-ghost":"btn-navy"}" style="flex:1" data-act="pendfilter" data-v="0">すべて</button>
@@ -524,6 +708,9 @@ async function sharePlans(scope){
   if(scope === "day"){
     const ps = plansOn(S.selDate).filter(([,p]) => p.status !== "中止");
     text = `【${fmtDay(S.selDate)}の段取り】${S.site?"\n現場："+S.site:""}\n` + ps.map(([,p]) => planLine(p)).join("\n");
+    const rules = [];
+    ps.forEach(([,p]) => { const t = getTpl(p.trade); if(t && t.rules.length) rules.push(`＜${p.trade}＞\n` + t.rules.map(r => "・" + r).join("\n")); });
+    if(rules.length) text += "\n\n【気を付けること】\n" + [...new Set(rules)].join("\n");
   }else{
     const t = today(), end = monthLater(t);
     text = `【今後の段取り ${fmtDay(t)}〜${fmtDay(end)}】${S.site?"\n現場："+S.site:""}`;
@@ -747,6 +934,15 @@ document.addEventListener("click", async e => {
   else if(a === "editplan"){ S.planEdit = el.dataset.id; if(S.view === "upcoming"){ S.selDate = S.plans[el.dataset.id].date; S.view = "day"; } render(); $("#plan-form")?.scrollIntoView({behavior:"smooth"}); }
   else if(a === "cancelplan"){ S.planEdit = null; S.planCopy = null; render(); }
   else if(a === "copyplan"){ const src = S.plans[el.dataset.id]; if(!src) return; S.planCopy = { ...src }; delete S.planCopy.createdAt; delete S.planCopy.createdBy; S.planEdit = "new"; if(S.view === "upcoming"){ S.selDate = src.date; S.view = "day"; } render(); $("#plan-form")?.scrollIntoView({behavior:"smooth"}); }
+  else if(a === "master"){ e.preventDefault(); S.view = "master"; S.tplEdit = null; S.planEdit = null; render(); window.scrollTo(0,0); }
+  else if(a === "edittpl"){ e.preventDefault(); S.tplFrom = S.view === "master" ? null : S.view; S.tplEdit = el.dataset.t; S.view = "master"; S.planEdit = null; render(); window.scrollTo(0,0); }
+  else if(a === "addtpl"){ const n = $("#new-tpl").value.trim(); if(!n) return; S.tplEdit = n; render(); }
+  else if(a === "tplback"){ S.tplEdit = null; if(S.tplFrom){ S.view = S.tplFrom; S.tplFrom = null; } render(); }
+  else if(a === "savetpl"){ await saveTpl(); }
+  else if(a === "resettpl"){ if(!confirm(`「${S.tplEdit}」の登録内容を消しますか？`)) return; try{ await remove(ref(db, `kantoku_templates/${uidOf(S.tplEdit)}`)); S.tplEdit = null; toast("消しました"); render(); }catch(err){ alert("失敗しました：" + err.message); } }
+  else if(a === "togglechk"){ S.openChk[el.dataset.id] = !S.openChk[el.dataset.id]; render(); }
+  else if(a === "chk"){ await toggleCheck(el.dataset.id, el.dataset.k); }
+  else if(a === "openchk"){ const p = S.plans[el.dataset.id]; if(!p) return; S.openChk[el.dataset.id] = true; S.selDate = p.date; S.cursor = pd(p.date); S.view = "day"; render(); window.scrollTo(0,0); }
   else if(a === "pendfilter"){ S.onlyPending = el.dataset.v === "1"; render(); }
   else if(a === "share"){ await sharePlans(el.dataset.scope); }
   else if(a === "saveplan"){ await savePlan(); }
