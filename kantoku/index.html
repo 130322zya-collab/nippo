@@ -67,7 +67,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--navy);ba
 .st.on.s-確定{background:var(--greenBg);border-color:var(--green);color:var(--green)}
 .st.on.s-中止{background:#eef1f4;border-color:var(--sub);color:var(--sub)}
 .p-acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
-.p-acts a,.p-acts button{font-size:12px;font-weight:700;border-radius:8px;padding:6px 10px;text-decoration:none;border:none}
+.p-acts a,.p-acts button{font-size:12px;font-weight:700;border-radius:8px;padding:6px 9px;text-decoration:none;border:none;white-space:nowrap}
 .a-tel{background:var(--greenBg);color:var(--green)}
 .a-gcal{background:var(--navyBg);color:var(--navy)}
 .a-edit{background:#eef1f4;color:var(--sub)}
@@ -133,6 +133,8 @@ const pad = n => String(n).padStart(2,"0");
 const ds = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const pd = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y,m-1,d); };
 const addDays = (s,n) => { const d = pd(s); d.setDate(d.getDate()+n); return ds(d); };
+// 1か月後の同じ日（月末は調整）
+const monthLater = s => { const d = pd(s); const t = new Date(d.getFullYear(), d.getMonth()+1, d.getDate()); if(t.getDate() !== d.getDate()) t.setDate(0); return ds(t); };
 const today = () => ds(new Date());
 const fmtDay = s => { const d = pd(s); return `${d.getMonth()+1}月${d.getDate()}日（${WD[d.getDay()]}）`; };
 const uidOf = name => name.replace(/[.#$/\[\]]/g,"_");
@@ -154,6 +156,8 @@ const S = {
   selDate: today(),
   site: lsGet("kantoku_site_filter", ""),
   planEdit: null,                     // 編集中の手配（id か "new"）
+  planCopy: null,                     // 複製元の手配
+  onlyPending: false,                 // 今後の段取り：未連絡だけ表示
   report: null,                       // 編集中の日報
   reportDirty: false,
   unsubReports: null
@@ -252,7 +256,7 @@ function plansOn(d){
     .sort((a,b) => (a[1].site||"").localeCompare(b[1].site||"") || (a[1].time||"").localeCompare(b[1].time||""));
 }
 function pendingCount(){
-  const t = today(), end = addDays(t, 14);
+  const t = today(), end = monthLater(t);
   return Object.values(S.plans).filter(p => p.status === "未連絡" && (p.dateTo || p.date) >= t && p.date <= end && (!S.site || p.site === S.site)).length;
 }
 function siteFilter(){
@@ -312,7 +316,7 @@ function viewCal(){
   }
   const n = pendingCount();
   return `
-  ${n ? `<div class="alert" data-act="view" data-v="upcoming" style="cursor:pointer">📞 2週間以内に未連絡の手配が ${n} 件あります →</div>` : ""}
+  ${n ? `<div class="alert" data-act="view" data-v="upcoming" style="cursor:pointer">📞 1か月以内に未連絡の手配が ${n} 件あります →</div>` : ""}
   ${siteFilter()}
   <div class="card">
     <div class="monthbar">
@@ -336,15 +340,16 @@ function planCard(id, p, showDate){
     <div class="p-main">${esc(p.trade||"（業種なし）")}${p.company?`　${esc(p.company)}`:""}${p.count?`　${esc(p.count)}名`:""}</div>
     <div class="p-sub">
       ${p.time ? `🕗 ${esc(p.time)}　` : ""}🏗️ ${esc(p.site||"（現場なし）")}
-      ${multi || showDate ? `<br>📆 ${fmtDay(p.date)}${multi?` 〜 ${fmtDay(p.dateTo)}`:""}` : ""}
+      ${multi ? `<br>📆 ${fmtDay(p.date)} 〜 ${fmtDay(p.dateTo)}` : ""}
       ${p.contact ? `<br>📞 ${esc(p.contact)}` : ""}
     </div>
     ${p.memo ? `<div class="p-memo">${esc(p.memo)}</div>` : ""}
     <div class="sts">${STATUSES.map(s => `<button class="st s-${s} ${ (p.status||"未連絡")===s?"on":""}" data-act="status" data-id="${id}" data-s="${s}">${s}</button>`).join("")}</div>
     <div class="p-acts">
       ${tel ? `<a class="a-tel" href="tel:${esc(tel)}">📞 電話</a>` : ""}
-      <a class="a-gcal" href="${gcalUrl(p)}" target="_blank" rel="noopener">📅 Googleカレンダー</a>
+      <a class="a-gcal" href="${gcalUrl(p)}" target="_blank" rel="noopener">📅 予定に追加</a>
       <button class="a-edit" data-act="editplan" data-id="${id}">編集</button>
+      <button class="a-edit" data-act="copyplan" data-id="${id}">複製</button>
       <button class="a-del" data-act="delplan" data-id="${id}">削除</button>
     </div>
     ${p.updatedBy ? `<div class="small" style="margin-top:6px">最終更新：${esc(p.updatedBy)}</div>` : ""}
@@ -358,10 +363,10 @@ function gcalUrl(p){
 }
 function planForm(){
   const isNew = S.planEdit === "new";
-  const p = isNew ? { date:S.selDate, dateTo:"", site:S.site || lsGet("kantoku_last_site",""), trade:"", company:"", count:"", time:"", contact:"", memo:"", status:"未連絡" } : { ...S.plans[S.planEdit] };
+  const p = isNew && S.planCopy ? { ...S.planCopy, date:S.selDate, dateTo:"", status:"未連絡" } : isNew ? { date:S.selDate, dateTo:"", site:S.site || lsGet("kantoku_last_site",""), trade:"", company:"", count:"", time:"", contact:"", memo:"", status:"未連絡" } : { ...S.plans[S.planEdit] };
   return `
   <div class="card" id="plan-form" style="border:2px solid var(--navy)">
-    <div class="card-title">${isNew ? "＋ 手配を追加" : "✏️ 手配を編集"}</div>
+    <div class="card-title">${isNew ? (S.planCopy ? "📄 手配を複製（日付を変えて保存）" : "＋ 手配を追加") : "✏️ 手配を編集"}</div>
     <div class="row2">
       <div class="field"><label>開始日</label><input type="date" id="pf-date" value="${esc(p.date)}"></div>
       <div class="field"><label>終了日（複数日なら）</label><input type="date" id="pf-dateTo" value="${esc(p.dateTo||"")}"></div>
@@ -399,7 +404,7 @@ function viewDay(){
   <button class="btn btn-light btn-block" style="margin-bottom:10px" data-act="view" data-v="cal">← カレンダーに戻る</button>
   ${siteFilter()}
   <div class="card">
-    <div class="card-title"><span>👷 この日の手配（段取り）</span><span>${ps.length}件</span></div>
+    <div class="card-title"><span>👷 この日の手配（段取り）</span><span>${ps.length}件${ps.length ? ` <button class="btn btn-light" style="padding:4px 10px;font-size:12px;margin-left:6px" data-act="share" data-scope="day">📤 共有</button>` : ""}</span></div>
     ${ps.length ? Object.entries(bySite).map(([site, list]) => `<div class="site-h">🏗️ ${esc(site)}</div>${list.map(([id,p]) => planCard(id,p)).join("")}`).join("") : `<div class="small">この日の手配はまだありません。</div>`}
     ${S.planEdit ? "" : `<button class="btn btn-light btn-block" style="margin-top:8px" data-act="newplan">＋ 手配を追加</button>`}
   </div>
@@ -415,20 +420,62 @@ function viewDay(){
 function viewUpcoming(){
   const t = today();
   const days = [];
-  for(let i=0;i<14;i++) days.push(addDays(t,i));
+  const end = monthLater(t);
+  for(let d = t; d <= end; d = addDays(d,1)) days.push(d);
   const n = pendingCount();
-  let html = n ? `<div class="alert">📞 未連絡が ${n} 件あります。早めに連絡を。</div>` : `<div class="info">✓ 2週間以内の手配はすべて連絡済みです</div>`;
+  let html = `<div class="small" style="margin:0 2px 8px">今日から1か月後（${fmtDay(end)}）までの手配</div>`;
+  html += n ? `<div class="alert">📞 未連絡が ${n} 件あります。早めに連絡を。</div>` : `<div class="info">✓ 1か月以内の手配はすべて連絡済みです</div>`;
   html += siteFilter();
+  html += `<div style="display:flex;gap:6px;margin-bottom:10px">
+    <button class="btn ${S.onlyPending?"btn-ghost":"btn-navy"}" style="flex:1" data-act="pendfilter" data-v="0">すべて</button>
+    <button class="btn ${S.onlyPending?"btn-navy":"btn-ghost"}" style="flex:1" data-act="pendfilter" data-v="1">未連絡だけ</button>
+    <button class="btn btn-light" style="flex:1" data-act="share" data-scope="upcoming">📤 共有</button>
+  </div>`;
   let any = false;
   days.forEach(d => {
-    const ps = plansOn(d).filter(([,p]) => p.date === d || d === t); // 複数日の手配は初日（または今日）にだけ表示
+    const ps = plansOn(d).filter(([,p]) => (p.date === d || d === t) && (!S.onlyPending || p.status === "未連絡")); // 複数日の手配は初日（または今日）にだけ表示
     if(!ps.length) return;
     any = true;
     html += `<div class="date-h"><span>${fmtDay(d)}${d===t?"　今日":""}</span><button class="btn btn-light" style="padding:5px 10px;font-size:12px" data-act="day" data-d="${d}">この日を開く</button></div>`;
     html += ps.map(([id,p]) => planCard(id,p,true)).join("");
   });
-  if(!any) html += `<div class="card small">これから2週間の手配はありません。カレンダーの日付から追加できます。</div>`;
+  if(!any) html += `<div class="card small">${S.onlyPending ? "未連絡の手配はありません。" : "これから1か月の手配はありません。カレンダーの日付から追加できます。"}</div>`;
   return html;
+}
+
+// ===== 業者名を入れたら、前回の連絡先・業種・人数を自動で入れる =====
+document.addEventListener("change", e => {
+  if(e.target.id !== "pf-company") return;
+  const name = e.target.value.trim(); if(!name) return;
+  const last = Object.values(S.plans).filter(p => p.company === name).sort((a,b) => (b.updatedAt||0) - (a.updatedAt||0))[0];
+  if(!last) return;
+  const fill = (id, v) => { const el = $(id); if(el && !el.value.trim() && v) el.value = v; };
+  fill("#pf-contact", last.contact); fill("#pf-trade", last.trade); fill("#pf-count", last.count);
+  toast("前回の連絡先などを入れました");
+});
+
+// ===== 段取りを文章にして共有（LINEなど） =====
+function planLine(p){
+  return `・${p.trade||""}${p.company?" "+p.company:""}${p.count?" "+p.count+"名":""}${p.time?" "+p.time:""}${p.site?"（"+p.site+"）":""}【${p.status||"未連絡"}】${p.memo?"\n　"+p.memo.replace(/\n/g," "):""}`;
+}
+async function sharePlans(scope){
+  let text = "";
+  if(scope === "day"){
+    const ps = plansOn(S.selDate).filter(([,p]) => p.status !== "中止");
+    text = `【${fmtDay(S.selDate)}の段取り】${S.site?"\n現場："+S.site:""}\n` + ps.map(([,p]) => planLine(p)).join("\n");
+  }else{
+    const t = today(), end = monthLater(t);
+    text = `【今後の段取り ${fmtDay(t)}〜${fmtDay(end)}】${S.site?"\n現場："+S.site:""}`;
+    for(let d = t; d <= end; d = addDays(d,1)){
+      const ps = plansOn(d).filter(([,p]) => (p.date === d || d === t) && p.status !== "中止" && (!S.onlyPending || p.status === "未連絡"));
+      if(ps.length) text += `\n\n■ ${fmtDay(d)}\n` + ps.map(([,p]) => planLine(p) + (p.dateTo && p.dateTo !== p.date ? `　〜${fmtDay(p.dateTo)}` : "")).join("\n");
+    }
+  }
+  try{
+    if(navigator.share){ await navigator.share({ text }); return; }
+  }catch(e){ if(e && e.name === "AbortError") return; }
+  try{ await navigator.clipboard.writeText(text); toast("コピーしました。LINEなどに貼り付けてください"); }
+  catch(e){ prompt("この文章をコピーしてください", text); }
 }
 
 // ===== 手配の保存など =====
@@ -447,7 +494,7 @@ async function savePlan(){
     if(S.planEdit === "new"){ p.createdBy = S.me; p.createdAt = Date.now(); await push(ref(db, "kantoku_plans"), p); }
     else { const old = S.plans[S.planEdit] || {}; await set(ref(db, `kantoku_plans/${S.planEdit}`), { ...old, ...p }); }
     if(p.site) lsSet("kantoku_last_site", p.site);
-    S.planEdit = null; toast("手配を保存しました"); render();
+    S.planEdit = null; S.planCopy = null; toast("手配を保存しました"); render();
   }catch(e){ alert("保存に失敗しました：" + e.message); }
 }
 async function setStatus(id, s){
@@ -633,9 +680,12 @@ document.addEventListener("click", async e => {
   else if(a === "month"){ S.cursor = new Date(S.cursor.getFullYear(), S.cursor.getMonth() + Number(el.dataset.n), 1); render(); }
   else if(a === "day"){ S.selDate = el.dataset.d; S.cursor = pd(S.selDate); S.view = "day"; S.planEdit = null; render(); window.scrollTo(0,0); }
   else if(a === "dshift"){ S.selDate = addDays(S.selDate, Number(el.dataset.n)); S.cursor = pd(S.selDate); S.planEdit = null; render(); }
-  else if(a === "newplan"){ S.planEdit = "new"; render(); $("#plan-form")?.scrollIntoView({behavior:"smooth"}); }
+  else if(a === "newplan"){ S.planEdit = "new"; S.planCopy = null; render(); $("#plan-form")?.scrollIntoView({behavior:"smooth"}); }
   else if(a === "editplan"){ S.planEdit = el.dataset.id; if(S.view === "upcoming"){ S.selDate = S.plans[el.dataset.id].date; S.view = "day"; } render(); $("#plan-form")?.scrollIntoView({behavior:"smooth"}); }
-  else if(a === "cancelplan"){ S.planEdit = null; render(); }
+  else if(a === "cancelplan"){ S.planEdit = null; S.planCopy = null; render(); }
+  else if(a === "copyplan"){ const src = S.plans[el.dataset.id]; if(!src) return; S.planCopy = { ...src }; delete S.planCopy.createdAt; delete S.planCopy.createdBy; S.planEdit = "new"; if(S.view === "upcoming"){ S.selDate = src.date; S.view = "day"; } render(); $("#plan-form")?.scrollIntoView({behavior:"smooth"}); }
+  else if(a === "pendfilter"){ S.onlyPending = el.dataset.v === "1"; render(); }
+  else if(a === "share"){ await sharePlans(el.dataset.scope); }
   else if(a === "saveplan"){ await savePlan(); }
   else if(a === "status"){ await setStatus(el.dataset.id, el.dataset.s); }
   else if(a === "delplan"){ await delPlan(el.dataset.id); }
