@@ -49,6 +49,17 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--navy);ba
 .cell .pc{font-size:10px;font-weight:800;color:#fff;background:var(--navy);border-radius:8px;padding:0 5px;line-height:15px}
 .cell .ok{font-size:10px;color:var(--green);font-weight:800}
 .cell .warn{position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--red)}
+/* 年間 */
+.ygrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ym{background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 6px}
+.ym-h{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:800;margin-bottom:4px;padding:0 2px;background:none;border:none;width:100%;color:var(--ink)}
+.ym-h span{font-size:10px;font-weight:700;color:var(--navy)}
+.ym-g{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
+.ym-w{font-size:8px;color:var(--faint);text-align:center}
+.yd{aspect-ratio:1;border:none;border-radius:4px;font-size:9px;padding:0;background:transparent;color:var(--ink);position:relative}
+.yd.l1{background:#dbe7f3}.yd.l2{background:#9fbfdd}.yd.l3{background:var(--navy);color:#fff}
+.yd.td{outline:2px solid var(--amber)}
+.yd.pd::after{content:"";position:absolute;top:1px;right:1px;width:4px;height:4px;border-radius:50%;background:var(--red)}
 .legend{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--sub)}
 /* 手配 */
 .plan{border:1px solid var(--line);border-left:4px solid var(--faint);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fafbfc}
@@ -245,7 +256,7 @@ function header(){
 function tabs(){
   const t = (v,l) => `<button class="tab ${S.view===v||(v==="cal"&&S.view==="day")?"on":""}" data-act="view" data-v="${v}">${l}</button>`;
   const n = pendingCount();
-  return `<div class="tabs">${t("cal","📅 カレンダー")}${t("upcoming", "📋 今後の段取り" + (n ? `（未連絡${n}）` : ""))}</div>`;
+  return `<div class="tabs">${t("cal","📅 月")}${t("year","🗓 年間")}${t("upcoming", "📋 今後の段取り" + (n ? `（未連絡${n}）` : ""))}</div>`;
 }
 
 // 手配がその日に入っているか（複数日の手配に対応）
@@ -276,6 +287,7 @@ function render(){
   else if(v === "cal") body = viewCal();
   else if(v === "day") body = viewDay();
   else if(v === "upcoming") body = viewUpcoming();
+  else if(v === "year") body = viewYear();
   else if(v === "report") return renderReport();
   $("#app").innerHTML = `<div class="wrap">${header()}${v==="names"?"":tabs()}${body}</div>`;
 }
@@ -329,6 +341,55 @@ function viewCal(){
     <div class="legend"><span><b style="color:var(--navy)">■</b> 手配の件数</span><span><b style="color:var(--green)">✓</b> 日報記入済み</span><span><b style="color:var(--red)">●</b> 未連絡あり</span></div>
   </div>
   <button class="btn btn-navy btn-big" data-act="day" data-d="${today()}">今日の段取り・日報を開く</button>`;
+}
+
+// ----- 年間カレンダー -----
+function viewYear(){
+  const y = S.year || S.cursor.getFullYear();
+  const from = `${y}-01-01`, to = `${y}-12-31`;
+  const map = {}; // 日付 -> {n, pending}
+  Object.values(S.plans).forEach(p => {
+    if(p.status === "中止" || (S.site && p.site !== S.site)) return;
+    const end = p.dateTo || p.date;
+    if(end < from || p.date > to) return;
+    let d = p.date < from ? from : p.date;
+    const last = end > to ? to : end;
+    for(let i = 0; d <= last && i < 400; d = addDays(d,1), i++){
+      const o = map[d] = map[d] || { n:0, pending:false };
+      o.n++; if(p.status === "未連絡") o.pending = true;
+    }
+  });
+  const t = today();
+  let months = "";
+  for(let m = 0; m < 12; m++){
+    const first = new Date(y,m,1).getDay(), last = new Date(y,m+1,0).getDate();
+    let cells = "", total = 0;
+    for(let i=0;i<first;i++) cells += `<span></span>`;
+    for(let d=1; d<=last; d++){
+      const k = `${y}-${pad(m+1)}-${pad(d)}`, o = map[k];
+      const lv = !o ? "" : o.n >= 4 ? "l3" : o.n >= 2 ? "l2" : "l1";
+      if(o) total++;
+      cells += `<button class="yd ${lv} ${k===t?"td":""} ${o&&o.pending?"pd":""}" data-act="day" data-d="${k}">${d}</button>`;
+    }
+    months += `<div class="ym">
+      <button class="ym-h" data-act="openmonth" data-m="${m}">${m+1}月${total ? `<span>手配${total}日</span>` : ""}</button>
+      <div class="ym-g">${WD.map(w=>`<span class="ym-w">${w}</span>`).join("")}${cells}</div>
+    </div>`;
+  }
+  return `
+  ${siteFilter()}
+  <div class="monthbar">
+    <button class="mbtn" data-act="year" data-n="-1">‹</button>
+    <div class="mlabel">${y}年</div>
+    <button class="mbtn" data-act="year" data-n="1">›</button>
+  </div>
+  <div class="ygrid">${months}</div>
+  <div class="legend">
+    <span><b style="color:#9fbfdd">■</b> 手配あり（濃いほど多い）</span>
+    <span><b style="color:var(--red)">●</b> 未連絡あり</span>
+    <span><b style="color:var(--amber)">□</b> 今日</span>
+  </div>
+  <div class="small" style="text-align:center;margin-top:6px">日付をタップでその日、月の名前をタップで月のカレンダーを開きます</div>`;
 }
 
 // ----- 1日の画面 -----
@@ -676,7 +737,9 @@ document.addEventListener("click", async e => {
     try{ await set(ref(db, `kantoku_meta/names/${uidOf(n)}`), n); S.me = n; lsSet("kantoku_me", n); watchMyReports(); S.view = "cal"; render(); }
     catch(err){ alert("追加に失敗しました：" + err.message); }
   }
-  else if(a === "view"){ S.view = el.dataset.v; S.planEdit = null; render(); }
+  else if(a === "view"){ S.view = el.dataset.v; S.planEdit = null; if(S.view === "year") S.year = S.cursor.getFullYear(); render(); window.scrollTo(0,0); }
+  else if(a === "year"){ S.year = (S.year || S.cursor.getFullYear()) + Number(el.dataset.n); render(); }
+  else if(a === "openmonth"){ S.cursor = new Date(S.year || S.cursor.getFullYear(), Number(el.dataset.m), 1); S.view = "cal"; render(); }
   else if(a === "month"){ S.cursor = new Date(S.cursor.getFullYear(), S.cursor.getMonth() + Number(el.dataset.n), 1); render(); }
   else if(a === "day"){ S.selDate = el.dataset.d; S.cursor = pd(S.selDate); S.view = "day"; S.planEdit = null; render(); window.scrollTo(0,0); }
   else if(a === "dshift"){ S.selDate = addDays(S.selDate, Number(el.dataset.n)); S.cursor = pd(S.selDate); S.planEdit = null; render(); }
