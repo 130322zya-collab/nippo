@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>現場監督日報・段取り | 株式会社濱崎組</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--ink:#1c2530;--sub:#6b7785;--faint:#9aa5b1;--line:#e3e7ec;--bg:#f4f6f8;--navy:#1f4e7a;--navyBg:#eef4fa;--amber:#c2710c;--amberBg:#fdf3e3;--green:#2f7d4f;--greenBg:#eaf5ee;--red:#c0392b;--redBg:#fdecea}
+body{font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding-bottom:40px}
+.wrap{max-width:640px;margin:0 auto;padding:12px}
+button{font-family:inherit;cursor:pointer}
+button:active{opacity:.7}
+.head{background:var(--navy);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.head-title{font-size:18px;font-weight:800;color:#fff}
+.head-sub{font-size:11px;color:#a8c4e0;margin-top:2px}
+.name-chip{background:#fff;color:var(--navy);border:none;border-radius:20px;padding:7px 12px;font-size:13px;font-weight:700;white-space:nowrap}
+.links{display:flex;gap:12px;font-size:12px;margin:0 2px 10px}
+.links a{color:var(--navy);text-decoration:none;font-weight:700}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tab{flex:1;background:#fff;color:var(--sub);border:1.5px solid var(--line);border-radius:10px;padding:10px 0;font-size:13px;font-weight:700}
+.tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.card{background:#fff;border-radius:14px;padding:14px 15px;margin-bottom:12px;border:1px solid var(--line)}
+.card-title{font-size:13px;font-weight:700;color:var(--sub);margin-bottom:10px;display:flex;align-items:center;gap:6px;justify-content:space-between}
+label{font-size:11px;font-weight:700;color:var(--faint);letter-spacing:.03em;display:block;margin-bottom:4px}
+input,textarea,select{width:100%;background:#f8fafc;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px;color:var(--ink);font-family:inherit;resize:none;line-height:1.5}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--navy);background:#fff}
+.field{margin-bottom:10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row3{display:grid;grid-template-columns:2fr 2fr 1fr;gap:6px}
+.btn{border:none;border-radius:10px;padding:11px 14px;font-size:14px;font-weight:700}
+.btn-navy{background:var(--navy);color:#fff}
+.btn-light{background:var(--navyBg);color:var(--navy)}
+.btn-ghost{background:#fff;color:var(--sub);border:1.5px solid var(--line)}
+.btn-red{background:var(--redBg);color:var(--red)}
+.btn-block{width:100%}
+.btn-big{width:100%;padding:15px;font-size:16px;font-weight:800;border-radius:12px}
+.small{font-size:11px;color:var(--faint);line-height:1.5}
+/* カレンダー */
+.monthbar{display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:8px}
+.mbtn{background:#fff;border:1px solid var(--line);border-radius:10px;width:40px;height:40px;font-size:20px;color:var(--navy)}
+.mlabel{font-size:18px;font-weight:800;min-width:120px;text-align:center}
+.wrow,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.wrow div{text-align:center;font-size:11px;font-weight:700;color:var(--faint);padding:2px 0}
+.cell{min-height:58px;border-radius:9px;border:1px solid var(--line);background:#fff;padding:3px 2px;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
+.cell .d{font-size:13px;font-weight:600}
+.cell.today{border:2px solid var(--navy)}
+.cell.sel{background:var(--navyBg)}
+.cell .pc{font-size:10px;font-weight:800;color:#fff;background:var(--navy);border-radius:8px;padding:0 5px;line-height:15px}
+.cell .ok{font-size:10px;color:var(--green);font-weight:800}
+.cell .warn{position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--red)}
+.legend{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--sub)}
+/* 手配 */
+.plan{border:1px solid var(--line);border-left:4px solid var(--faint);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fafbfc}
+.plan.st-未連絡{border-left-color:var(--red)}
+.plan.st-連絡済{border-left-color:var(--amber)}
+.plan.st-確定{border-left-color:var(--green)}
+.plan.st-中止{opacity:.55}
+.plan.st-中止 .p-main{text-decoration:line-through}
+.p-main{font-size:15px;font-weight:700}
+.p-sub{font-size:12px;color:var(--sub);margin-top:2px;line-height:1.5}
+.p-memo{font-size:12px;color:var(--ink);margin-top:4px;white-space:pre-wrap}
+.sts{display:flex;gap:4px;margin-top:8px}
+.st{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:8px;padding:6px 0;font-size:11px;font-weight:700;color:var(--sub)}
+.st.on.s-未連絡{background:var(--redBg);border-color:var(--red);color:var(--red)}
+.st.on.s-連絡済{background:var(--amberBg);border-color:var(--amber);color:var(--amber)}
+.st.on.s-確定{background:var(--greenBg);border-color:var(--green);color:var(--green)}
+.st.on.s-中止{background:#eef1f4;border-color:var(--sub);color:var(--sub)}
+.p-acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.p-acts a,.p-acts button{font-size:12px;font-weight:700;border-radius:8px;padding:6px 10px;text-decoration:none;border:none}
+.a-tel{background:var(--greenBg);color:var(--green)}
+.a-gcal{background:var(--navyBg);color:var(--navy)}
+.a-edit{background:#eef1f4;color:var(--sub)}
+.a-del{background:var(--redBg);color:var(--red)}
+.site-h{font-size:12px;font-weight:800;color:var(--navy);margin:10px 0 6px}
+.date-h{font-size:14px;font-weight:800;margin:14px 2px 6px;display:flex;justify-content:space-between;align-items:center}
+.alert{background:var(--redBg);color:var(--red);border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;margin-bottom:10px}
+.info{background:var(--greenBg);color:var(--green);border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;margin-bottom:10px}
+/* 日報 */
+.dm-row{display:grid;grid-template-columns:2fr 2fr 1fr 30px;gap:6px;margin-bottom:6px;align-items:center}
+.x{background:var(--redBg);color:var(--red);border:none;border-radius:8px;height:34px;font-weight:700}
+.miss{border:1.5px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:#fafbfc}
+.miss-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.miss-n{font-size:12px;font-weight:700;color:var(--amber)}
+.sev{font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px}
+.sev-軽微{background:var(--greenBg);color:var(--green)}
+.sev-中程度{background:var(--amberBg);color:var(--amber)}
+.sev-重大{background:var(--redBg);color:var(--red)}
+.daynav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.daynav .t{font-size:16px;font-weight:800}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 20px;border-radius:24px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;white-space:nowrap}
+.toast.show{opacity:1}
+.center{max-width:380px;margin:40px auto;padding:0 16px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast"></div>
+<datalist id="dl-trades"></datalist>
+<datalist id="dl-sites"></datalist>
+<datalist id="dl-companies"></datalist>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, get, set, push, remove, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCVkSQ6WUfkWI_m3CiK8PHlLV4z_U0MnA4",
+  authDomain: "hamasaki-nippo.firebaseapp.com",
+  databaseURL: "https://hamasaki-nippo-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "hamasaki-nippo",
+  storageBucket: "hamasaki-nippo.firebasestorage.app",
+  messagingSenderId: "870438510963",
+  appId: "1:870438510963:web:fe09b4ec1fe1c3ff196506"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getDatabase(fbApp);
+const auth = getAuth(fbApp);
+
+// ===== 定数 =====
+const WX = ["晴れ","曇り","雨","雪","強風"];
+const MISS_CATS = ["現場管理","安全","工程","資材","職人とのやり取り","その他"];
+const TRADES = ["大工","基礎","プレカット搬入","足場","屋根","板金","外壁","サッシ","防蟻","断熱","電気","設備","内装（クロス）","左官","塗装","美装","検査・立会い","その他"];
+const STATUSES = ["未連絡","連絡済","確定","中止"];
+const REDO = [{max:30,sev:"軽微"},{max:120,sev:"中程度"},{max:Infinity,sev:"重大"}]; // 大工日報と同じ基準
+const WD = ["日","月","火","水","木","金","土"];
+
+// ===== 小道具 =====
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2,"0");
+const ds = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const pd = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y,m-1,d); };
+const addDays = (s,n) => { const d = pd(s); d.setDate(d.getDate()+n); return ds(d); };
+const today = () => ds(new Date());
+const fmtDay = s => { const d = pd(s); return `${d.getMonth()+1}月${d.getDate()}日（${WD[d.getDay()]}）`; };
+const uidOf = name => name.replace(/[.#$/\[\]]/g,"_");
+const toArr = v => Array.isArray(v) ? v.filter(Boolean) : (v && typeof v === "object" ? Object.values(v) : []);
+const sevOf = min => { const v = parseFloat(min); if(!v || v <= 0) return ""; return REDO.find(r => v <= r.max).sev; };
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove("show"), 2200); }
+function lsGet(k, def){ try{ const v = localStorage.getItem(k); return v === null ? def : JSON.parse(v); }catch(e){ return def; } }
+function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+
+// ===== 状態 =====
+const S = {
+  me: lsGet("kantoku_me", ""),       // 選んだ名前
+  names: {},                          // uid -> 表示名
+  plans: {},                          // id -> 手配
+  myReports: {},                      // date -> 日報
+  view: "cal",                        // cal | day | report | upcoming | names
+  cursor: new Date(),
+  selDate: today(),
+  site: lsGet("kantoku_site_filter", ""),
+  planEdit: null,                     // 編集中の手配（id か "new"）
+  report: null,                       // 編集中の日報
+  reportDirty: false,
+  unsubReports: null
+};
+
+// ===== ログイン =====
+function renderLogin(){
+  $("#app").innerHTML = `
+  <div class="center">
+    <div style="font-size:22px;font-weight:800;color:var(--navy)">現場監督日報・段取り</div>
+    <div class="small" style="margin:4px 0 24px">株式会社濱崎組　ログイン</div>
+    <div class="field"><input id="l-mail" type="email" autocomplete="username" placeholder="メールアドレス"></div>
+    <div class="field"><input id="l-pass" type="password" autocomplete="current-password" placeholder="パスワード"></div>
+    <div id="l-err" style="color:var(--red);font-size:13px;min-height:18px;margin-bottom:8px"></div>
+    <button class="btn btn-navy btn-big" id="l-btn">ログイン</button>
+  </div>`;
+  $("#l-btn").onclick = async () => {
+    const b = $("#l-btn"); b.disabled = true; b.textContent = "確認中…";
+    try{ await signInWithEmailAndPassword(auth, $("#l-mail").value.trim(), $("#l-pass").value); }
+    catch(e){ $("#l-err").textContent = "メールまたはパスワードが違います"; b.disabled = false; b.textContent = "ログイン"; }
+  };
+}
+
+let started = false;
+onAuthStateChanged(auth, u => {
+  if(!u){ started = false; renderLogin(); return; }
+  if(started) return;
+  started = true;
+  startData();
+});
+
+function startData(){
+  $("#app").innerHTML = `<div class="center small">読み込み中…</div>`;
+  onValue(ref(db, "kantoku_plans"), snap => {
+    S.plans = snap.exists() ? snap.val() : {};
+    refreshLists();
+    if(S.view !== "report" && !S.planEdit) render(); // 入力中は画面を作り直さない（入力が消えないように）
+  }, err => showDbError(err));
+  onValue(ref(db, "kantoku_meta/names"), async snap => {
+    S.names = snap.exists() ? snap.val() : {};
+    // 以前の日報に出てくる名前も候補に入れる
+    try{
+      const r = await get(ref(db, "kantoku_reports"));
+      if(r.exists()) Object.entries(r.val()).forEach(([uid, days]) => {
+        if(!S.names[uid]){ const first = Object.values(days || {})[0]; S.names[uid] = (first && first.name) || uid; }
+      });
+    }catch(e){}
+    if(S.view === "names" || !S.me) render();
+  }, err => showDbError(err));
+  watchMyReports();
+  render();
+}
+function showDbError(err){
+  $("#app").innerHTML = `<div class="center"><div class="alert">データを読み込めませんでした。<br>${esc(err && err.message)}</div><div class="small">Firebaseのルールに kantoku_plans / kantoku_meta が入っているか確認してください。</div></div>`;
+}
+function watchMyReports(){
+  if(S.unsubReports){ S.unsubReports(); S.unsubReports = null; }
+  S.myReports = {};
+  if(!S.me) return;
+  S.unsubReports = onValue(ref(db, `kantoku_reports/${uidOf(S.me)}`), snap => {
+    S.myReports = snap.exists() ? snap.val() : {};
+    if((S.view === "cal" || S.view === "day") && !S.planEdit) render();
+  });
+}
+
+// 入力候補（現場名・業種・業者名）
+function refreshLists(){
+  const sites = new Set(), comps = new Set(), trades = new Set(TRADES);
+  Object.values(S.plans).forEach(p => { if(p.site) sites.add(p.site); if(p.company) comps.add(p.company); if(p.trade) trades.add(p.trade); });
+  Object.values(S.myReports).forEach(r => { if(r && r.site) sites.add(r.site); });
+  $("#dl-sites").innerHTML = [...sites].map(s => `<option value="${esc(s)}">`).join("");
+  $("#dl-companies").innerHTML = [...comps].map(s => `<option value="${esc(s)}">`).join("");
+  $("#dl-trades").innerHTML = [...trades].map(s => `<option value="${esc(s)}">`).join("");
+}
+
+// ===== 共通の上部 =====
+function header(){
+  return `
+  <div class="head">
+    <div><div class="head-title">現場監督日報・段取り</div><div class="head-sub">株式会社濱崎組</div></div>
+    <button class="name-chip" data-act="names">${S.me ? "👤 " + esc(S.me) : "名前を選ぶ"}</button>
+  </div>
+  <div class="links"><a href="../">大工日報 →</a><a href="../kanri/">日報管理 →</a></div>`;
+}
+function tabs(){
+  const t = (v,l) => `<button class="tab ${S.view===v||(v==="cal"&&S.view==="day")?"on":""}" data-act="view" data-v="${v}">${l}</button>`;
+  const n = pendingCount();
+  return `<div class="tabs">${t("cal","📅 カレンダー")}${t("upcoming", "📋 今後の段取り" + (n ? `（未連絡${n}）` : ""))}</div>`;
+}
+
+// 手配がその日に入っているか（複数日の手配に対応）
+const covers = (p, d) => p.date <= d && d <= (p.dateTo || p.date);
+function plansOn(d){
+  return Object.entries(S.plans)
+    .filter(([,p]) => covers(p, d) && (!S.site || p.site === S.site))
+    .sort((a,b) => (a[1].site||"").localeCompare(b[1].site||"") || (a[1].time||"").localeCompare(b[1].time||""));
+}
+function pendingCount(){
+  const t = today(), end = addDays(t, 14);
+  return Object.values(S.plans).filter(p => p.status === "未連絡" && (p.dateTo || p.date) >= t && p.date <= end && (!S.site || p.site === S.site)).length;
+}
+function siteFilter(){
+  const sites = [...new Set(Object.values(S.plans).map(p => p.site).filter(Boolean))].sort();
+  return `<div class="field"><select data-act="site">
+    <option value="">すべての現場</option>
+    ${sites.map(s => `<option ${s===S.site?"selected":""}>${esc(s)}</option>`).join("")}
+  </select></div>`;
+}
+
+// ===== 画面切り替え =====
+function render(){
+  if(!S.me && S.view !== "names") S.view = "names";
+  const v = S.view;
+  let body = "";
+  if(v === "names") body = viewNames();
+  else if(v === "cal") body = viewCal();
+  else if(v === "day") body = viewDay();
+  else if(v === "upcoming") body = viewUpcoming();
+  else if(v === "report") return renderReport();
+  $("#app").innerHTML = `<div class="wrap">${header()}${v==="names"?"":tabs()}${body}</div>`;
+}
+
+// ----- 名前選択 -----
+function viewNames(){
+  const list = Object.entries(S.names).sort((a,b)=>a[1].localeCompare(b[1]));
+  return `
+  <div class="card">
+    <div class="card-title">👤 あなたの名前を選んでください</div>
+    ${list.length ? list.map(([uid,n]) => `<button class="btn ${n===S.me?"btn-navy":"btn-ghost"} btn-block" style="margin-bottom:6px" data-act="pick" data-n="${esc(n)}">${esc(n)}</button>`).join("") : `<div class="small" style="margin-bottom:8px">まだ登録がありません。下から追加してください。</div>`}
+    <div style="display:flex;gap:6px;margin-top:10px">
+      <input id="new-name" placeholder="名前を追加（例：濱崎）">
+      <button class="btn btn-light" data-act="addname" style="white-space:nowrap">追加</button>
+    </div>
+    <div class="small" style="margin-top:6px">同じ人が別の名前で登録されないよう、いつも同じ名前を選んでください。</div>
+  </div>`;
+}
+
+// ----- カレンダー -----
+function viewCal(){
+  const y = S.cursor.getFullYear(), m = S.cursor.getMonth();
+  const first = new Date(y,m,1).getDay(), last = new Date(y,m+1,0).getDate();
+  let cells = "";
+  for(let i=0;i<first;i++) cells += `<div></div>`;
+  for(let d=1; d<=last; d++){
+    const k = `${y}-${pad(m+1)}-${pad(d)}`;
+    const ps = plansOn(k).filter(([,p]) => p.status !== "中止");
+    const pending = ps.some(([,p]) => p.status === "未連絡");
+    const dow = (first+d-1)%7;
+    const col = dow===0 ? "var(--red)" : dow===6 ? "var(--navy)" : "var(--ink)";
+    cells += `<button class="cell ${k===today()?"today":""} ${k===S.selDate?"sel":""}" data-act="day" data-d="${k}">
+      <span class="d" style="color:${col}">${d}</span>
+      ${ps.length ? `<span class="pc">${ps.length}件</span>` : ""}
+      ${S.myReports[k] ? `<span class="ok">✓日報</span>` : ""}
+      ${pending ? `<span class="warn"></span>` : ""}
+    </button>`;
+  }
+  const n = pendingCount();
+  return `
+  ${n ? `<div class="alert" data-act="view" data-v="upcoming" style="cursor:pointer">📞 2週間以内に未連絡の手配が ${n} 件あります →</div>` : ""}
+  ${siteFilter()}
+  <div class="card">
+    <div class="monthbar">
+      <button class="mbtn" data-act="month" data-n="-1">‹</button>
+      <div class="mlabel">${y}年${m+1}月</div>
+      <button class="mbtn" data-act="month" data-n="1">›</button>
+    </div>
+    <div class="wrow">${WD.map(w=>`<div>${w}</div>`).join("")}</div>
+    <div class="grid">${cells}</div>
+    <div class="legend"><span><b style="color:var(--navy)">■</b> 手配の件数</span><span><b style="color:var(--green)">✓</b> 日報記入済み</span><span><b style="color:var(--red)">●</b> 未連絡あり</span></div>
+  </div>
+  <button class="btn btn-navy btn-big" data-act="day" data-d="${today()}">今日の段取り・日報を開く</button>`;
+}
+
+// ----- 1日の画面 -----
+function planCard(id, p, showDate){
+  const tel = (p.contact || "").replace(/[^0-9+]/g, "");
+  const multi = p.dateTo && p.dateTo !== p.date;
+  return `
+  <div class="plan st-${esc(p.status||"未連絡")}">
+    <div class="p-main">${esc(p.trade||"（業種なし）")}${p.company?`　${esc(p.company)}`:""}${p.count?`　${esc(p.count)}名`:""}</div>
+    <div class="p-sub">
+      ${p.time ? `🕗 ${esc(p.time)}　` : ""}🏗️ ${esc(p.site||"（現場なし）")}
+      ${multi || showDate ? `<br>📆 ${fmtDay(p.date)}${multi?` 〜 ${fmtDay(p.dateTo)}`:""}` : ""}
+      ${p.contact ? `<br>📞 ${esc(p.contact)}` : ""}
+    </div>
+    ${p.memo ? `<div class="p-memo">${esc(p.memo)}</div>` : ""}
+    <div class="sts">${STATUSES.map(s => `<button class="st s-${s} ${ (p.status||"未連絡")===s?"on":""}" data-act="status" data-id="${id}" data-s="${s}">${s}</button>`).join("")}</div>
+    <div class="p-acts">
+      ${tel ? `<a class="a-tel" href="tel:${esc(tel)}">📞 電話</a>` : ""}
+      <a class="a-gcal" href="${gcalUrl(p)}" target="_blank" rel="noopener">📅 Googleカレンダー</a>
+      <button class="a-edit" data-act="editplan" data-id="${id}">編集</button>
+      <button class="a-del" data-act="delplan" data-id="${id}">削除</button>
+    </div>
+    ${p.updatedBy ? `<div class="small" style="margin-top:6px">最終更新：${esc(p.updatedBy)}</div>` : ""}
+  </div>`;
+}
+function gcalUrl(p){
+  const s = p.date.replace(/-/g,""), e = addDays(p.dateTo || p.date, 1).replace(/-/g,"");
+  const text = `${p.trade||"手配"}${p.company?" "+p.company:""}（${p.site||""}）`;
+  const details = [p.count?`人数：${p.count}名`:"", p.time?`時間：${p.time}`:"", p.contact?`連絡先：${p.contact}`:"", p.memo||""].filter(Boolean).join("\n");
+  return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent(text) + "&dates=" + s + "/" + e + "&details=" + encodeURIComponent(details);
+}
+function planForm(){
+  const isNew = S.planEdit === "new";
+  const p = isNew ? { date:S.selDate, dateTo:"", site:S.site || lsGet("kantoku_last_site",""), trade:"", company:"", count:"", time:"", contact:"", memo:"", status:"未連絡" } : { ...S.plans[S.planEdit] };
+  return `
+  <div class="card" id="plan-form" style="border:2px solid var(--navy)">
+    <div class="card-title">${isNew ? "＋ 手配を追加" : "✏️ 手配を編集"}</div>
+    <div class="row2">
+      <div class="field"><label>開始日</label><input type="date" id="pf-date" value="${esc(p.date)}"></div>
+      <div class="field"><label>終了日（複数日なら）</label><input type="date" id="pf-dateTo" value="${esc(p.dateTo||"")}"></div>
+    </div>
+    <div class="field"><label>現場名</label><input id="pf-site" list="dl-sites" value="${esc(p.site)}" placeholder="例：〇〇邸新築工事"></div>
+    <div class="row2">
+      <div class="field"><label>業種</label><input id="pf-trade" list="dl-trades" value="${esc(p.trade)}" placeholder="例：大工"></div>
+      <div class="field"><label>業者・職人名</label><input id="pf-company" list="dl-companies" value="${esc(p.company)}" placeholder="例：〇〇電気"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>人数</label><input id="pf-count" type="number" inputmode="numeric" value="${esc(p.count)}" placeholder="例：2"></div>
+      <div class="field"><label>時間</label><input id="pf-time" value="${esc(p.time)}" placeholder="例：8:00〜"></div>
+    </div>
+    <div class="field"><label>連絡先（電話番号）</label><input id="pf-contact" type="tel" value="${esc(p.contact)}" placeholder="例：090-xxxx-xxxx"></div>
+    <div class="field"><label>メモ（段取り・持ち物・注意点など）</label><textarea id="pf-memo" rows="2">${esc(p.memo)}</textarea></div>
+    <div class="field"><label>状況</label><select id="pf-status">${STATUSES.map(s=>`<option ${s===(p.status||"未連絡")?"selected":""}>${s}</option>`).join("")}</select></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" style="flex:1" data-act="cancelplan">キャンセル</button>
+      <button class="btn btn-navy" style="flex:2" data-act="saveplan">保存</button>
+    </div>
+  </div>`;
+}
+function viewDay(){
+  const d = S.selDate;
+  const ps = plansOn(d);
+  const bySite = {};
+  ps.forEach(([id,p]) => { const k = p.site || "（現場なし）"; (bySite[k] = bySite[k] || []).push([id,p]); });
+  const rep = S.myReports[d];
+  return `
+  <div class="daynav">
+    <button class="mbtn" data-act="dshift" data-n="-1">‹</button>
+    <div class="t">${fmtDay(d)}${d===today()?"　今日":""}</div>
+    <button class="mbtn" data-act="dshift" data-n="1">›</button>
+  </div>
+  <button class="btn btn-light btn-block" style="margin-bottom:10px" data-act="view" data-v="cal">← カレンダーに戻る</button>
+  ${siteFilter()}
+  <div class="card">
+    <div class="card-title"><span>👷 この日の手配（段取り）</span><span>${ps.length}件</span></div>
+    ${ps.length ? Object.entries(bySite).map(([site, list]) => `<div class="site-h">🏗️ ${esc(site)}</div>${list.map(([id,p]) => planCard(id,p)).join("")}`).join("") : `<div class="small">この日の手配はまだありません。</div>`}
+    ${S.planEdit ? "" : `<button class="btn btn-light btn-block" style="margin-top:8px" data-act="newplan">＋ 手配を追加</button>`}
+  </div>
+  ${S.planEdit ? planForm() : ""}
+  <div class="card">
+    <div class="card-title"><span>📝 ${esc(S.me)}さんの日報</span>${rep ? `<span style="color:var(--green)">✓ 記入済み</span>` : `<span>未記入</span>`}</div>
+    ${rep ? `<div class="p-sub" style="margin-bottom:8px">${esc((rep.work||"").slice(0,80))}${(rep.work||"").length>80?"…":""}</div>` : ""}
+    <button class="btn btn-navy btn-big" data-act="report">${rep ? "日報を見る・直す" : "この日の日報を書く"}</button>
+  </div>`;
+}
+
+// ----- 今後の段取り -----
+function viewUpcoming(){
+  const t = today();
+  const days = [];
+  for(let i=0;i<14;i++) days.push(addDays(t,i));
+  const n = pendingCount();
+  let html = n ? `<div class="alert">📞 未連絡が ${n} 件あります。早めに連絡を。</div>` : `<div class="info">✓ 2週間以内の手配はすべて連絡済みです</div>`;
+  html += siteFilter();
+  let any = false;
+  days.forEach(d => {
+    const ps = plansOn(d).filter(([,p]) => p.date === d || d === t); // 複数日の手配は初日（または今日）にだけ表示
+    if(!ps.length) return;
+    any = true;
+    html += `<div class="date-h"><span>${fmtDay(d)}${d===t?"　今日":""}</span><button class="btn btn-light" style="padding:5px 10px;font-size:12px" data-act="day" data-d="${d}">この日を開く</button></div>`;
+    html += ps.map(([id,p]) => planCard(id,p,true)).join("");
+  });
+  if(!any) html += `<div class="card small">これから2週間の手配はありません。カレンダーの日付から追加できます。</div>`;
+  return html;
+}
+
+// ===== 手配の保存など =====
+async function savePlan(){
+  const g = id => $(id).value.trim();
+  const p = {
+    date: g("#pf-date"), dateTo: g("#pf-dateTo"), site: g("#pf-site"), trade: g("#pf-trade"),
+    company: g("#pf-company"), count: g("#pf-count"), time: g("#pf-time"), contact: g("#pf-contact"),
+    memo: g("#pf-memo"), status: $("#pf-status").value, updatedBy: S.me, updatedAt: Date.now()
+  };
+  if(!p.date){ alert("開始日を入れてください"); return; }
+  if(!p.trade && !p.company){ alert("業種か業者名のどちらかは入れてください"); return; }
+  if(p.dateTo && p.dateTo < p.date){ alert("終了日が開始日より前になっています"); return; }
+  if(p.dateTo === p.date) p.dateTo = "";
+  try{
+    if(S.planEdit === "new"){ p.createdBy = S.me; p.createdAt = Date.now(); await push(ref(db, "kantoku_plans"), p); }
+    else { const old = S.plans[S.planEdit] || {}; await set(ref(db, `kantoku_plans/${S.planEdit}`), { ...old, ...p }); }
+    if(p.site) lsSet("kantoku_last_site", p.site);
+    S.planEdit = null; toast("手配を保存しました"); render();
+  }catch(e){ alert("保存に失敗しました：" + e.message); }
+}
+async function setStatus(id, s){
+  const p = S.plans[id]; if(!p) return;
+  try{ await set(ref(db, `kantoku_plans/${id}`), { ...p, status:s, updatedBy:S.me, updatedAt:Date.now() }); toast(`「${s}」にしました`); }
+  catch(e){ alert("更新に失敗しました：" + e.message); }
+}
+async function delPlan(id){
+  const p = S.plans[id]; if(!p) return;
+  if(!confirm(`${p.trade||""} ${p.company||""}（${fmtDay(p.date)}）の手配を削除しますか？`)) return;
+  try{ await remove(ref(db, `kantoku_plans/${id}`)); toast("削除しました"); }
+  catch(e){ alert("削除に失敗しました：" + e.message); }
+}
+
+// ===== 日報 =====
+const draftKey = () => `kantoku_draft_${uidOf(S.me)}_${S.selDate}`;
+function emptyReport(){ return { weather:"", site:"", work:"", demen:[], misses:[], learn:"", next:"", anzen:"" }; }
+function normalize(r){
+  const o = { ...emptyReport(), ...(r || {}) };
+  o.demen = toArr(o.demen).map(x => ({ trade:x.trade||"", company:x.company||"", count:x.count??"" }));
+  o.misses = toArr(o.misses).map(x => ({ big:x.big||"", text:x.text||"", cause:x.cause||"", redo:x.redo||"", taisaku:x.taisaku||"", sev:x.sev||"" }));
+  return o;
+}
+// その日の手配（中止以外）から出面を作る
+function demenFromPlans(){
+  return plansOn(S.selDate).filter(([,p]) => p.status !== "中止" && (!S.site || p.site === S.site))
+    .map(([,p]) => ({ trade:p.trade||"", company:p.company||"", count:p.count||"" }));
+}
+async function openReport(){
+  S.view = "report";
+  $("#app").innerHTML = `<div class="center small">日報を読み込み中…</div>`;
+  let saved = null;
+  try{ const snap = await get(ref(db, `kantoku_reports/${uidOf(S.me)}/${S.selDate}`)); if(snap.exists()) saved = snap.val(); }
+  catch(e){ alert("日報を読み込めませんでした：" + e.message); S.view = "day"; render(); return; }
+  const draft = lsGet(draftKey(), null);
+  S.reportNote = "";
+  if(draft && (!saved || (draft._at || 0) > (saved.savedAt || 0))){
+    S.report = normalize(draft); S.reportNote = "保存していない下書きを復元しました";
+  }else if(saved){
+    S.report = normalize(saved); S.reportNote = "保存済みの日報を開きました。直したら「保存」を押してください";
+    if(draft) lsDel(draftKey());
+  }else{
+    S.report = emptyReport();
+    S.report.demen = demenFromPlans();
+    const firstSite = plansOn(S.selDate).map(([,p])=>p.site).find(Boolean);
+    S.report.site = S.site || firstSite || lsGet("kantoku_last_site","");
+  }
+  S.reportExists = !!saved;
+  S.reportDirty = false;
+  renderReport();
+}
+function saveDraft(){ S.reportDirty = true; lsSet(draftKey(), { ...S.report, _at: Date.now() }); }
+
+function renderReport(){
+  const r = S.report;
+  const demen = r.demen.map((x,i) => `
+    <div class="dm-row">
+      <input list="dl-trades" data-dm="${i}:trade" value="${esc(x.trade)}" placeholder="業種">
+      <input list="dl-companies" data-dm="${i}:company" value="${esc(x.company)}" placeholder="業者名">
+      <input type="number" inputmode="numeric" data-dm="${i}:count" value="${esc(x.count)}" placeholder="人">
+      <button class="x" data-act="dmdel" data-i="${i}">✕</button>
+    </div>`).join("");
+  const total = r.demen.reduce((s,x)=>s+(parseFloat(x.count)||0),0);
+  const misses = r.misses.map((m,i) => { const sv = sevOf(m.redo); return `
+    <div class="miss">
+      <div class="miss-h"><span class="miss-n">ミス・問題 #${i+1}</span><span><span class="sev ${sv?"sev-"+sv:""}" id="sev-${i}">${sv||"深刻度：時間で自動"}</span> <button class="x" style="width:30px;height:28px" data-act="mdel" data-i="${i}">✕</button></span></div>
+      <div class="field"><label>分類</label><select data-m="${i}:big"><option value="">選択</option>${MISS_CATS.map(c=>`<option ${c===m.big?"selected":""}>${c}</option>`).join("")}</select></div>
+      <div class="field"><label>内容</label><textarea rows="2" data-m="${i}:text" placeholder="何が起きたか">${esc(m.text)}</textarea></div>
+      <div class="field"><label>原因（分かれば）</label><input data-m="${i}:cause" value="${esc(m.cause)}" placeholder="例：指示の伝達不足"></div>
+      <div class="field"><label>対応・やり直しにかかった時間（分）</label><input type="number" inputmode="numeric" data-m="${i}:redo" value="${esc(m.redo)}" placeholder="例：30"></div>
+      <div class="field" style="margin-bottom:0"><label>対策・今後どうするか</label><textarea rows="2" data-m="${i}:taisaku" placeholder="次に同じことが起きないための対策">${esc(m.taisaku)}</textarea></div>
+    </div>`; }).join("");
+  $("#app").innerHTML = `
+  <div class="wrap">
+    ${header()}
+    <div class="daynav">
+      <button class="btn btn-light" data-act="repback">← 戻る</button>
+      <div class="t">${fmtDay(S.selDate)}の日報</div>
+      <span style="width:60px"></span>
+    </div>
+    ${S.reportNote ? `<div class="info">${esc(S.reportNote)}</div>` : ""}
+    <div class="card">
+      <div class="card-title">📋 基本情報</div>
+      <div class="row2">
+        <div class="field"><label>天候</label><select data-f="weather"><option value="">選択</option>${WX.map(w=>`<option ${w===r.weather?"selected":""}>${w}</option>`).join("")}</select></div>
+        <div class="field"><label>記入者</label><input value="${esc(S.me)}" disabled></div>
+      </div>
+      <div class="field" style="margin-bottom:0"><label>現場名</label><input list="dl-sites" data-f="site" value="${esc(r.site)}" placeholder="例：〇〇邸新築工事"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>👷 出面（今日入った業者・人数）</span><span>計 ${total} 名</span></div>
+      ${demen || `<div class="small" style="margin-bottom:8px">まだありません。</div>`}
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-light" style="flex:1" data-act="dmadd">＋ 行を追加</button>
+        <button class="btn btn-ghost" style="flex:1" data-act="dmplan">手配から読み込む</button>
+      </div>
+      <div class="small" style="margin-top:6px">その日の手配（中止以外）が自動で入ります。実際と違えば直してください。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🏗️ 今日の現場の様子</div>
+      <textarea rows="4" data-f="work" placeholder="今日の工程の進み具合、現場全体の状況など">${esc(r.work)}</textarea>
+    </div>
+    <div class="card">
+      <div class="card-title">🦺 安全・検査・打合せ</div>
+      <textarea rows="3" data-f="anzen" placeholder="KY・安全巡視で気づいたこと、検査・立会い、施主や設計との打合せなど">${esc(r.anzen)}</textarea>
+    </div>
+    <div class="card">
+      <div class="card-title">⚠️ ミス・問題・気づき</div>
+      ${misses}
+      <button class="btn btn-light btn-block" data-act="madd">＋ ミス・問題を追加</button>
+      <div class="small" style="margin-top:6px">深刻度は大工日報と同じ基準で自動判定（30分未満＝軽微／2時間未満＝中程度／2時間以上＝重大）。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">💡 今日の学び・気づき</div>
+      <textarea rows="3" data-f="learn" placeholder="監督として今日感じたこと、次に活かしたいこと">${esc(r.learn)}</textarea>
+    </div>
+    <div class="card">
+      <div class="card-title">🎯 次回に向けて（申し送り）</div>
+      <textarea rows="3" data-f="next" placeholder="明日以降の申し送り、確認すべきことなど">${esc(r.next)}</textarea>
+    </div>
+    <button class="btn btn-navy btn-big" id="save-rep" data-act="saverep">${S.reportExists ? "日報を更新する" : "日報を保存する"}</button>
+    <div class="small" style="text-align:center;margin-top:8px">入力中の内容はこの端末に自動で下書き保存されます</div>
+  </div>`;
+}
+async function saveReport(){
+  const r = S.report;
+  const half = r.misses.filter(m => !m.text.trim() && (m.big || m.cause.trim() || m.redo || m.taisaku.trim()));
+  if(half.length && !confirm(`「内容」が空のミスが ${half.length} 件あります。内容が空のものは保存されません。このまま保存しますか？`)) return;
+  const record = {
+    name: S.me,
+    site: r.site.trim(), weather: r.weather, work: r.work.trim(), anzen: r.anzen.trim(),
+    demen: r.demen.filter(x => x.trade.trim() || x.company.trim()).map(x => ({ trade:x.trade.trim(), company:x.company.trim(), count: x.count === "" ? "" : Number(x.count) })),
+    misses: r.misses.filter(m => m.text.trim()).map(m => ({ big:m.big, text:m.text.trim(), cause:m.cause.trim(), redo: m.redo ? Number(m.redo) : 0, sev: sevOf(m.redo), taisaku:m.taisaku.trim() })),
+    learn: r.learn.trim(), next: r.next.trim(), savedAt: Date.now()
+  };
+  const b = $("#save-rep"); b.disabled = true; b.textContent = "保存中…";
+  try{
+    await set(ref(db, `kantoku_reports/${uidOf(S.me)}/${S.selDate}`), record);
+    lsDel(draftKey());
+    if(record.site) lsSet("kantoku_last_site", record.site);
+    S.reportDirty = false;
+    toast("日報を保存しました");
+    S.view = "day"; render();
+  }catch(e){
+    alert("保存に失敗しました（下書きは端末に残っています）：" + e.message);
+    b.disabled = false; b.textContent = S.reportExists ? "日報を更新する" : "日報を保存する";
+  }
+}
+
+// ===== 入力イベント（日報） =====
+document.addEventListener("input", e => {
+  const el = e.target;
+  if(S.view !== "report" || !S.report) return;
+  if(el.dataset.f){ S.report[el.dataset.f] = el.value; saveDraft(); }
+  else if(el.dataset.dm){ const [i,k] = el.dataset.dm.split(":"); S.report.demen[i][k] = el.value; saveDraft(); }
+  else if(el.dataset.m){
+    const [i,k] = el.dataset.m.split(":"); S.report.misses[i][k] = el.value; saveDraft();
+    if(k === "redo"){ const sv = sevOf(el.value), t = $("#sev-"+i); if(t){ t.textContent = sv || "深刻度：時間で自動"; t.className = "sev " + (sv ? "sev-"+sv : ""); } }
+  }
+});
+document.addEventListener("change", e => {
+  const el = e.target;
+  if(el.dataset.act === "site"){ S.site = el.value; lsSet("kantoku_site_filter", S.site); render(); return; }
+  if(S.view === "report" && el.tagName === "SELECT"){
+    if(el.dataset.f){ S.report[el.dataset.f] = el.value; saveDraft(); }
+    if(el.dataset.m){ const [i,k] = el.dataset.m.split(":"); S.report.misses[i][k] = el.value; saveDraft(); }
+  }
+});
+
+// ===== クリック =====
+document.addEventListener("click", async e => {
+  const el = e.target.closest("[data-act]");
+  if(!el || el.tagName === "SELECT") return;
+  const a = el.dataset.act;
+  if(a === "names"){ if(S.view==="report" && S.reportDirty && !confirm("入力中の日報は下書きとして残ります。名前の画面に移りますか？")) return; S.view = "names"; render(); }
+  else if(a === "pick"){ S.me = el.dataset.n; lsSet("kantoku_me", S.me); watchMyReports(); S.view = "cal"; render(); }
+  else if(a === "addname"){
+    const n = $("#new-name").value.trim(); if(!n) return;
+    try{ await set(ref(db, `kantoku_meta/names/${uidOf(n)}`), n); S.me = n; lsSet("kantoku_me", n); watchMyReports(); S.view = "cal"; render(); }
+    catch(err){ alert("追加に失敗しました：" + err.message); }
+  }
+  else if(a === "view"){ S.view = el.dataset.v; S.planEdit = null; render(); }
+  else if(a === "month"){ S.cursor = new Date(S.cursor.getFullYear(), S.cursor.getMonth() + Number(el.dataset.n), 1); render(); }
+  else if(a === "day"){ S.selDate = el.dataset.d; S.cursor = pd(S.selDate); S.view = "day"; S.planEdit = null; render(); window.scrollTo(0,0); }
+  else if(a === "dshift"){ S.selDate = addDays(S.selDate, Number(el.dataset.n)); S.cursor = pd(S.selDate); S.planEdit = null; render(); }
+  else if(a === "newplan"){ S.planEdit = "new"; render(); $("#plan-form")?.scrollIntoView({behavior:"smooth"}); }
+  else if(a === "editplan"){ S.planEdit = el.dataset.id; if(S.view === "upcoming"){ S.selDate = S.plans[el.dataset.id].date; S.view = "day"; } render(); $("#plan-form")?.scrollIntoView({behavior:"smooth"}); }
+  else if(a === "cancelplan"){ S.planEdit = null; render(); }
+  else if(a === "saveplan"){ await savePlan(); }
+  else if(a === "status"){ await setStatus(el.dataset.id, el.dataset.s); }
+  else if(a === "delplan"){ await delPlan(el.dataset.id); }
+  else if(a === "report"){ await openReport(); window.scrollTo(0,0); }
+  else if(a === "repback"){ if(S.reportDirty && !confirm("保存していない内容は下書きとして端末に残ります。戻りますか？")) return; S.view = "day"; render(); }
+  else if(a === "saverep"){ await saveReport(); }
+  else if(a === "dmadd"){ S.report.demen.push({trade:"",company:"",count:""}); saveDraft(); renderReport(); }
+  else if(a === "dmdel"){ S.report.demen.splice(Number(el.dataset.i),1); saveDraft(); renderReport(); }
+  else if(a === "dmplan"){
+    const add = demenFromPlans();
+    if(!add.length){ toast("この日の手配がありません"); return; }
+    if(S.report.demen.length && !confirm("今の出面を、手配の内容で置き換えますか？")) return;
+    S.report.demen = add; saveDraft(); renderReport();
+  }
+  else if(a === "madd"){ S.report.misses.push({big:"",text:"",cause:"",redo:"",taisaku:"",sev:""}); saveDraft(); renderReport(); }
+  else if(a === "mdel"){ if(!confirm("このミスを消しますか？")) return; S.report.misses.splice(Number(el.dataset.i),1); saveDraft(); renderReport(); }
+});
+
+// 画面を閉じるとき、未保存なら警告（下書きは残る）
+window.addEventListener("beforeunload", e => { if(S.view === "report" && S.reportDirty){ e.preventDefault(); e.returnValue = ""; } });
+</script>
+</body>
+</html>
