@@ -316,34 +316,38 @@ function renderLogin(){
 }
 
 let started = false, curUid = null;
-onAuthStateChanged(auth, async u => {
+onAuthStateChanged(auth, u => enter(u));
+// ログイン中のアカウントで監督日報を開けるか確認（Firebaseのルールで読めるかで判断）
+async function enter(u, retry){
   if(!u){ started = false; curUid = null; renderLogin(); return; }
   if(started && u.uid === curUid) return;
   curUid = u.uid;
-  // 監督用アカウントかどうか（Firebaseのルールで読めるかで判断）
-  $("#app").innerHTML = `<div class="center small">確認中…</div>`;
+  if(!retry) $("#app").innerHTML = `<div class="center small">確認中…</div>`;
   try{ await get(ref(db, "kantoku_meta/names")); }
-  catch(e){ started = false; renderLocked(u.email); return; }
+  catch(e){ started = false; renderLocked(u.email, retry); return; }
   started = true;
   startData();
-});
+}
 // 監督用でないアカウントでログインしているとき
-function renderLocked(email){
+function renderLocked(email, retried){
   $("#app").innerHTML = `
   <div class="center">
     <div style="font-size:22px;font-weight:800;color:var(--navy)">🔒 監督専用</div>
     <div class="small" style="margin:6px 0 18px;line-height:1.7">この画面（監督日報・段取り）は監督専用です。<br>今は <b>${esc(email||"")}</b> でログインしています。<br>監督用のメールアドレスとパスワードを入れてください。</div>
     <div class="field"><input id="l-mail" type="email" autocomplete="username" placeholder="監督用メールアドレス"></div>
     <div class="field"><input id="l-pass" type="password" autocomplete="current-password" placeholder="パスワード"></div>
-    <div id="l-err" style="color:var(--red);font-size:13px;min-height:18px;margin-bottom:8px"></div>
+    <div id="l-err" style="color:var(--red);font-size:13px;min-height:18px;margin-bottom:8px;line-height:1.6">${retried ? `「${esc(email||"")}」には監督日報を見る権限がありません。Firebaseのルールにこのメールアドレスが正しく入っているか確認してください。` : ""}</div>
     <button class="btn btn-navy btn-big" id="l-btn">監督用でログイン</button>
     <div class="small" style="margin-top:14px;line-height:1.6">※この端末でログインを切り替えると、同じ端末の大工日報・日報管理も監督用アカウントで開くようになります（どちらも使えます）。</div>
     <div class="links" style="margin-top:12px"><a href="../">大工日報に戻る →</a></div>
   </div>`;
   $("#l-btn").onclick = async () => {
     const b = $("#l-btn"); b.disabled = true; b.textContent = "確認中…";
+    const before = auth.currentUser && auth.currentUser.uid;
     try{ await signInWithEmailAndPassword(auth, $("#l-mail").value.trim(), $("#l-pass").value); }
-    catch(e){ $("#l-err").textContent = "メールまたはパスワードが違います"; b.disabled = false; b.textContent = "監督用でログイン"; }
+    catch(e){ $("#l-err").textContent = "メールまたはパスワードが違います"; b.disabled = false; b.textContent = "監督用でログイン"; return; }
+    // 同じアカウントで入り直したときは切り替えが起きないので、ここで確認し直す
+    if(auth.currentUser && auth.currentUser.uid === before){ started = false; curUid = null; await enter(auth.currentUser, true); }
   };
 }
 
