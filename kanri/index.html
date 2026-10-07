@@ -603,7 +603,7 @@ async function renderKantokuSummary(from,to){
     if(!r||!inRange(d,from,to))return;
     reps.push({date:d,...r});
     const ms=Array.isArray(r.misses)?r.misses:Object.values(r.misses||{});
-    ms.forEach(m=>misses.push({...m,date:d,personName:r.name||"",site:r.site||""}));
+    ms.forEach(m=>misses.push({...m,date:d,personName:r.name||"",site:m.site||r.site||""}));
   }));
   kantokuMissCache=misses;
   if(reps.length===0){el.innerHTML='<div style="color:#9aa5b1;font-size:13px">この期間の監督日報はありません</div>';return}
@@ -669,6 +669,7 @@ window.loadData=async function(){
     ["chart-big","chart-detail","chart-site","chart-trend","learn-list","logs-body","sev-row"].forEach(id=>{
       const el=document.getElementById(id);if(el)el.innerHTML='<div class="no-data">データがありません</div>';
     });
+    renderKantokuSummary(from,to);
     return;
   }
   const allData=snap.val();

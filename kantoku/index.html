@@ -721,7 +721,7 @@ function viewReports(){
   const rows = [];
   Object.entries(S.allReports).forEach(([uid, days]) => {
     if(S.repPerson && uid !== S.repPerson) return;
-    Object.entries(days || {}).forEach(([d, r]) => { if(d.startsWith(prefix) && r && (!S.site || r.site === S.site)) rows.push({ uid, d, r }); });
+    Object.entries(days || {}).forEach(([d, r]) => { if(d.startsWith(prefix) && r && (!S.site || r.site === S.site || toArr(r.visits).some(v => v.site === S.site))) rows.push({ uid, d, r }); });
   });
   rows.sort((a,b) => b.d.localeCompare(a.d) || (a.r.name||"").localeCompare(b.r.name||""));
   const missAll = rows.reduce((n,x) => n + toArr(x.r.misses).length, 0);
@@ -731,16 +731,22 @@ function viewReports(){
     const total = dm.reduce((n,x) => n + (parseFloat(x.count)||0), 0);
     let h = `<div class="plan" style="border-left-color:${ms.length?"var(--amber)":"var(--navy)"}">
       <button class="rep-h" data-act="repopen" data-k="${esc(key)}">
-        <span><b>${fmtDay(d)}</b>　${esc(r.name||uid)}<br><span class="small">${esc(r.site||"（現場なし）")}${r.weather?"・"+esc(r.weather):""}${total?`・出面${total}名`:""}${(toArr(r.photos).length + ms.reduce((n,z)=>n+toArr(z.photos).length,0)) ? "・📷" + (toArr(r.photos).length + ms.reduce((n,z)=>n+toArr(z.photos).length,0)) : ""}</span></span>
+        <span><b>${fmtDay(d)}</b>　${esc(r.name||uid)}<br><span class="small">${esc(r.site||"（現場なし）")}${toArr(r.visits).length>1?`（${toArr(r.visits).length}現場）`:""}${r.weather?"・"+esc(r.weather):""}${total?`・出面${total}名`:""}${(toArr(r.photos).length + ms.reduce((n,z)=>n+toArr(z.photos).length,0)) ? "・📷" + (toArr(r.photos).length + ms.reduce((n,z)=>n+toArr(z.photos).length,0)) : ""}</span></span>
         <span style="text-align:right">${ms.length?`<span class="sev sev-${ms.some(z=>z.sev==="重大")?"重大":"中程度"}">ミス${ms.length}</span>`:""} ${open?"▲":"▼"}</span>
       </button>`;
     if(!open) return h + (r.work ? `<div class="p-sub">${esc(r.work.slice(0,60))}${r.work.length>60?"…":""}</div>` : "") + `</div>`;
     const sec = (t, v) => v ? `<div class="chk-h">${t}</div><div class="p-memo">${esc(v)}</div>` : "";
     h += `<div class="chk-body">`;
-    if(dm.length) h += `<div class="chk-h">👷 出面</div>` + dm.map(x => `<div class="p-sub">・${esc(x.trade)} ${esc(x.company)} ${x.count!==""?esc(x.count)+"名":""}</div>`).join("");
-    h += sec("🏗️ 現場の様子", r.work) + photoThumbs(r.photos) + sec("🦺 安全・検査・打合せ", r.anzen);
+    // 現場ごとに表示（以前の形の日報は1現場として表示）
+    const vs = toArr(r.visits).length ? toArr(r.visits) : [{ site:r.site, work:r.work, anzen:r.anzen, demen:r.demen, photos:r.photos }];
+    vs.forEach(v => {
+      const vdm = toArr(v.demen);
+      h += `<div class="site-h" style="margin-top:10px">🏗️ ${esc(v.site||"（現場名なし）")}${vdm.length?`　<span class="small">出面 ${vdm.reduce((n,x)=>n+(parseFloat(x.count)||0),0)}名</span>`:""}</div>`;
+      if(vdm.length) h += vdm.map(x => `<div class="p-sub">・${esc(x.trade)} ${esc(x.company)} ${x.count!==""?esc(x.count)+"名":""}</div>`).join("");
+      h += sec("現場の様子", v.work) + photoThumbs(v.photos) + sec("安全・検査・打合せ", v.anzen);
+    });
     if(ms.length) h += `<div class="chk-h">⚠️ ミス・問題</div>` + ms.map(z => `<div style="margin:4px 0;padding:6px 8px;background:#fafbfc;border-radius:8px">
-      <div style="font-size:13px">${z.sev?`<span class="sev sev-${esc(z.sev)}">${esc(z.sev)}</span> `:""}${z.big?`<span class="small">${esc(z.big)}</span> `:""}${esc(z.text)}</div>
+      <div style="font-size:13px">${z.sev?`<span class="sev sev-${esc(z.sev)}">${esc(z.sev)}</span> `:""}${z.site?`<span class="small">［${esc(z.site)}］</span> `:""}${z.big?`<span class="small">${esc(z.big)}</span> `:""}${esc(z.text)}</div>
       ${z.cause?`<div class="p-sub">原因：${esc(z.cause)}</div>`:""}${z.taisaku?`<div class="p-sub" style="color:var(--green)">対策：${esc(z.taisaku)}</div>`:""}${z.redo?`<div class="p-sub">対応時間：${esc(z.redo)}分</div>`:""}${photoThumbs(z.photos)}
     </div>`).join("");
     h += sec("💡 学び・気づき", r.learn) + sec("🎯 申し送り", r.next);
@@ -1129,26 +1135,34 @@ document.addEventListener("change", async e => {
   toast("写真をアップロード中…");
   try{
     const url = await uploadPhoto(file, `${uidOf(S.me)}/${S.selDate}`);
-    const target = w === "r" ? S.report : S.report.misses[Number(w)];
+    const target = photoTarget(w);
     if(!target) return;
     target.photos = [...(target.photos||[]), url];
     saveDraft(); renderReport(); toast("写真を追加しました（保存を押すと日報に残ります）");
   }catch(err){ toast("アップロードに失敗しました"); }
 });
+// 写真の置き場所："v0" などは現場ブロック、数字はミス
+const photoTarget = w => String(w).startsWith("v") ? S.report.visits[Number(String(w).slice(1))] : S.report.misses[Number(w)];
 
-// ===== 日報 =====
+// ===== 日報（1日に複数の現場） =====
 const draftKey = () => `kantoku_draft_${uidOf(S.me)}_${S.selDate}`;
-function emptyReport(){ return { weather:"", site:"", work:"", demen:[], misses:[], learn:"", next:"", anzen:"", photos:[] }; }
+const emptyVisit = site => ({ site:site||"", work:"", anzen:"", demen:[], photos:[] });
+function emptyReport(){ return { weather:"", visits:[emptyVisit()], misses:[], learn:"", next:"" }; }
+const normDemen = d => toArr(d).map(x => ({ trade:x.trade||"", company:x.company||"", count:x.count??"" }));
 function normalize(r){
-  const o = { ...emptyReport(), ...(r || {}) };
-  o.demen = toArr(o.demen).map(x => ({ trade:x.trade||"", company:x.company||"", count:x.count??"" }));
-  o.misses = toArr(o.misses).map(x => ({ big:x.big||"", text:x.text||"", cause:x.cause||"", redo:x.redo||"", taisaku:x.taisaku||"", sev:x.sev||"", photos:toArr(x.photos) }));
-  o.photos = toArr(o.photos);
+  r = r || {};
+  const o = { weather:r.weather||"", learn:r.learn||"", next:r.next||"" };
+  // 以前の形（現場が1つ）の日報は、現場ブロック1つに変換
+  const vs = toArr(r.visits);
+  o.visits = (vs.length ? vs : [{ site:r.site, work:r.work, anzen:r.anzen, demen:r.demen, photos:r.photos }])
+    .map(v => ({ site:v.site||"", work:v.work||"", anzen:v.anzen||"", demen:normDemen(v.demen), photos:toArr(v.photos) }));
+  if(!o.visits.length) o.visits = [emptyVisit()];
+  o.misses = toArr(r.misses).map(x => ({ site:x.site||"", big:x.big||"", text:x.text||"", cause:x.cause||"", redo:x.redo||"", taisaku:x.taisaku||"", sev:x.sev||"", photos:toArr(x.photos) }));
   return o;
 }
-// その日の手配（中止以外）から出面を作る
-function demenFromPlans(){
-  return plansOn(S.selDate).filter(([,p]) => p.status !== "中止" && (!S.site || p.site === S.site))
+// その日の手配（中止以外）から出面を作る（現場を指定すればその現場だけ）
+function demenFromPlans(site){
+  return plansOn(S.selDate).filter(([,p]) => p.status !== "中止" && (!site || p.site === site))
     .map(([,p]) => ({ trade:p.trade||"", company:p.company||"", count:p.count||"" }));
 }
 async function openReport(){
@@ -1166,9 +1180,10 @@ async function openReport(){
     if(draft) lsDel(draftKey());
   }else{
     S.report = emptyReport();
-    S.report.demen = demenFromPlans();
-    const firstSite = plansOn(S.selDate).map(([,p])=>p.site).find(Boolean);
-    S.report.site = S.site || firstSite || lsGet("kantoku_last_site","");
+    // その日の手配がある現場ごとにブロックを作る
+    const sites = [...new Set(plansOn(S.selDate).filter(([,p]) => p.status !== "中止").map(([,p]) => p.site).filter(Boolean))];
+    if(sites.length) S.report.visits = sites.map(st => ({ ...emptyVisit(st), demen:demenFromPlans(st) }));
+    else S.report.visits = [emptyVisit(S.site || lsGet("kantoku_last_site",""))];
   }
   S.reportExists = !!saved;
   S.reportDirty = false;
@@ -1178,24 +1193,47 @@ function saveDraft(){ S.reportDirty = true; lsSet(draftKey(), { ...S.report, _at
 
 function renderReport(){
   const r = S.report;
-  const demen = r.demen.map((x,i) => `
-    <div class="dm-row">
-      <input list="dl-trades" data-dm="${i}:trade" value="${esc(x.trade)}" placeholder="業種">
-      <input list="dl-companies" data-dm="${i}:company" value="${esc(x.company)}" placeholder="業者名">
-      <input type="number" inputmode="numeric" data-dm="${i}:count" value="${esc(x.count)}" placeholder="人">
-      <button class="x" data-act="dmdel" data-i="${i}">✕</button>
-    </div>`).join("");
-  const total = r.demen.reduce((s,x)=>s+(parseFloat(x.count)||0),0);
+  const vsites = r.visits.map(v => v.site.trim()).filter(Boolean);
+  const visits = r.visits.map((v,vi) => {
+    const total = v.demen.reduce((n,x)=>n+(parseFloat(x.count)||0),0);
+    const dm = v.demen.map((x,i) => `
+      <div class="dm-row">
+        <input list="dl-trades" data-vd="${vi}:${i}:trade" value="${esc(x.trade)}" placeholder="業種">
+        <input list="dl-companies" data-vd="${vi}:${i}:company" value="${esc(x.company)}" placeholder="業者名">
+        <input type="number" inputmode="numeric" data-vd="${vi}:${i}:count" value="${esc(x.count)}" placeholder="人">
+        <button class="x" data-act="dmdel" data-v="${vi}" data-i="${i}">✕</button>
+      </div>`).join("");
+    return `
+    <div class="card visit">
+      <div class="card-title"><span>🏗️ 現場 ${vi+1}${v.site?`：${esc(v.site)}`:""}</span>${r.visits.length > 1 ? `<button class="x" style="width:auto;padding:0 10px;height:30px;font-size:12px" data-act="vdel" data-v="${vi}">この現場を外す</button>` : ""}</div>
+      <div class="field"><label>現場名</label><input list="dl-sites" data-v="${vi}:site" value="${esc(v.site)}" placeholder="例：〇〇邸新築工事"></div>
+      <div class="field"><label>出面（業者・人数）　計 ${total} 名</label>
+        ${dm || `<div class="small" style="margin-bottom:6px">まだありません。</div>`}
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-light" style="flex:1;padding:8px" data-act="dmadd" data-v="${vi}">＋ 行を追加</button>
+          <button class="btn btn-ghost" style="flex:1;padding:8px" data-act="dmplan" data-v="${vi}">手配から読み込む</button>
+        </div>
+      </div>
+      <div class="field"><label>現場の様子（進み具合・状況）</label><textarea rows="3" data-v="${vi}:work" placeholder="今日の工程の進み具合、現場の状況など">${esc(v.work)}</textarea></div>
+      <div class="field"><label>安全・検査・打合せ</label><textarea rows="2" data-v="${vi}:anzen" placeholder="KY・安全巡視、検査・立会い、施主や設計との打合せなど">${esc(v.anzen)}</textarea></div>
+      <label>写真（進み具合・検査の記録など）</label>
+      ${photoPicker(v.photos, "v"+vi)}
+    </div>`;
+  }).join("");
   const misses = r.misses.map((m,i) => { const sv = sevOf(m.redo); return `
     <div class="miss">
       <div class="miss-h"><span class="miss-n">ミス・問題 #${i+1}</span><span><span class="sev ${sv?"sev-"+sv:""}" id="sev-${i}">${sv||"深刻度：時間で自動"}</span> <button class="x" style="width:30px;height:28px" data-act="mdel" data-i="${i}">✕</button></span></div>
-      <div class="field"><label>分類</label><select data-m="${i}:big"><option value="">選択</option>${MISS_CATS.map(c=>`<option ${c===m.big?"selected":""}>${c}</option>`).join("")}</select></div>
+      <div class="row2">
+        <div class="field"><label>どの現場</label><select data-m="${i}:site"><option value="">選択</option>${[...new Set([...vsites, m.site].filter(Boolean))].map(x=>`<option ${x===m.site?"selected":""}>${esc(x)}</option>`).join("")}</select></div>
+        <div class="field"><label>分類</label><select data-m="${i}:big"><option value="">選択</option>${MISS_CATS.map(c=>`<option ${c===m.big?"selected":""}>${c}</option>`).join("")}</select></div>
+      </div>
       <div class="field"><label>内容</label><textarea rows="2" data-m="${i}:text" placeholder="何が起きたか">${esc(m.text)}</textarea></div>
       <div class="field"><label>原因（分かれば）</label><input data-m="${i}:cause" value="${esc(m.cause)}" placeholder="例：指示の伝達不足"></div>
       <div class="field"><label>対応・やり直しにかかった時間（分）</label><input type="number" inputmode="numeric" data-m="${i}:redo" value="${esc(m.redo)}" placeholder="例：30"></div>
       <div class="field"><label>対策・今後どうするか</label><textarea rows="2" data-m="${i}:taisaku" placeholder="次に同じことが起きないための対策">${esc(m.taisaku)}</textarea></div>
       ${photoPicker(m.photos, i)}
     </div>`; }).join("");
+  const allTotal = r.visits.reduce((n,v)=>n+v.demen.reduce((k,x)=>k+(parseFloat(x.count)||0),0),0);
   $("#app").innerHTML = `
   <div class="wrap">
     ${header()}
@@ -1206,32 +1244,14 @@ function renderReport(){
     </div>
     ${S.reportNote ? `<div class="info">${esc(S.reportNote)}</div>` : ""}
     <div class="card">
-      <div class="card-title">📋 基本情報</div>
+      <div class="card-title"><span>📋 基本情報</span><span class="small">${r.visits.length}現場・出面 計${allTotal}名</span></div>
       <div class="row2">
-        <div class="field"><label>天候</label><select data-f="weather"><option value="">選択</option>${WX.map(w=>`<option ${w===r.weather?"selected":""}>${w}</option>`).join("")}</select></div>
-        <div class="field"><label>記入者</label><input value="${esc(S.me)}" disabled></div>
+        <div class="field" style="margin-bottom:0"><label>天候</label><select data-f="weather"><option value="">選択</option>${WX.map(w=>`<option ${w===r.weather?"selected":""}>${w}</option>`).join("")}</select></div>
+        <div class="field" style="margin-bottom:0"><label>記入者</label><input value="${esc(S.me)}" disabled></div>
       </div>
-      <div class="field" style="margin-bottom:0"><label>現場名</label><input list="dl-sites" data-f="site" value="${esc(r.site)}" placeholder="例：〇〇邸新築工事"></div>
     </div>
-    <div class="card">
-      <div class="card-title"><span>👷 出面（今日入った業者・人数）</span><span>計 ${total} 名</span></div>
-      ${demen || `<div class="small" style="margin-bottom:8px">まだありません。</div>`}
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-light" style="flex:1" data-act="dmadd">＋ 行を追加</button>
-        <button class="btn btn-ghost" style="flex:1" data-act="dmplan">手配から読み込む</button>
-      </div>
-      <div class="small" style="margin-top:6px">その日の手配（中止以外）が自動で入ります。実際と違えば直してください。</div>
-    </div>
-    <div class="card">
-      <div class="card-title">🏗️ 今日の現場の様子</div>
-      <textarea rows="4" data-f="work" placeholder="今日の工程の進み具合、現場全体の状況など">${esc(r.work)}</textarea>
-      <div class="small" style="margin:8px 0 2px">現場写真（進み具合・検査の記録など）</div>
-      ${photoPicker(r.photos, "r")}
-    </div>
-    <div class="card">
-      <div class="card-title">🦺 安全・検査・打合せ</div>
-      <textarea rows="3" data-f="anzen" placeholder="KY・安全巡視で気づいたこと、検査・立会い、施主や設計との打合せなど">${esc(r.anzen)}</textarea>
-    </div>
+    ${visits}
+    <button class="btn btn-light btn-block" style="margin-bottom:12px;border:1.5px dashed var(--navy)" data-act="vadd">＋ 回った現場を追加</button>
     <div class="card">
       <div class="card-title">⚠️ ミス・問題・気づき</div>
       ${misses}
@@ -1254,19 +1274,27 @@ async function saveReport(){
   const r = S.report;
   const half = r.misses.filter(m => !m.text.trim() && (m.big || m.cause.trim() || m.redo || m.taisaku.trim()));
   if(half.length && !confirm(`「内容」が空のミスが ${half.length} 件あります。内容が空のものは保存されません。このまま保存しますか？`)) return;
+  const visits = r.visits.map(v => ({
+    site: v.site.trim(), work: v.work.trim(), anzen: v.anzen.trim(), photos: v.photos || [],
+    demen: v.demen.filter(x => x.trade.trim() || x.company.trim()).map(x => ({ trade:x.trade.trim(), company:x.company.trim(), count: x.count === "" ? "" : Number(x.count) }))
+  })).filter(v => v.site || v.work || v.anzen || v.demen.length || v.photos.length);
+  const multi = visits.length > 1;
   const record = {
-    name: S.me,
-    site: r.site.trim(), weather: r.weather, work: r.work.trim(), anzen: r.anzen.trim(),
-    demen: r.demen.filter(x => x.trade.trim() || x.company.trim()).map(x => ({ trade:x.trade.trim(), company:x.company.trim(), count: x.count === "" ? "" : Number(x.count) })),
-    misses: r.misses.filter(m => m.text.trim()).map(m => ({ big:m.big, text:m.text.trim(), cause:m.cause.trim(), redo: m.redo ? Number(m.redo) : 0, sev: sevOf(m.redo), taisaku:m.taisaku.trim(), photos:m.photos||[] })),
-    photos: r.photos || [],
+    name: S.me, weather: r.weather, visits,
+    // 一覧・管理画面用のまとめ（現場が複数なら「【現場名】」付きでつなげる）
+    site: visits.map(v => v.site).filter(Boolean).join("・"),
+    work: visits.filter(v => v.work).map(v => (multi && v.site ? `【${v.site}】` : "") + v.work).join("\n"),
+    anzen: visits.filter(v => v.anzen).map(v => (multi && v.site ? `【${v.site}】` : "") + v.anzen).join("\n"),
+    demen: visits.flatMap(v => v.demen),
+    photos: visits.flatMap(v => v.photos),
+    misses: r.misses.filter(m => m.text.trim()).map(m => ({ site:m.site || (visits.length === 1 ? visits[0].site : ""), big:m.big, text:m.text.trim(), cause:m.cause.trim(), redo: m.redo ? Number(m.redo) : 0, sev: sevOf(m.redo), taisaku:m.taisaku.trim(), photos:m.photos||[] })),
     learn: r.learn.trim(), next: r.next.trim(), savedAt: Date.now()
   };
   const b = $("#save-rep"); b.disabled = true; b.textContent = "保存中…";
   try{
     await set(ref(db, `kantoku_reports/${uidOf(S.me)}/${S.selDate}`), record);
     lsDel(draftKey());
-    if(record.site) lsSet("kantoku_last_site", record.site);
+    if(visits.length && visits[visits.length-1].site) lsSet("kantoku_last_site", visits[visits.length-1].site);
     S.reportDirty = false; S.allReports = null;
     toast("日報を保存しました");
     S.view = "day"; render();
@@ -1281,7 +1309,8 @@ document.addEventListener("input", e => {
   const el = e.target;
   if(S.view !== "report" || !S.report) return;
   if(el.dataset.f){ S.report[el.dataset.f] = el.value; saveDraft(); }
-  else if(el.dataset.dm){ const [i,k] = el.dataset.dm.split(":"); S.report.demen[i][k] = el.value; saveDraft(); }
+  else if(el.dataset.v && el.dataset.act === undefined){ const [i,k] = el.dataset.v.split(":"); S.report.visits[i][k] = el.value; saveDraft(); }
+  else if(el.dataset.vd){ const [v,i,k] = el.dataset.vd.split(":"); S.report.visits[v].demen[i][k] = el.value; saveDraft(); }
   else if(el.dataset.m){
     const [i,k] = el.dataset.m.split(":"); S.report.misses[i][k] = el.value; saveDraft();
     if(k === "redo"){ const sv = sevOf(el.value), t = $("#sev-"+i); if(t){ t.textContent = sv || "深刻度：時間で自動"; t.className = "sev " + (sv ? "sev-"+sv : ""); } }
@@ -1297,6 +1326,8 @@ document.addEventListener("change", e => {
     if(el.dataset.f){ S.report[el.dataset.f] = el.value; saveDraft(); }
     if(el.dataset.m){ const [i,k] = el.dataset.m.split(":"); S.report.misses[i][k] = el.value; saveDraft(); }
   }
+  // 現場名を入れ終わったら、見出しとミスの「どの現場」を更新
+  if(S.view === "report" && el.dataset.v && /:site$/.test(el.dataset.v)) renderReport();
 });
 
 // ===== クリック =====
@@ -1378,18 +1409,25 @@ document.addEventListener("click", async e => {
   else if(a === "report"){ await openReport(); window.scrollTo(0,0); }
   else if(a === "repback"){ if(S.reportDirty && !confirm("保存していない内容は下書きとして端末に残ります。戻りますか？")) return; S.view = "day"; render(); }
   else if(a === "saverep"){ await saveReport(); }
-  else if(a === "dmadd"){ S.report.demen.push({trade:"",company:"",count:""}); saveDraft(); renderReport(); }
-  else if(a === "dmdel"){ S.report.demen.splice(Number(el.dataset.i),1); saveDraft(); renderReport(); }
+  else if(a === "dmadd"){ S.report.visits[Number(el.dataset.v)].demen.push({trade:"",company:"",count:""}); saveDraft(); renderReport(); }
+  else if(a === "dmdel"){ S.report.visits[Number(el.dataset.v)].demen.splice(Number(el.dataset.i),1); saveDraft(); renderReport(); }
+  else if(a === "vadd"){ S.report.visits.push(emptyVisit()); saveDraft(); renderReport(); document.querySelectorAll(".visit")[S.report.visits.length-1]?.scrollIntoView({behavior:"smooth"}); }
+  else if(a === "vdel"){
+    const v = S.report.visits[Number(el.dataset.v)];
+    if((v.work || v.anzen || v.demen.length || v.photos.length) && !confirm(`「${v.site||"現場 "+(Number(el.dataset.v)+1)}」の入力内容を消しますか？`)) return;
+    const gone = S.report.visits.splice(Number(el.dataset.v),1)[0]; saveDraft(); renderReport(); (gone.photos||[]).forEach(deletePhotoByUrl);
+  }
   else if(a === "dmplan"){
-    const add = demenFromPlans();
-    if(!add.length){ toast("この日の手配がありません"); return; }
-    if(S.report.demen.length && !confirm("今の出面を、手配の内容で置き換えますか？")) return;
-    S.report.demen = add; saveDraft(); renderReport();
+    const v = S.report.visits[Number(el.dataset.v)];
+    const add = demenFromPlans(v.site.trim() || undefined);
+    if(!add.length){ toast(v.site ? `この日の「${v.site}」の手配がありません` : "この日の手配がありません"); return; }
+    if(v.demen.length && !confirm("今の出面を、手配の内容で置き換えますか？")) return;
+    v.demen = add; saveDraft(); renderReport();
   }
   else if(a === "madd"){ S.report.misses.push({big:"",text:"",cause:"",redo:"",taisaku:"",sev:"",photos:[]}); saveDraft(); renderReport(); }
   else if(a === "phdel"){
     if(!confirm("この写真を消しますか？")) return;
-    const w = el.dataset.w, target = w === "r" ? S.report : S.report.misses[Number(w)];
+    const target = photoTarget(el.dataset.w);
     const url = target.photos.splice(Number(el.dataset.i), 1)[0];
     saveDraft(); renderReport(); if(url) deletePhotoByUrl(url);
   }
