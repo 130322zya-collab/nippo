@@ -364,7 +364,8 @@ function startData(){
   }, err => showDbError(err));
   onValue(ref(db, "kantoku_meta/sites"), snap => {
     S.sites = snap.exists() ? snap.val() : {};
-    if(S.view === "master" && !S.tplEdit) render();
+    refreshLists();
+    if(S.view !== "report" && !S.planEdit && !S.tplEdit) render();
   });
   onValue(ref(db, "kantoku_meta/tplOrder"), snap => {
     S.tplOrder = snap.exists() ? snap.val() : {};
@@ -404,6 +405,7 @@ function refreshLists(){
   const sites = new Set(), comps = new Set(), trades = new Set(TRADES);
   Object.values(S.plans).forEach(p => { if(p.site) sites.add(p.site); if(p.company) comps.add(p.company); if(p.trade) trades.add(p.trade); });
   Object.values(S.myReports).forEach(r => { if(r && r.site) sites.add(r.site); });
+  Object.values(S.sites||{}).forEach(x => { if(x && x.name) sites.add(x.name); });
   $("#dl-sites").innerHTML = [...sites].map(s => `<option value="${esc(s)}">`).join("");
   $("#dl-companies").innerHTML = [...comps].map(s => `<option value="${esc(s)}">`).join("");
   fillTradeList("zairai");
@@ -541,7 +543,7 @@ function viewMaster(){
   const m = S.tplMethod || "zairai";
   const list = tplList(m);
   const used = [...new Set(Object.values(S.plans).filter(p => methodOf(p) === m).map(p => p.trade).filter(t => t && !list.includes(t)))];
-  const sites = [...new Set([...Object.values(S.sites).map(x => x.name), ...Object.values(S.plans).map(p => p.site)].filter(Boolean))].sort();
+  const sites = allSites();
   return `
   <button class="btn btn-light btn-block" style="margin-bottom:10px" data-act="view" data-v="cal">← カレンダーに戻る</button>
   <div class="tabs">${Object.entries(METHODS).map(([k,l]) => `<button class="tab ${k===m?"on":""}" data-act="tplmethod" data-m="${k}">${l}</button>`).join("")}</div>
@@ -559,12 +561,18 @@ function viewMaster(){
       <button class="btn btn-light" data-act="addtpl" style="white-space:nowrap">追加</button>
     </div>
   </div>
-  <div class="card">
-    <div class="card-title">🏗️ 現場ごとの工法</div>
+  <div class="card" id="site-card">
+    <div class="card-title">🏗️ 現場（追加・工法の設定）</div>
     <div class="small" style="margin-bottom:8px">手配のチェックリストは、その現場の工法の内容が使われます。</div>
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <input id="new-site" placeholder="現場名（例：〇〇邸新築工事）" style="flex:1">
+      <select id="new-site-m" style="width:78px;flex:0 0 78px">${Object.entries(METHODS).map(([k]) => `<option value="${k}">${methodShort(k)}</option>`).join("")}</select>
+      <button class="btn btn-navy" data-act="addsite" style="white-space:nowrap;padding:10px 12px">追加</button>
+    </div>
     ${sites.length ? sites.map(sn => { const sm = siteMethod(sn); return `<div class="tpl-row"><span style="flex:1;font-size:14px;font-weight:700">${esc(sn)}</span>
-      ${Object.entries(METHODS).map(([k,l]) => `<button class="st ${sm===k?"on s-確定":""}" style="flex:0 0 74px" data-act="sitemethod" data-s="${esc(sn)}" data-m="${k}">${methodShort(k)}</button>`).join("")}
-    </div>`; }).join("") : `<div class="small">まだ現場がありません。手配を入れると出てきます。</div>`}
+      ${Object.entries(METHODS).map(([k,l]) => `<button class="st ${sm===k?"on s-確定":""}" style="flex:0 0 58px" data-act="sitemethod" data-s="${esc(sn)}" data-m="${k}">${methodShort(k)}</button>`).join("")}
+      <button class="x" style="flex:0 0 32px" data-act="delsite" data-s="${esc(sn)}">✕</button>
+    </div>`; }).join("") : `<div class="small">まだ現場がありません。上の欄から追加してください。</div>`}
   </div>`;
 }
 function viewTplEdit(){
@@ -619,11 +627,14 @@ function pendingCount(){
   const t = today(), end = monthLater(t);
   return Object.values(S.plans).filter(p => p.status === "未連絡" && (p.dateTo || p.date) >= t && p.date <= end && (!S.site || p.site === S.site)).length;
 }
+// 登録した現場＋手配に出てくる現場
+function allSites(){ return [...new Set([...Object.values(S.sites||{}).map(x => x && x.name), ...Object.values(S.plans).map(p => p.site)].filter(Boolean))].sort(); }
 function siteFilter(){
-  const sites = [...new Set(Object.values(S.plans).map(p => p.site).filter(Boolean))].sort();
+  const sites = allSites();
   return `<div class="field"><select data-act="site">
     <option value="">すべての現場</option>
     ${sites.map(s => `<option ${s===S.site?"selected":""}>${esc(s)}</option>`).join("")}
+    <option value="__add">＋ 現場を追加する…</option>
   </select></div>`;
 }
 
@@ -758,8 +769,8 @@ function viewReports(){
 // ----- 現場ごとの工程表（バー表示） -----
 const DAY_W = 22, LABEL_W = 118;
 function viewGantt(){
-  const sites = [...new Set(Object.values(S.plans).map(p => p.site).filter(Boolean))].sort();
-  if(!sites.length) return `<div class="card small">まだ手配がありません。手配を入れると、現場ごとの工程表が出ます。</div>`;
+  const sites = allSites();
+  if(!sites.length) return `<div class="card small">まだ現場がありません。「⚙ 工程ごとの材料・ルール」の下で現場を追加するか、手配を入れると出てきます。</div>`;
   if(!S.ganttSite || !sites.includes(S.ganttSite)) S.ganttSite = (S.site && sites.includes(S.site)) ? S.site : sites[0];
   const site = S.ganttSite, method = siteMethod(site) || "zairai", order = tplList(method);
   const rows = Object.entries(S.plans).filter(([,p]) => p.site === site && (S.ganttStop || p.status !== "中止"))
@@ -769,7 +780,7 @@ function viewGantt(){
     <div class="field"><select data-act="ganttsite">${sites.map(x => `<option ${x===site?"selected":""}>${esc(x)}</option>`).join("")}</select></div>
     <div class="field"><button class="btn btn-ghost btn-block" style="padding:10px 4px;font-size:12px" data-act="ganttstop">${S.ganttStop?"中止も表示中":"中止は非表示"}</button></div>
   </div>`;
-  if(!rows.length) return sel + `<div class="card small">この現場の手配はありません。</div>`;
+  if(!rows.length) return sel + `<div class="card small">この現場の手配はまだありません。カレンダーで日付を選んで「＋ 手配を追加」から入れてください（現場名に「${esc(site)}」を選ぶ）。</div>`;
   const t = today();
   let start = rows.reduce((m,[,p]) => p.date < m ? p.date : m, rows[0][1].date);
   let end = rows.reduce((m,[,p]) => (p.dateTo||p.date) > m ? (p.dateTo||p.date) : m, rows[0][1].dateTo || rows[0][1].date);
@@ -1280,6 +1291,7 @@ document.addEventListener("change", e => {
   const el = e.target;
   if(el.dataset.act === "ganttsite"){ S.ganttSite = el.value; render(); return; }
   if(el.dataset.act === "repperson"){ S.repPerson = el.value; render(); return; }
+  if(el.dataset.act === "site" && el.value === "__add"){ el.value = S.site; S.view = "master"; S.tplEdit = null; S.planEdit = null; render(); $("#site-card")?.scrollIntoView({behavior:"smooth"}); $("#new-site")?.focus(); return; }
   if(el.dataset.act === "site"){ S.site = el.value; lsSet("kantoku_site_filter", S.site); render(); return; }
   if(S.view === "report" && el.tagName === "SELECT"){
     if(el.dataset.f){ S.report[el.dataset.f] = el.value; saveDraft(); }
@@ -1338,6 +1350,18 @@ document.addEventListener("click", async e => {
     const ot = getTpl(S.tplEdit, S.tplMethod === "se" ? "zairai" : "se"); if(!ot) return;
     $("#te-mat").value = ot.materials.join("\n"); $("#te-rule").value = ot.rules.join("\n"); $("#te-prep").value = ot.prep.map(x => `${x.d}日前：${x.t}`).join("\n");
     toast("コピーしました。直してから保存してください");
+  }
+  else if(a === "addsite"){
+    const n = $("#new-site").value.trim(); if(!n){ toast("現場名を入れてください"); return; }
+    if(allSites().includes(n) && !confirm(`「${n}」はもうあります。工法を上書きしますか？`)) return;
+    await setSiteMethod(n, $("#new-site-m").value); toast(`「${n}」を追加しました`);
+    $("#new-site").value = "";
+  }
+  else if(a === "delsite"){
+    const n = el.dataset.s, used = Object.values(S.plans).some(p => p.site === n);
+    if(used){ alert(`「${n}」は手配で使われているので消せません。先に手配を消すか、現場名を変えてください。`); return; }
+    if(!confirm(`「${n}」を一覧から消しますか？`)) return;
+    try{ await remove(ref(db, `kantoku_meta/sites/${uidOf(n)}`)); toast("消しました"); }catch(err){ alert("失敗しました：" + err.message); }
   }
   else if(a === "sitemethod"){ await setSiteMethod(el.dataset.s, el.dataset.m); toast(`${el.dataset.s}を${METHODS[el.dataset.m]}にしました`); }
   else if(a === "tplback"){ S.tplEdit = null; if(S.tplFrom){ S.view = S.tplFrom; S.tplFrom = null; } render(); }
