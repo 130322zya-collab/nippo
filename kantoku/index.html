@@ -15,10 +15,11 @@ button:active{opacity:.7}
 .head-title{font-size:18px;font-weight:800;color:#fff}
 .head-sub{font-size:11px;color:#a8c4e0;margin-top:2px}
 .name-chip{background:#fff;color:var(--navy);border:none;border-radius:20px;padding:7px 12px;font-size:13px;font-weight:700;white-space:nowrap}
-.links{display:flex;gap:12px;font-size:12px;margin:0 2px 10px}
+.links{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;margin:0 2px 10px}
+.links a{white-space:nowrap}
 .links a{color:var(--navy);text-decoration:none;font-weight:700}
 .tabs{display:flex;gap:6px;margin-bottom:10px}
-.tab{flex:1;background:#fff;color:var(--sub);border:1.5px solid var(--line);border-radius:10px;padding:10px 0;font-size:13px;font-weight:700}
+.tab{flex:1;min-width:0;background:#fff;color:var(--sub);border:1.5px solid var(--line);border-radius:10px;padding:10px 0;font-size:12px;font-weight:700;white-space:nowrap}
 .tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 .card{background:#fff;border-radius:14px;padding:14px 15px;margin-bottom:12px;border:1px solid var(--line)}
 .card-title{font-size:13px;font-weight:700;color:var(--sub);margin-bottom:10px;display:flex;align-items:center;gap:6px;justify-content:space-between}
@@ -59,8 +60,35 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--navy);ba
 .chk input{width:20px;height:20px;flex-shrink:0;margin-top:1px}
 .chk.on>span{color:var(--faint);text-decoration:line-through}
 .rules{margin:0 0 0 18px;font-size:13px;line-height:1.7}
-.badge{display:inline-block;background:var(--red);color:#fff;border-radius:9px;font-size:10px;padding:0 6px;margin-left:4px;line-height:16px;vertical-align:1px}
+.badge{display:inline-block;background:var(--red);color:#fff;border-radius:9px;font-size:10px;padding:0 5px;margin-left:2px;line-height:15px;vertical-align:1px}
 .rep-h{display:flex;justify-content:space-between;gap:8px;width:100%;background:none;border:none;text-align:left;font-size:14px;color:var(--ink);padding:0;line-height:1.6}
+/* 写真 */
+.ph-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.ph{position:relative;width:64px;height:64px}
+.ph img{width:100%;height:100%;object-fit:cover;border-radius:8px;border:1px solid var(--line);cursor:pointer}
+.ph-x{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;border:none;font-size:12px;line-height:1;padding:0}
+.ph-add{display:inline-flex;align-items:center;justify-content:center;height:40px;padding:0 12px;border:1.5px dashed var(--navy);color:var(--navy);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin:0;letter-spacing:0}
+.lb{display:none;position:fixed;inset:0;background:rgba(20,26,34,.9);z-index:1000;align-items:center;justify-content:center;padding:20px}
+.lb.show{display:flex}
+.lb img{max-width:100%;max-height:88vh;border-radius:10px}
+.lb-x{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;border:none;background:#fff;font-size:20px;font-weight:700}
+/* 工程表 */
+.gantt{position:relative;overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;-webkit-overflow-scrolling:touch}
+.g-row{display:flex;border-bottom:1px solid #f0f2f5;min-width:max-content}
+.g-label{position:sticky;left:0;z-index:2;flex:0 0 118px;width:118px;background:#fff;border-right:1px solid var(--line);padding:5px 8px;font-size:12px;line-height:1.35;display:flex;flex-direction:column;justify-content:center;cursor:pointer}
+.g-label span{font-size:10px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-corner{font-weight:800;color:var(--sub);cursor:default}
+.g-track{position:relative;height:38px;flex:0 0 auto}
+.g-head .g-track{background:#fafbfc}
+.g-mon{position:absolute;top:2px;font-size:10px;font-weight:800;color:var(--navy);white-space:nowrap;padding-left:2px}
+.g-day{position:absolute;top:17px;width:22px;text-align:center;font-size:10px;color:var(--sub)}
+.g-day.sun{color:var(--red)}.g-day.sat{color:var(--navy)}
+.g-day.tdy{background:var(--red);color:#fff;border-radius:4px;font-weight:800}
+.g-we{position:absolute;top:0;bottom:0;width:22px;background:#f7f8fa}
+.g-bar{position:absolute;top:8px;height:22px;border:none;border-radius:6px;font-size:10px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;padding:0 4px;text-align:left}
+.g-bar.st-未連絡{background:var(--red)}.g-bar.st-連絡済{background:var(--amber)}.g-bar.st-確定{background:var(--green)}.g-bar.st-中止{background:#c3cad3;text-decoration:line-through}
+.g-bar.late{outline:2px solid var(--red);outline-offset:1px}
+.g-today{position:absolute;top:0;bottom:0;width:2px;background:var(--red);opacity:.6;z-index:1;pointer-events:none}
 /* 工程マスタ */
 .tpl-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
 .tpl-name{flex:1;display:flex;justify-content:space-between;align-items:center;gap:6px;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;font-weight:700;color:var(--ink)}
@@ -127,6 +155,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--navy);ba
 <body>
 <div id="app"></div>
 <div id="toast" class="toast"></div>
+<div id="lb" class="lb" data-act="lbclose"><img id="lb-img" alt="写真"><button class="lb-x" data-act="lbclose">×</button></div>
 <datalist id="dl-trades"></datalist>
 <datalist id="dl-sites"></datalist>
 <datalist id="dl-companies"></datalist>
@@ -134,7 +163,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--navy);ba
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, get, set, push, remove, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCVkSQ6WUfkWI_m3CiK8PHlLV4z_U0MnA4",
@@ -145,6 +174,9 @@ const firebaseConfig = {
   messagingSenderId: "870438510963",
   appId: "1:870438510963:web:fe09b4ec1fe1c3ff196506"
 };
+// 写真の保存先（大工日報と同じCloudflare Worker）
+const PHOTO_API = "https://hamasaki-nippo-photos.zoza.workers.dev";
+const UPLOAD_KEY = "hamasaki1147";
 const fbApp = initializeApp(firebaseConfig);
 const db = getDatabase(fbApp);
 const auth = getAuth(fbApp);
@@ -283,13 +315,37 @@ function renderLogin(){
   };
 }
 
-let started = false;
-onAuthStateChanged(auth, u => {
-  if(!u){ started = false; renderLogin(); return; }
-  if(started) return;
+let started = false, curUid = null;
+onAuthStateChanged(auth, async u => {
+  if(!u){ started = false; curUid = null; renderLogin(); return; }
+  if(started && u.uid === curUid) return;
+  curUid = u.uid;
+  // 監督用アカウントかどうか（Firebaseのルールで読めるかで判断）
+  $("#app").innerHTML = `<div class="center small">確認中…</div>`;
+  try{ await get(ref(db, "kantoku_meta/names")); }
+  catch(e){ started = false; renderLocked(u.email); return; }
   started = true;
   startData();
 });
+// 監督用でないアカウントでログインしているとき
+function renderLocked(email){
+  $("#app").innerHTML = `
+  <div class="center">
+    <div style="font-size:22px;font-weight:800;color:var(--navy)">🔒 監督専用</div>
+    <div class="small" style="margin:6px 0 18px;line-height:1.7">この画面（監督日報・段取り）は監督専用です。<br>今は <b>${esc(email||"")}</b> でログインしています。<br>監督用のメールアドレスとパスワードを入れてください。</div>
+    <div class="field"><input id="l-mail" type="email" autocomplete="username" placeholder="監督用メールアドレス"></div>
+    <div class="field"><input id="l-pass" type="password" autocomplete="current-password" placeholder="パスワード"></div>
+    <div id="l-err" style="color:var(--red);font-size:13px;min-height:18px;margin-bottom:8px"></div>
+    <button class="btn btn-navy btn-big" id="l-btn">監督用でログイン</button>
+    <div class="small" style="margin-top:14px;line-height:1.6">※この端末でログインを切り替えると、同じ端末の大工日報・日報管理も監督用アカウントで開くようになります（どちらも使えます）。</div>
+    <div class="links" style="margin-top:12px"><a href="../">大工日報に戻る →</a></div>
+  </div>`;
+  $("#l-btn").onclick = async () => {
+    const b = $("#l-btn"); b.disabled = true; b.textContent = "確認中…";
+    try{ await signInWithEmailAndPassword(auth, $("#l-mail").value.trim(), $("#l-pass").value); }
+    catch(e){ $("#l-err").textContent = "メールまたはパスワードが違います"; b.disabled = false; b.textContent = "監督用でログイン"; }
+  };
+}
 
 function startData(){
   $("#app").innerHTML = `<div class="center small">読み込み中…</div>`;
@@ -356,12 +412,12 @@ function header(){
     <div><div class="head-title">現場監督日報・段取り</div><div class="head-sub">株式会社濱崎組</div></div>
     <button class="name-chip" data-act="names">${S.me ? "👤 " + esc(S.me) : "名前を選ぶ"}</button>
   </div>
-  <div class="links"><a href="../">大工日報 →</a><a href="../kanri/">日報管理 →</a><a href="#" data-act="master">⚙ 工程ごとの材料・ルール</a></div>`;
+  <div class="links"><a href="../">大工日報 →</a><a href="../kanri/">日報管理 →</a><a href="#" data-act="master">⚙ 工程ごとの材料・ルール</a><a href="#" data-act="logout" style="color:var(--faint)">ログアウト</a></div>`;
 }
 function tabs(){
   const t = (v,l) => `<button class="tab ${S.view===v||(v==="cal"&&S.view==="day")?"on":""}" data-act="view" data-v="${v}">${l}</button>`;
   const n = pendingCount();
-  return `<div class="tabs">${t("cal","📅 月")}${t("year","🗓 年間")}${t("upcoming", "📋 今後" + (n ? `<span class="badge">${n}</span>` : ""))}${t("reports","📝 日報")}</div>`;
+  return `<div class="tabs">${t("cal","📅 月")}${t("year","🗓 年間")}${t("gantt","📊 工程")}${t("upcoming", "📋 今後" + (n ? `<span class="badge">${n}</span>` : ""))}${t("reports","📝 日報")}</div>`;
 }
 
 // 手配がその日に入っているか（複数日の手配に対応）
@@ -579,8 +635,10 @@ function render(){
   else if(v === "year") body = viewYear();
   else if(v === "master") body = viewMaster();
   else if(v === "reports") body = viewReports();
+  else if(v === "gantt") body = viewGantt();
   else if(v === "report") return renderReport();
   $("#app").innerHTML = `<div class="wrap">${header()}${v==="names"?"":tabs()}${body}</div>`;
+  if(v === "gantt") scrollGanttToToday();
 }
 
 // ----- 名前選択 -----
@@ -658,17 +716,17 @@ function viewReports(){
     const total = dm.reduce((n,x) => n + (parseFloat(x.count)||0), 0);
     let h = `<div class="plan" style="border-left-color:${ms.length?"var(--amber)":"var(--navy)"}">
       <button class="rep-h" data-act="repopen" data-k="${esc(key)}">
-        <span><b>${fmtDay(d)}</b>　${esc(r.name||uid)}<br><span class="small">${esc(r.site||"（現場なし）")}${r.weather?"・"+esc(r.weather):""}${total?`・出面${total}名`:""}</span></span>
+        <span><b>${fmtDay(d)}</b>　${esc(r.name||uid)}<br><span class="small">${esc(r.site||"（現場なし）")}${r.weather?"・"+esc(r.weather):""}${total?`・出面${total}名`:""}${(toArr(r.photos).length + ms.reduce((n,z)=>n+toArr(z.photos).length,0)) ? "・📷" + (toArr(r.photos).length + ms.reduce((n,z)=>n+toArr(z.photos).length,0)) : ""}</span></span>
         <span style="text-align:right">${ms.length?`<span class="sev sev-${ms.some(z=>z.sev==="重大")?"重大":"中程度"}">ミス${ms.length}</span>`:""} ${open?"▲":"▼"}</span>
       </button>`;
     if(!open) return h + (r.work ? `<div class="p-sub">${esc(r.work.slice(0,60))}${r.work.length>60?"…":""}</div>` : "") + `</div>`;
     const sec = (t, v) => v ? `<div class="chk-h">${t}</div><div class="p-memo">${esc(v)}</div>` : "";
     h += `<div class="chk-body">`;
     if(dm.length) h += `<div class="chk-h">👷 出面</div>` + dm.map(x => `<div class="p-sub">・${esc(x.trade)} ${esc(x.company)} ${x.count!==""?esc(x.count)+"名":""}</div>`).join("");
-    h += sec("🏗️ 現場の様子", r.work) + sec("🦺 安全・検査・打合せ", r.anzen);
+    h += sec("🏗️ 現場の様子", r.work) + photoThumbs(r.photos) + sec("🦺 安全・検査・打合せ", r.anzen);
     if(ms.length) h += `<div class="chk-h">⚠️ ミス・問題</div>` + ms.map(z => `<div style="margin:4px 0;padding:6px 8px;background:#fafbfc;border-radius:8px">
       <div style="font-size:13px">${z.sev?`<span class="sev sev-${esc(z.sev)}">${esc(z.sev)}</span> `:""}${z.big?`<span class="small">${esc(z.big)}</span> `:""}${esc(z.text)}</div>
-      ${z.cause?`<div class="p-sub">原因：${esc(z.cause)}</div>`:""}${z.taisaku?`<div class="p-sub" style="color:var(--green)">対策：${esc(z.taisaku)}</div>`:""}${z.redo?`<div class="p-sub">対応時間：${esc(z.redo)}分</div>`:""}
+      ${z.cause?`<div class="p-sub">原因：${esc(z.cause)}</div>`:""}${z.taisaku?`<div class="p-sub" style="color:var(--green)">対策：${esc(z.taisaku)}</div>`:""}${z.redo?`<div class="p-sub">対応時間：${esc(z.redo)}分</div>`:""}${photoThumbs(z.photos)}
     </div>`).join("");
     h += sec("💡 学び・気づき", r.learn) + sec("🎯 申し送り", r.next);
     if((r.name || "") === S.me) h += `<button class="btn btn-light btn-block" style="margin-top:8px" data-act="repedit" data-d="${d}">自分の日報なので開いて直す</button>`;
@@ -691,6 +749,78 @@ function viewReports(){
     <div><button class="btn btn-light" style="padding:6px 10px;font-size:12px" data-act="repreload">更新</button></div>
   </div>
   ${rows.length ? rows.map(card).join("") : `<div class="card small">この月の日報はありません。</div>`}`;
+}
+
+// ----- 現場ごとの工程表（バー表示） -----
+const DAY_W = 22, LABEL_W = 118;
+function viewGantt(){
+  const sites = [...new Set(Object.values(S.plans).map(p => p.site).filter(Boolean))].sort();
+  if(!sites.length) return `<div class="card small">まだ手配がありません。手配を入れると、現場ごとの工程表が出ます。</div>`;
+  if(!S.ganttSite || !sites.includes(S.ganttSite)) S.ganttSite = (S.site && sites.includes(S.site)) ? S.site : sites[0];
+  const site = S.ganttSite, method = siteMethod(site) || "zairai", order = tplList(method);
+  const rows = Object.entries(S.plans).filter(([,p]) => p.site === site && (S.ganttStop || p.status !== "中止"))
+    .sort((a,b) => { const ia = order.indexOf(a[1].trade), ib = order.indexOf(b[1].trade);
+      return (ia<0?999:ia) - (ib<0?999:ib) || a[1].date.localeCompare(b[1].date); });
+  const sel = `<div class="row2" style="grid-template-columns:2fr 1fr">
+    <div class="field"><select data-act="ganttsite">${sites.map(x => `<option ${x===site?"selected":""}>${esc(x)}</option>`).join("")}</select></div>
+    <div class="field"><button class="btn btn-ghost btn-block" style="padding:10px 4px;font-size:12px" data-act="ganttstop">${S.ganttStop?"中止も表示中":"中止は非表示"}</button></div>
+  </div>`;
+  if(!rows.length) return sel + `<div class="card small">この現場の手配はありません。</div>`;
+  const t = today();
+  let start = rows.reduce((m,[,p]) => p.date < m ? p.date : m, rows[0][1].date);
+  let end = rows.reduce((m,[,p]) => (p.dateTo||p.date) > m ? (p.dateTo||p.date) : m, rows[0][1].dateTo || rows[0][1].date);
+  start = addDays(start, -3); end = addDays(end, 3);
+  const days = []; for(let d = start; d <= end && days.length < 400; d = addDays(d,1)) days.push(d);
+  const idx = d => days.indexOf(d);
+  // 見出し（月・日）
+  let mh = "", dh = "";
+  days.forEach((d,i) => {
+    const dt = pd(d), dow = dt.getDay();
+    if(i === 0 || dt.getDate() === 1 || dow === 1) mh += `<span class="g-mon" style="left:${i*DAY_W}px">${dt.getMonth()+1}月</span>`;
+    dh += `<span class="g-day ${dow===0?"sun":dow===6?"sat":""} ${d===t?"tdy":""}" style="left:${i*DAY_W}px">${dt.getDate()}</span>`;
+  });
+  const ti = idx(t);
+  const width = days.length * DAY_W;
+  const grid = days.map((d,i) => { const w = pd(d).getDay(); return (w===0||w===6) ? `<span class="g-we" style="left:${i*DAY_W}px"></span>` : ""; }).join("");
+  const body = rows.map(([id,p]) => {
+    const a = Math.max(0, idx(p.date)), b = idx(p.dateTo || p.date);
+    const len = (b < 0 ? days.length-1 : b) - a + 1;
+    const tpl = tplOf(p), done = doneOf(p);
+    const late = tpl && p.date >= t && tpl.prep.some(x => !done.includes("p:"+x.t) && addDays(p.date, -(Number(x.d)||0)) < t);
+    return `<div class="g-row">
+      <div class="g-label" data-act="day" data-d="${p.date}"><b>${esc(p.trade||"")}</b><span>${esc(p.company||"")}${p.count?` ${esc(p.count)}名`:""}</span></div>
+      <div class="g-track" style="width:${width}px">${grid}
+        <button class="g-bar st-${esc(p.status||"未連絡")} ${late?"late":""}" style="left:${a*DAY_W+1}px;width:${len*DAY_W-2}px" data-act="day" data-d="${p.date}" title="${esc(p.trade)} ${esc(p.company||"")}">${len >= 3 ? esc(p.trade||"") : ""}</button>
+      </div>
+    </div>`;
+  }).join("");
+  const first = rows.reduce((m,[,p]) => p.date < m ? p.date : m, rows[0][1].date);
+  const last = addDays(end, -3);
+  const pend = rows.filter(([,p]) => p.status === "未連絡").length;
+  return sel + `
+  <div class="card" style="padding:10px 12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px">
+      <span><span class="mtag mt-${method}">${METHODS[method]}</span>　${fmtDay(first)} 〜 ${fmtDay(last)}</span>
+      <span class="small">${rows.length}件${pend?`・<b style="color:var(--red)">未連絡${pend}</b>`:""}</span>
+    </div>
+  </div>
+  <div class="gantt" id="gantt">
+    <div class="g-row g-head">
+      <div class="g-label g-corner">工程</div>
+      <div class="g-track" style="width:${width}px;height:34px">${mh}${dh}</div>
+    </div>
+    ${body}
+    ${ti >= 0 ? `<div class="g-today" style="left:${LABEL_W + ti*DAY_W + DAY_W/2}px"></div>` : ""}
+  </div>
+  <div class="legend">
+    <span><b style="color:var(--red)">■</b> 未連絡</span><span><b style="color:var(--amber)">■</b> 連絡済</span><span><b style="color:var(--green)">■</b> 確定</span><span><b style="color:var(--red)">┃</b> 今日</span><span>⚠ 赤枠＝段取りの期限切れ</span>
+  </div>
+  <div class="small" style="text-align:center;margin-top:6px">横にスクロールできます。バーや工程名をタップするとその日の段取りを開きます。工程の並びは「工程ごとの材料・ルール」の順番です。</div>`;
+}
+function scrollGanttToToday(){
+  const g = $("#gantt"); if(!g) return;
+  const today_ = g.querySelector(".g-day.tdy");
+  if(today_) g.scrollLeft = Math.max(0, parseFloat(today_.style.left) - 3*DAY_W);
 }
 
 // ----- 年間カレンダー -----
@@ -935,13 +1065,70 @@ async function delPlan(id){
   catch(e){ alert("削除に失敗しました：" + e.message); }
 }
 
+// ===== 写真 =====
+function resizeImageToBlob(file, maxDim=1280, quality=0.75){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if(w > maxDim || h > maxDim){ if(w > h){ h = Math.round(h*maxDim/w); w = maxDim; } else { w = Math.round(w*maxDim/h); h = maxDim; } }
+        const c = document.createElement("canvas"); c.width = w; c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, w, h);
+        c.toBlob(b => b ? resolve(b) : reject(new Error("画像の変換に失敗しました")), "image/jpeg", quality);
+      };
+      img.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error("ファイルの読み込みに失敗しました"));
+    reader.readAsDataURL(file);
+  });
+}
+async function uploadPhoto(file, folder){
+  const blob = await resizeImageToBlob(file);
+  const key = `kantoku_photos/${folder}/${Date.now()}_${Math.random().toString(36).slice(2,8)}.jpg`;
+  const res = await fetch(`${PHOTO_API}/upload?key=${encodeURIComponent(key)}`, { method:"POST", headers:{ "Authorization":`Bearer ${UPLOAD_KEY}`, "Content-Type":"image/jpeg" }, body:blob });
+  if(!res.ok) throw new Error("status " + res.status);
+  return (await res.json()).url;
+}
+async function deletePhotoByUrl(url){
+  try{
+    const k = new URL(url).pathname.replace(/^\/photo\//, ""); if(!k) return;
+    await fetch(`${PHOTO_API}/delete?key=${k}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${UPLOAD_KEY}` } });
+  }catch(e){}
+}
+// 写真の並び（サムネイル＋追加ボタン）。where は "r"（日報全体）か ミスの番号
+function photoPicker(list, where){
+  return `<div class="ph-row">${(list||[]).map((u,i) => `<span class="ph"><img src="${esc(u)}" data-act="lb" data-u="${esc(u)}" loading="lazy"><button class="ph-x" data-act="phdel" data-w="${where}" data-i="${i}">×</button></span>`).join("")}
+    <label class="ph-add">📷 写真<input type="file" accept="image/*" data-phadd="${where}" style="display:none"></label></div>`;
+}
+function photoThumbs(list){
+  list = toArr(list); if(!list.length) return "";
+  return `<div class="ph-row">${list.map(u => `<span class="ph"><img src="${esc(u)}" data-act="lb" data-u="${esc(u)}" loading="lazy"></span>`).join("")}</div>`;
+}
+document.addEventListener("change", async e => {
+  const el = e.target; if(!el.dataset || el.dataset.phadd === undefined || !S.report) return;
+  const file = el.files && el.files[0]; if(!file) return;
+  const w = el.dataset.phadd;
+  toast("写真をアップロード中…");
+  try{
+    const url = await uploadPhoto(file, `${uidOf(S.me)}/${S.selDate}`);
+    const target = w === "r" ? S.report : S.report.misses[Number(w)];
+    if(!target) return;
+    target.photos = [...(target.photos||[]), url];
+    saveDraft(); renderReport(); toast("写真を追加しました（保存を押すと日報に残ります）");
+  }catch(err){ toast("アップロードに失敗しました"); }
+});
+
 // ===== 日報 =====
 const draftKey = () => `kantoku_draft_${uidOf(S.me)}_${S.selDate}`;
-function emptyReport(){ return { weather:"", site:"", work:"", demen:[], misses:[], learn:"", next:"", anzen:"" }; }
+function emptyReport(){ return { weather:"", site:"", work:"", demen:[], misses:[], learn:"", next:"", anzen:"", photos:[] }; }
 function normalize(r){
   const o = { ...emptyReport(), ...(r || {}) };
   o.demen = toArr(o.demen).map(x => ({ trade:x.trade||"", company:x.company||"", count:x.count??"" }));
-  o.misses = toArr(o.misses).map(x => ({ big:x.big||"", text:x.text||"", cause:x.cause||"", redo:x.redo||"", taisaku:x.taisaku||"", sev:x.sev||"" }));
+  o.misses = toArr(o.misses).map(x => ({ big:x.big||"", text:x.text||"", cause:x.cause||"", redo:x.redo||"", taisaku:x.taisaku||"", sev:x.sev||"", photos:toArr(x.photos) }));
+  o.photos = toArr(o.photos);
   return o;
 }
 // その日の手配（中止以外）から出面を作る
@@ -991,7 +1178,8 @@ function renderReport(){
       <div class="field"><label>内容</label><textarea rows="2" data-m="${i}:text" placeholder="何が起きたか">${esc(m.text)}</textarea></div>
       <div class="field"><label>原因（分かれば）</label><input data-m="${i}:cause" value="${esc(m.cause)}" placeholder="例：指示の伝達不足"></div>
       <div class="field"><label>対応・やり直しにかかった時間（分）</label><input type="number" inputmode="numeric" data-m="${i}:redo" value="${esc(m.redo)}" placeholder="例：30"></div>
-      <div class="field" style="margin-bottom:0"><label>対策・今後どうするか</label><textarea rows="2" data-m="${i}:taisaku" placeholder="次に同じことが起きないための対策">${esc(m.taisaku)}</textarea></div>
+      <div class="field"><label>対策・今後どうするか</label><textarea rows="2" data-m="${i}:taisaku" placeholder="次に同じことが起きないための対策">${esc(m.taisaku)}</textarea></div>
+      ${photoPicker(m.photos, i)}
     </div>`; }).join("");
   $("#app").innerHTML = `
   <div class="wrap">
@@ -1022,6 +1210,8 @@ function renderReport(){
     <div class="card">
       <div class="card-title">🏗️ 今日の現場の様子</div>
       <textarea rows="4" data-f="work" placeholder="今日の工程の進み具合、現場全体の状況など">${esc(r.work)}</textarea>
+      <div class="small" style="margin:8px 0 2px">現場写真（進み具合・検査の記録など）</div>
+      ${photoPicker(r.photos, "r")}
     </div>
     <div class="card">
       <div class="card-title">🦺 安全・検査・打合せ</div>
@@ -1053,7 +1243,8 @@ async function saveReport(){
     name: S.me,
     site: r.site.trim(), weather: r.weather, work: r.work.trim(), anzen: r.anzen.trim(),
     demen: r.demen.filter(x => x.trade.trim() || x.company.trim()).map(x => ({ trade:x.trade.trim(), company:x.company.trim(), count: x.count === "" ? "" : Number(x.count) })),
-    misses: r.misses.filter(m => m.text.trim()).map(m => ({ big:m.big, text:m.text.trim(), cause:m.cause.trim(), redo: m.redo ? Number(m.redo) : 0, sev: sevOf(m.redo), taisaku:m.taisaku.trim() })),
+    misses: r.misses.filter(m => m.text.trim()).map(m => ({ big:m.big, text:m.text.trim(), cause:m.cause.trim(), redo: m.redo ? Number(m.redo) : 0, sev: sevOf(m.redo), taisaku:m.taisaku.trim(), photos:m.photos||[] })),
+    photos: r.photos || [],
     learn: r.learn.trim(), next: r.next.trim(), savedAt: Date.now()
   };
   const b = $("#save-rep"); b.disabled = true; b.textContent = "保存中…";
@@ -1083,6 +1274,7 @@ document.addEventListener("input", e => {
 });
 document.addEventListener("change", e => {
   const el = e.target;
+  if(el.dataset.act === "ganttsite"){ S.ganttSite = el.value; render(); return; }
   if(el.dataset.act === "repperson"){ S.repPerson = el.value; render(); return; }
   if(el.dataset.act === "site"){ S.site = el.value; lsSet("kantoku_site_filter", S.site); render(); return; }
   if(S.view === "report" && el.tagName === "SELECT"){
@@ -1120,6 +1312,8 @@ document.addEventListener("click", async e => {
     const list = tplList(S.tplMethod); if(!list.includes(n)){ list.push(n); await saveOrder(S.tplMethod, list); }
     S.tplFrom = null; S.tplEdit = n; render();
   }
+  else if(a === "ganttstop"){ S.ganttStop = !S.ganttStop; render(); }
+  else if(a === "logout"){ e.preventDefault(); if(!confirm("ログアウトしますか？（この端末の大工日報・日報管理もログアウトされます）")) return; await signOut(auth); location.reload(); }
   else if(a === "repopen"){ S.repOpen[el.dataset.k] = !S.repOpen[el.dataset.k]; render(); }
   else if(a === "repmonth"){ const c = S.repMonth || new Date(); S.repMonth = new Date(c.getFullYear(), c.getMonth() + Number(el.dataset.n), 1); render(); }
   else if(a === "repreload"){ S.allReports = null; render(); }
@@ -1164,8 +1358,16 @@ document.addEventListener("click", async e => {
     if(S.report.demen.length && !confirm("今の出面を、手配の内容で置き換えますか？")) return;
     S.report.demen = add; saveDraft(); renderReport();
   }
-  else if(a === "madd"){ S.report.misses.push({big:"",text:"",cause:"",redo:"",taisaku:"",sev:""}); saveDraft(); renderReport(); }
-  else if(a === "mdel"){ if(!confirm("このミスを消しますか？")) return; S.report.misses.splice(Number(el.dataset.i),1); saveDraft(); renderReport(); }
+  else if(a === "madd"){ S.report.misses.push({big:"",text:"",cause:"",redo:"",taisaku:"",sev:"",photos:[]}); saveDraft(); renderReport(); }
+  else if(a === "phdel"){
+    if(!confirm("この写真を消しますか？")) return;
+    const w = el.dataset.w, target = w === "r" ? S.report : S.report.misses[Number(w)];
+    const url = target.photos.splice(Number(el.dataset.i), 1)[0];
+    saveDraft(); renderReport(); if(url) deletePhotoByUrl(url);
+  }
+  else if(a === "lb"){ $("#lb-img").src = el.dataset.u; $("#lb").classList.add("show"); }
+  else if(a === "lbclose"){ $("#lb").classList.remove("show"); $("#lb-img").src = ""; }
+  else if(a === "mdel"){ if(!confirm("このミスを消しますか？")) return; const gone = S.report.misses.splice(Number(el.dataset.i),1)[0]; saveDraft(); renderReport(); (gone && gone.photos || []).forEach(deletePhotoByUrl); }
 });
 
 window.addEventListener("hashchange", () => { if(location.hash === "#reports" && S.me && started && S.view !== "report"){ S.view = "reports"; S.allReports = null; render(); } });

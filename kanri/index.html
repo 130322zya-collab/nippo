@@ -250,6 +250,11 @@ window.addEventListener('unhandledrejection', function(e){
       <div id="learn-trend"></div>
       <div style="font-size:11px;color:#9aa5b1;margin-top:8px;line-height:1.5">※ キーワードで自動グループ化しています。同じグループに複数件あるものが「繰り返し出てきた学び」です。</div>
     </div>
+    <div class="card" id="kantoku-card">
+      <div class="card-title"><span class="card-title-icon" style="background:#f1ecfb">👷</span>監督日報（この期間）
+        <a href="../kantoku/#reports" style="margin-left:auto;font-size:12px;color:#1f4e7a;font-weight:700;text-decoration:none">一覧を開く ↗</a></div>
+      <div id="kantoku-summary"><div style="color:#9aa5b1;font-size:13px">読み込み中...</div></div>
+    </div>
     <button class="print-btn" id="print-btn">🖨️ 印刷する</button>
     <button class="print-btn" id="export-ai-btn" style="background:#7c3aed;margin-top:8px">🤖 AI分析用にテキストをコピー</button>
     <!-- ダウンロードボタン群 -->
@@ -580,6 +585,53 @@ function getWeekLabel(dateKey){
   return`${sun.getMonth()+1}/${sun.getDate()}〜${sat.getMonth()+1}/${sat.getDate()}`;
 }
 
+// ==== 監督日報の集計 ====
+let kantokuMissCache=null; // null=読めない／[]=この期間なし
+async function renderKantokuSummary(from,to){
+  const el=document.getElementById("kantoku-summary"); if(!el)return;
+  let all;
+  try{
+    const snap=await get(ref(db,"kantoku_reports"));
+    all=snap.exists()?snap.val():{};
+  }catch(e){
+    kantokuMissCache=null;
+    el.innerHTML='<div style="color:#9aa5b1;font-size:13px;line-height:1.6">🔒 監督日報は監督用アカウントでログインすると表示されます。</div>';
+    return;
+  }
+  const reps=[],misses=[];
+  Object.values(all).forEach(days=>Object.entries(days||{}).forEach(([d,r])=>{
+    if(!r||!inRange(d,from,to))return;
+    reps.push({date:d,...r});
+    const ms=Array.isArray(r.misses)?r.misses:Object.values(r.misses||{});
+    ms.forEach(m=>misses.push({...m,date:d,personName:r.name||"",site:r.site||""}));
+  }));
+  kantokuMissCache=misses;
+  if(reps.length===0){el.innerHTML='<div style="color:#9aa5b1;font-size:13px">この期間の監督日報はありません</div>';return}
+  const bySev={};misses.forEach(m=>{if(m.sev)bySev[m.sev]=(bySev[m.sev]||0)+1});
+  const people=[...new Set(reps.map(r=>r.name).filter(Boolean))];
+  const redoH=Math.round(misses.reduce((s,m)=>s+(parseFloat(m.redo)||0),0)/60*10)/10;
+  let html=`<div class="sev-row" style="margin-bottom:12px">
+    <div class="sev-card" style="background:#eef4fa"><div class="sev-num" style="color:#1f4e7a">${reps.length}</div><div class="sev-lbl" style="color:#1f4e7a">日報</div><div class="sev-sub">${people.length}人</div></div>
+    <div class="sev-card" style="background:#fdf3e3"><div class="sev-num" style="color:#c2710c">${misses.length}</div><div class="sev-lbl" style="color:#c2710c">ミス</div><div class="sev-sub">${redoH}時間</div></div>
+    ${REDO.map(r=>`<div class="sev-card" style="background:${r.bg}"><div class="sev-num" style="color:${r.color}">${bySev[r.sev]||0}</div><div class="sev-lbl" style="color:${r.color}">${r.sev}</div></div>`).join('')}
+  </div>`;
+  html+='<div id="kantoku-bar"></div>';
+  if(misses.length){
+    html+='<div style="font-size:12px;font-weight:700;color:#6b7785;margin:10px 0 6px">ミスの内容</div>';
+    html+=misses.sort((a,b)=>b.date.localeCompare(a.date)).map(m=>`
+      <div style="border-left:3px solid #6b46c1;padding:7px 10px;margin-bottom:8px;background:#f8f7fd;border-radius:0 8px 8px 0">
+        <div style="font-size:11px;color:#6b46c1;font-weight:700;margin-bottom:3px">${fmtDate(m.date)} ${m.personName}${m.site?`（${m.site}）`:""}${m.big?`　${m.big}`:""}${m.sev?`　${m.sev}`:""}</div>
+        <div style="font-size:13px;color:#1c2530;line-height:1.5">${m.text||""}</div>
+        ${m.cause?`<div style="font-size:12px;color:#6b7785;margin-top:3px">原因: ${m.cause}</div>`:""}
+        ${m.taisaku?`<div style="font-size:12px;color:#2f7d4f;margin-top:3px">✅ 対策: ${m.taisaku}</div>`:""}
+        ${renderPhotoRow(m)}
+      </div>`).join('');
+  }
+  el.innerHTML=html;
+  const byBig={};misses.forEach(m=>{const k=m.big||"未分類";byBig[k]=(byBig[k]||0)+1});
+  if(misses.length)renderBar("kantoku-bar",Object.entries(byBig).sort((a,b)=>b[1]-a[1]),"#6b46c1");
+}
+
 function renderBar(containerId,entries,color){
   const el=document.getElementById(containerId);if(!el)return;
   if(entries.length===0){el.innerHTML='<div style="color:#9aa5b1;font-size:13px">データなし</div>';return}
@@ -861,6 +913,9 @@ window.loadData=async function(){
       hitEl.style.display="none";
     }
   }
+
+  // 監督日報の集計（監督用アカウントのときだけ読める）
+  renderKantokuSummary(from,to);
 
   // 日別ログ
   renderLogs(personData,searchTerm);
@@ -1540,6 +1595,10 @@ function buildAiExportText(){
     t+=`\n（育成チェックのデータはまだありません）\n`;
   }
 
+  if(kantokuMissCache&&kantokuMissCache.length){
+    t+=`\n----- 監督日報のミス（${kantokuMissCache.length}件） -----\n`;
+    kantokuMissCache.forEach(m=>{ t+=`・${m.date} ${m.personName}${m.site?"（"+m.site+"）":""} ${m.big||""}${m.sev?"／"+m.sev:""}: ${m.text||""}${m.cause?`（原因: ${m.cause}）`:""}${m.taisaku?`（対策: ${m.taisaku}）`:""}\n`; });
+  }
   t+=`\n----- AIへの依頼 -----\n`;
   t+=`上記データをもとに、月一の定例会議（60分）で話す内容を整理してください。\n`;
   t+=`①先月の振り返り（ミス傾向）②再発防止の論点 ③育成の進捗と自己評価とのズレ ④来月の目標案\n`;
