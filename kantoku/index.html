@@ -59,6 +59,16 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--navy);ba
 .chk input{width:20px;height:20px;flex-shrink:0;margin-top:1px}
 .chk.on>span{color:var(--faint);text-decoration:line-through}
 .rules{margin:0 0 0 18px;font-size:13px;line-height:1.7}
+.badge{display:inline-block;background:var(--red);color:#fff;border-radius:9px;font-size:10px;padding:0 6px;margin-left:4px;line-height:16px;vertical-align:1px}
+.rep-h{display:flex;justify-content:space-between;gap:8px;width:100%;background:none;border:none;text-align:left;font-size:14px;color:var(--ink);padding:0;line-height:1.6}
+/* 工程マスタ */
+.tpl-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.tpl-name{flex:1;display:flex;justify-content:space-between;align-items:center;gap:6px;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;font-weight:700;color:var(--ink)}
+.tpl-mv{width:38px;height:40px;border:1.5px solid var(--line);background:#fff;border-radius:10px;font-size:16px;color:var(--navy)}
+.tpl-mv:disabled{opacity:.3}
+.mtag{font-size:10px;font-weight:800;padding:1px 6px;border-radius:6px;vertical-align:1px}
+.mt-zairai{background:#eef1f4;color:var(--sub)}
+.mt-se{background:#f1ecfb;color:#6b46c1}
 /* 年間 */
 .ygrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .ym{background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 6px}
@@ -184,6 +194,28 @@ const DEFAULT_TPL = {
     rules:["指摘事項は写真付きで記録する"],
     prep:[{d:7,t:"検査日の予約・確認"},{d:1,t:"検査箇所の事前確認"}] }
 };
+// SE構法の標準例（在来と違う工程だけ上書き。参考なので自社の仕様・検査に合わせて直す）
+const DEFAULT_TPL_SE = { ...DEFAULT_TPL,
+  "基礎": { materials:["SE構法用アンカーボルト（指定品）","鉄筋（径・ピッチを図面で確認）","型枠・セパ","スペーサー","生コン（配合・数量は業者と確認）"],
+    rules:["アンカーボルトの位置・高さは施工図どおりに（柱脚金物の精度に直結）","配筋検査が終わるまで打設しない","打設後にアンカーボルトの位置を測って記録する"],
+    prep:[{d:21,t:"構造図・基礎伏図・アンカー位置図の確認"},{d:14,t:"配筋検査の予約"},{d:7,t:"生コン・ポンプ車の手配確認"},{d:3,t:"天気予報を見て打設日を最終決定"},{d:1,t:"近隣へ車両出入りの連絡"}] },
+  "プレカット搬入": { materials:["構造用集成材（番付・数量を照合）","SE金物（柱脚金物・接合金物）","ドリフトピン・ボルト類","養生シート・ブルーシート"],
+    rules:["番付と金物の種類・数量を納品書と照合する","集成材を濡らさない・傷つけない（養生を徹底）","搬入順と置き場を事前に決めておく"],
+    prep:[{d:21,t:"SE構法の構造図・プレカット図の承認"},{d:7,t:"搬入日時・車両サイズの確認"},{d:3,t:"置き場の確保・地面の養生"},{d:1,t:"クレーン・誘導員の手配確認"}] },
+  "大工": { materials:["SE金物・ドリフトピン","ボルト・ナット類","トルクレンチ","仮筋交い材"],
+    rules:["接合部ボルトのトルク管理と締め忘れチェック","ドリフトピンの打ち込み・接合部の隙間を確認する","集成材の養生・傷防止","高所はフルハーネス（安全帯）を使う"],
+    prep:[{d:14,t:"上棟日を施主に連絡"},{d:7,t:"クレーンの手配"},{d:3,t:"天気予報の確認"},{d:1,t:"人員・トルクレンチなど工具の確認"}] },
+  "耐力壁": { materials:["構造用合板（指定の厚み・品番）","指定の釘"],
+    rules:["釘の種類とピッチを図面どおりにする","めり込み・打ち損じは打ち直す","施工後に釘ピッチを写真で記録する"],
+    prep:[{d:3,t:"合板・釘の種類と数量の確認"}] },
+  "検査・立会い": { materials:["図面・構造計算書","検査チェックリスト","カメラ"],
+    rules:["金物・接合部の検査結果は写真で残す","指摘事項は是正後に再確認して記録する"],
+    prep:[{d:7,t:"構造躯体検査の予約・確認"},{d:1,t:"金物・接合部の事前確認"}] }
+};
+const DEFAULT_ORDER = {
+  zairai: ["基礎","プレカット搬入","足場","大工","屋根","サッシ","防蟻","電気","設備","断熱","内装（クロス）","検査・立会い"],
+  se:     ["基礎","プレカット搬入","足場","大工","耐力壁","屋根","サッシ","防蟻","電気","設備","断熱","内装（クロス）","検査・立会い"]
+};
 const REDO = [{max:30,sev:"軽微"},{max:120,sev:"中程度"},{max:Infinity,sev:"重大"}]; // 大工日報と同じ基準
 const WD = ["日","月","火","水","木","金","土"];
 
@@ -219,6 +251,12 @@ const S = {
   tpls: {},                           // 工程マスタ（Firebase）
   openChk: {},                        // チェックリストを開いている手配
   tplEdit: null,                      // 編集中の工程名
+  tplMethod: "zairai",                // 工程マスタで見ている工法
+  sites: {},                          // 現場 -> 工法
+  tplOrder: {},                       // 工法ごとの工程の並び順
+  allReports: null,                   // 日報一覧（全監督）
+  repPerson: "",                      // 日報一覧の絞り込み
+  repOpen: {},                        // 日報一覧で開いている日報
   planEdit: null,                     // 編集中の手配（id か "new"）
   planCopy: null,                     // 複製元の手配
   onlyPending: false,                 // 今後の段取り：未連絡だけ表示
@@ -264,6 +302,15 @@ function startData(){
     S.tpls = snap.exists() ? snap.val() : {};
     if(S.view !== "report" && !S.planEdit && S.view !== "master") render();
   }, err => showDbError(err));
+  onValue(ref(db, "kantoku_meta/sites"), snap => {
+    S.sites = snap.exists() ? snap.val() : {};
+    if(S.view === "master" && !S.tplEdit) render();
+  });
+  onValue(ref(db, "kantoku_meta/tplOrder"), snap => {
+    S.tplOrder = snap.exists() ? snap.val() : {};
+    fillTradeList("zairai");
+    if(S.view === "master" && !S.tplEdit) render();
+  });
   onValue(ref(db, "kantoku_meta/names"), async snap => {
     S.names = snap.exists() ? snap.val() : {};
     // 以前の日報に出てくる名前も候補に入れる
@@ -276,6 +323,7 @@ function startData(){
     if(S.view === "names" || !S.me) render();
   }, err => showDbError(err));
   watchMyReports();
+  if(location.hash === "#reports" && S.me) S.view = "reports";
   render();
 }
 function showDbError(err){
@@ -298,7 +346,7 @@ function refreshLists(){
   Object.values(S.myReports).forEach(r => { if(r && r.site) sites.add(r.site); });
   $("#dl-sites").innerHTML = [...sites].map(s => `<option value="${esc(s)}">`).join("");
   $("#dl-companies").innerHTML = [...comps].map(s => `<option value="${esc(s)}">`).join("");
-  $("#dl-trades").innerHTML = [...trades].map(s => `<option value="${esc(s)}">`).join("");
+  fillTradeList("zairai");
 }
 
 // ===== 共通の上部 =====
@@ -313,7 +361,7 @@ function header(){
 function tabs(){
   const t = (v,l) => `<button class="tab ${S.view===v||(v==="cal"&&S.view==="day")?"on":""}" data-act="view" data-v="${v}">${l}</button>`;
   const n = pendingCount();
-  return `<div class="tabs">${t("cal","📅 月")}${t("year","🗓 年間")}${t("upcoming", "📋 今後の段取り" + (n ? `（未連絡${n}）` : ""))}</div>`;
+  return `<div class="tabs">${t("cal","📅 月")}${t("year","🗓 年間")}${t("upcoming", "📋 今後" + (n ? `<span class="badge">${n}</span>` : ""))}${t("reports","📝 日報")}</div>`;
 }
 
 // 手配がその日に入っているか（複数日の手配に対応）
@@ -323,13 +371,39 @@ function plansOn(d){
     .filter(([,p]) => covers(p, d) && (!S.site || p.site === S.site))
     .sort((a,b) => (a[1].site||"").localeCompare(b[1].site||"") || (a[1].time||"").localeCompare(b[1].time||""));
 }
-// ===== 工程マスタ =====
-function getTpl(trade){
+// ===== 工程マスタ（工法ごと） =====
+const METHODS = { zairai:"在来工法", se:"SE構法" };
+const methodShort = m => m === "se" ? "SE" : "在来";
+const siteMethod = site => { const x = site && S.sites[uidOf(site)]; return x ? x.method : ""; };
+const methodOf = p => p.method || siteMethod(p.site) || "zairai";
+function defaultsOf(method){ return method === "se" ? DEFAULT_TPL_SE : DEFAULT_TPL; }
+function savedOf(method, trade){
+  const raw = S.tpls || {}, u = uidOf(trade);
+  if(raw[method] && raw[method][u]) return raw[method][u];
+  if(raw[u] && raw[u].name) return raw[u]; // 以前の保存形式（工法の区別なし）
+  return null;
+}
+function getTpl(trade, method){
   if(!trade) return null;
-  const saved = S.tpls[uidOf(trade)];
+  method = method || "zairai";
+  const saved = savedOf(method, trade);
   if(saved) return { name:trade, materials:toArr(saved.materials), rules:toArr(saved.rules), prep:toArr(saved.prep), custom:true };
-  const d = DEFAULT_TPL[trade];
+  const d = defaultsOf(method)[trade];
   return d ? { name:trade, ...d, custom:false } : null;
+}
+const tplOf = p => getTpl(p.trade, methodOf(p));
+// 工程の並び順（保存されていなければ標準の順＋自社で追加した工程）
+function tplList(method){
+  const saved = S.tplOrder && S.tplOrder[method];
+  if(saved) return toArr(saved);
+  const list = [...DEFAULT_ORDER[method]];
+  const raw = (S.tpls || {})[method] || {};
+  Object.values(raw).forEach(x => { if(x && x.name && !list.includes(x.name)) list.push(x.name); });
+  return list;
+}
+async function saveOrder(method, list){
+  try{ await set(ref(db, `kantoku_meta/tplOrder/${method}`), list); }
+  catch(e){ alert("並び順の保存に失敗しました：" + e.message); }
 }
 const doneOf = p => toArr(p.done);
 // アラート：事前段取りの期限切れ／3日以内、2日以内の手配で材料未確認
@@ -338,7 +412,7 @@ function computeAlerts(){
   Object.entries(S.plans).forEach(([id,p]) => {
     if(p.status === "中止" || (S.site && p.site !== S.site)) return;
     if(p.date < t || p.date > end) return;
-    const tpl = getTpl(p.trade); if(!tpl) return;
+    const tpl = tplOf(p); if(!tpl) return;
     const done = doneOf(p);
     tpl.prep.forEach(x => {
       if(done.includes("p:"+x.t)) return;
@@ -373,24 +447,24 @@ function alertList(){
 }
 // 手配カードの中のチェックリスト
 function checkBlock(id, p){
-  const tpl = getTpl(p.trade);
-  if(!tpl) return p.trade ? `<div class="small" style="margin-top:6px">「${esc(p.trade)}」の材料・ルールは未登録です　<a href="#" data-act="edittpl" data-t="${esc(p.trade)}">登録する</a></div>` : "";
+  const m = methodOf(p), tpl = tplOf(p);
+  if(!tpl) return p.trade ? `<div class="small" style="margin-top:6px">${METHODS[m]}の「${esc(p.trade)}」は材料・ルールが未登録です　<a href="#" data-act="edittpl" data-t="${esc(p.trade)}" data-m="${m}">登録する</a></div>` : "";
   const done = doneOf(p), t = today();
-  const pd2 = tpl.prep.filter(x => done.includes("p:"+x.t)).length, md = tpl.materials.filter(m => done.includes("m:"+m)).length;
+  const pd2 = tpl.prep.filter(x => done.includes("p:"+x.t)).length, md = tpl.materials.filter(x => done.includes("m:"+x)).length;
   const late = tpl.prep.some(x => !done.includes("p:"+x.t) && addDays(p.date, -(Number(x.d)||0)) < t) && p.date >= t;
   const open = !!S.openChk[id];
   let html = `<button class="chk-sum ${late?"late":""}" data-act="togglechk" data-id="${id}">
     ⏰ 事前段取り ${pd2}/${tpl.prep.length}　📦 材料 ${md}/${tpl.materials.length}　⚠ ルール ${tpl.rules.length}${late?"　<b>期限切れあり</b>":""}<span style="float:right">${open?"▲":"▼"}</span></button>`;
   if(!open) return html;
   const box = (k, label, sub) => `<label class="chk ${done.includes(k)?"on":""}"><input type="checkbox" data-act="chk" data-id="${id}" data-k="${esc(k)}" ${done.includes(k)?"checked":""}><span>${esc(label)}${sub?`<span class="small"> ${sub}</span>`:""}</span></label>`;
-  html += `<div class="chk-body">`;
+  html += `<div class="chk-body"><div class="small" style="margin-bottom:4px">${METHODS[m]}の内容</div>`;
   if(tpl.prep.length) html += `<div class="chk-h">⏰ 事前の段取り</div>` + tpl.prep.map(x => {
     const due = addDays(p.date, -(Number(x.d)||0)), k = "p:"+x.t, over = !done.includes(k) && due < t;
     return box(k, x.t, `<span style="color:${over?"var(--red)":"var(--faint)"}">（${fmtDay(due)}まで${over?"・期限切れ":""}）</span>`);
   }).join("");
-  if(tpl.materials.length) html += `<div class="chk-h">📦 必要な材料</div>` + tpl.materials.map(m => box("m:"+m, m)).join("");
+  if(tpl.materials.length) html += `<div class="chk-h">📦 必要な材料</div>` + tpl.materials.map(x => box("m:"+x, x)).join("");
   if(tpl.rules.length) html += `<div class="chk-h">⚠ 気を付けるルール</div><ul class="rules">${tpl.rules.map(r => `<li>${esc(r)}</li>`).join("")}</ul>`;
-  html += `<div class="small" style="margin-top:6px">${tpl.custom?"":"※標準の例です。"}<a href="#" data-act="edittpl" data-t="${esc(p.trade)}">「${esc(p.trade)}」の内容を直す</a></div></div>`;
+  html += `<div class="small" style="margin-top:6px">${tpl.custom?"":"※標準の例です。"}<a href="#" data-act="edittpl" data-t="${esc(p.trade)}" data-m="${m}">「${esc(p.trade)}」の内容を直す</a></div></div>`;
   return html;
 }
 async function toggleCheck(id, k){
@@ -404,35 +478,54 @@ async function toggleCheck(id, k){
 // ----- 工程マスタ画面 -----
 function viewMaster(){
   if(S.tplEdit) return viewTplEdit();
-  const names = new Set([...Object.keys(DEFAULT_TPL), ...Object.values(S.tpls).map(x => x.name).filter(Boolean), ...Object.values(S.plans).map(p => p.trade).filter(Boolean)]);
+  const m = S.tplMethod || "zairai";
+  const list = tplList(m);
+  const used = [...new Set(Object.values(S.plans).filter(p => methodOf(p) === m).map(p => p.trade).filter(t => t && !list.includes(t)))];
+  const sites = [...new Set([...Object.values(S.sites).map(x => x.name), ...Object.values(S.plans).map(p => p.site)].filter(Boolean))].sort();
   return `
   <button class="btn btn-light btn-block" style="margin-bottom:10px" data-act="view" data-v="cal">← カレンダーに戻る</button>
+  <div class="tabs">${Object.entries(METHODS).map(([k,l]) => `<button class="tab ${k===m?"on":""}" data-act="tplmethod" data-m="${k}">${l}</button>`).join("")}</div>
   <div class="card">
-    <div class="card-title">⚙ 工程ごとの材料・ルール・事前の段取り</div>
-    <div class="small" style="margin-bottom:10px">ここで登録した内容が、その業種の手配にチェックリストとして出ます。監督全員で共有されます。「標準の例」は参考なので、自社のやり方に合わせて直してください。</div>
-    ${[...names].sort().map(n => { const t = getTpl(n); return `<button class="btn btn-ghost btn-block" style="margin-bottom:6px;text-align:left;display:flex;justify-content:space-between" data-act="edittpl" data-t="${esc(n)}">
-      <span>${esc(n)}</span><span class="small">${!t ? "未登録" : t.custom ? `登録済み（材料${t.materials.length}・ルール${t.rules.length}・段取り${t.prep.length}）` : "標準の例"}</span></button>`; }).join("")}
+    <div class="card-title">⚙ ${METHODS[m]}の工程（材料・ルール・事前の段取り）</div>
+    <div class="small" style="margin-bottom:10px">工程名をタップすると中身を直せます。↑↓で順番を入れ替えられます（手配を入れるときの業種の候補もこの順に出ます）。「標準の例」は参考なので、自社のやり方に合わせて直してください。</div>
+    ${list.map((n,i) => { const t = getTpl(n, m); return `<div class="tpl-row">
+      <button class="tpl-name" data-act="edittpl" data-t="${esc(n)}" data-m="${m}"><span>${i+1}. ${esc(n)}</span><span class="small">${!t ? "未登録" : t.custom ? `自社用（材料${t.materials.length}・ルール${t.rules.length}・段取り${t.prep.length}）` : "標準の例"}</span></button>
+      <button class="tpl-mv" data-act="tplmove" data-i="${i}" data-n="-1" ${i===0?"disabled":""}>↑</button>
+      <button class="tpl-mv" data-act="tplmove" data-i="${i}" data-n="1" ${i===list.length-1?"disabled":""}>↓</button>
+    </div>`; }).join("")}
+    ${used.length ? `<div class="small" style="margin:10px 0 4px">手配で使われているが、一覧にない業種：</div>${used.map(n => `<button class="btn btn-ghost" style="margin:0 6px 6px 0;padding:6px 10px;font-size:12px" data-act="tpladdname" data-n="${esc(n)}">＋ ${esc(n)}</button>`).join("")}` : ""}
     <div style="display:flex;gap:6px;margin-top:10px">
-      <input id="new-tpl" list="dl-trades" placeholder="工程を追加（例：大工（造作））">
+      <input id="new-tpl" placeholder="工程を追加（例：大工（造作））">
       <button class="btn btn-light" data-act="addtpl" style="white-space:nowrap">追加</button>
     </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🏗️ 現場ごとの工法</div>
+    <div class="small" style="margin-bottom:8px">手配のチェックリストは、その現場の工法の内容が使われます。</div>
+    ${sites.length ? sites.map(sn => { const sm = siteMethod(sn); return `<div class="tpl-row"><span style="flex:1;font-size:14px;font-weight:700">${esc(sn)}</span>
+      ${Object.entries(METHODS).map(([k,l]) => `<button class="st ${sm===k?"on s-確定":""}" style="flex:0 0 74px" data-act="sitemethod" data-s="${esc(sn)}" data-m="${k}">${methodShort(k)}</button>`).join("")}
+    </div>`; }).join("") : `<div class="small">まだ現場がありません。手配を入れると出てきます。</div>`}
   </div>`;
 }
 function viewTplEdit(){
-  const n = S.tplEdit, t = getTpl(n) || { materials:[], rules:[], prep:[], custom:false };
+  const n = S.tplEdit, m = S.tplMethod || "zairai", t = getTpl(n, m) || { materials:[], rules:[], prep:[], custom:false };
+  const other = m === "se" ? "zairai" : "se", ot = getTpl(n, other);
+  const inList = tplList(m).includes(n);
   return `
   <button class="btn btn-light btn-block" style="margin-bottom:10px" data-act="tplback">← ${S.tplFrom ? "戻る" : "工程の一覧に戻る"}</button>
   <div class="card">
-    <div class="card-title">✏️ 「${esc(n)}」の材料・ルール・段取り</div>
-    ${t.custom ? "" : `<div class="info" style="font-weight:600">${getTpl(n) ? "今は標準の例です。保存すると自社用になります。" : "まだ登録がありません。"}</div>`}
+    <div class="card-title">✏️ ${METHODS[m]}「${esc(n)}」</div>
+    ${t.custom ? "" : `<div class="info" style="font-weight:600">${getTpl(n, m) ? "今は標準の例です。保存すると自社用になります。" : "まだ登録がありません。"}</div>`}
+    ${ot ? `<button class="btn btn-ghost btn-block" style="margin-bottom:10px;font-size:13px" data-act="tplcopy">${METHODS[other]}の内容を下にコピーする</button>` : ""}
     <div class="field"><label>📦 必要な材料（1行に1つ）</label><textarea id="te-mat" rows="5">${esc(t.materials.join("\n"))}</textarea></div>
-    <div class="field"><label>⚠ 気を付けるルール（1行に1つ）</label><textarea id="te-rule" rows="4">${esc(t.rules.join("\n"))}</textarea></div>
+    <div class="field"><label>⚠ 気を付けるルール・検査・仕様（1行に1つ）</label><textarea id="te-rule" rows="5">${esc(t.rules.join("\n"))}</textarea></div>
     <div class="field"><label>⏰ 事前の段取り（1行に1つ。「7日前：近隣挨拶」の形で）</label><textarea id="te-prep" rows="5">${esc(t.prep.map(x => `${x.d}日前：${x.t}`).join("\n"))}</textarea>
       <div class="small" style="margin-top:4px">日数を書かないと「当日」になります。手配の日から逆算して期限を出し、過ぎたらアラートを出します。</div></div>
-    <div style="display:flex;gap:8px">
-      ${t.custom ? `<button class="btn btn-red" style="flex:1" data-act="resettpl">${DEFAULT_TPL[n]?"標準に戻す":"削除"}</button>` : ""}
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${t.custom ? `<button class="btn btn-red" style="flex:1" data-act="resettpl">${defaultsOf(m)[n]?"標準に戻す":"内容を消す"}</button>` : ""}
       <button class="btn btn-navy" style="flex:2" data-act="savetpl">保存</button>
     </div>
+    ${inList ? `<button class="btn btn-ghost btn-block" style="margin-top:10px;font-size:13px;color:var(--red)" data-act="tplremove">この工程を一覧から外す</button>` : ""}
   </div>`;
 }
 function parsePrep(line){
@@ -440,10 +533,26 @@ function parsePrep(line){
   return m ? { d:Number(m[1]), t:m[2].trim() } : { d:0, t:line.trim() };
 }
 async function saveTpl(){
+  const m = S.tplMethod || "zairai";
   const lines = id => $(id).value.split("\n").map(x => x.trim()).filter(Boolean);
   const rec = { name:S.tplEdit, materials:lines("#te-mat"), rules:lines("#te-rule"), prep:lines("#te-prep").map(parsePrep), updatedBy:S.me, updatedAt:Date.now() };
-  try{ await set(ref(db, `kantoku_templates/${uidOf(S.tplEdit)}`), rec); toast("保存しました"); S.tplEdit = null; if(S.tplFrom){ S.view = S.tplFrom; S.tplFrom = null; } render(); }
-  catch(e){ alert("保存に失敗しました：" + e.message); }
+  try{
+    await set(ref(db, `kantoku_templates/${m}/${uidOf(S.tplEdit)}`), rec);
+    const list = tplList(m); if(!list.includes(S.tplEdit)){ list.push(S.tplEdit); await saveOrder(m, list); }
+    toast("保存しました"); S.tplEdit = null; if(S.tplFrom){ S.view = S.tplFrom; S.tplFrom = null; } render();
+  }catch(e){ alert("保存に失敗しました：" + e.message); }
+}
+async function setSiteMethod(site, method){
+  if(!site) return;
+  try{ await set(ref(db, `kantoku_meta/sites/${uidOf(site)}`), { name:site, method }); }
+  catch(e){ alert("現場の工法を保存できませんでした：" + e.message); }
+}
+// 業種の候補（工法ごとの並び順＋手配で使った業種）
+function fillTradeList(method){
+  const list = [...tplList(method || "zairai")];
+  Object.values(S.plans).forEach(p => { if(p.trade && !list.includes(p.trade)) list.push(p.trade); });
+  TRADES.forEach(t => { if(!list.includes(t)) list.push(t); });
+  $("#dl-trades").innerHTML = list.map(x => `<option value="${esc(x)}">`).join("");
 }
 
 function pendingCount(){
@@ -469,6 +578,7 @@ function render(){
   else if(v === "upcoming") body = viewUpcoming();
   else if(v === "year") body = viewYear();
   else if(v === "master") body = viewMaster();
+  else if(v === "reports") body = viewReports();
   else if(v === "report") return renderReport();
   $("#app").innerHTML = `<div class="wrap">${header()}${v==="names"?"":tabs()}${body}</div>`;
 }
@@ -523,6 +633,64 @@ function viewCal(){
     <div class="legend"><span><b style="color:var(--navy)">■</b> 手配の件数</span><span><b style="color:var(--green)">✓</b> 日報記入済み</span><span><b style="color:var(--red)">●</b> 未連絡あり</span></div>
   </div>
   <button class="btn btn-navy btn-big" data-act="day" data-d="${today()}">今日の段取り・日報を開く</button>`;
+}
+
+// ----- 監督日報の一覧（全員分） -----
+async function loadAllReports(){
+  try{ const snap = await get(ref(db, "kantoku_reports")); S.allReports = snap.exists() ? snap.val() : {}; }
+  catch(e){ S.allReports = {}; toast("日報を読み込めませんでした"); }
+  if(S.view === "reports") render();
+}
+function viewReports(){
+  if(S.allReports === null){ loadAllReports(); return `<div class="card small">読み込み中…</div>`; }
+  const mc = S.repMonth || new Date(), y = mc.getFullYear(), m = mc.getMonth(), prefix = `${y}-${pad(m+1)}`;
+  const people = Object.entries(S.allReports).map(([uid, days]) => { const f = Object.values(days || {})[0]; return [uid, (f && f.name) || S.names[uid] || uid]; }).sort((a,b) => a[1].localeCompare(b[1]));
+  const rows = [];
+  Object.entries(S.allReports).forEach(([uid, days]) => {
+    if(S.repPerson && uid !== S.repPerson) return;
+    Object.entries(days || {}).forEach(([d, r]) => { if(d.startsWith(prefix) && r && (!S.site || r.site === S.site)) rows.push({ uid, d, r }); });
+  });
+  rows.sort((a,b) => b.d.localeCompare(a.d) || (a.r.name||"").localeCompare(b.r.name||""));
+  const missAll = rows.reduce((n,x) => n + toArr(x.r.misses).length, 0);
+  const sevN = sv => rows.reduce((n,x) => n + toArr(x.r.misses).filter(z => z.sev === sv).length, 0);
+  const card = ({uid, d, r}) => {
+    const key = uid + "/" + d, open = !!S.repOpen[key], ms = toArr(r.misses), dm = toArr(r.demen);
+    const total = dm.reduce((n,x) => n + (parseFloat(x.count)||0), 0);
+    let h = `<div class="plan" style="border-left-color:${ms.length?"var(--amber)":"var(--navy)"}">
+      <button class="rep-h" data-act="repopen" data-k="${esc(key)}">
+        <span><b>${fmtDay(d)}</b>　${esc(r.name||uid)}<br><span class="small">${esc(r.site||"（現場なし）")}${r.weather?"・"+esc(r.weather):""}${total?`・出面${total}名`:""}</span></span>
+        <span style="text-align:right">${ms.length?`<span class="sev sev-${ms.some(z=>z.sev==="重大")?"重大":"中程度"}">ミス${ms.length}</span>`:""} ${open?"▲":"▼"}</span>
+      </button>`;
+    if(!open) return h + (r.work ? `<div class="p-sub">${esc(r.work.slice(0,60))}${r.work.length>60?"…":""}</div>` : "") + `</div>`;
+    const sec = (t, v) => v ? `<div class="chk-h">${t}</div><div class="p-memo">${esc(v)}</div>` : "";
+    h += `<div class="chk-body">`;
+    if(dm.length) h += `<div class="chk-h">👷 出面</div>` + dm.map(x => `<div class="p-sub">・${esc(x.trade)} ${esc(x.company)} ${x.count!==""?esc(x.count)+"名":""}</div>`).join("");
+    h += sec("🏗️ 現場の様子", r.work) + sec("🦺 安全・検査・打合せ", r.anzen);
+    if(ms.length) h += `<div class="chk-h">⚠️ ミス・問題</div>` + ms.map(z => `<div style="margin:4px 0;padding:6px 8px;background:#fafbfc;border-radius:8px">
+      <div style="font-size:13px">${z.sev?`<span class="sev sev-${esc(z.sev)}">${esc(z.sev)}</span> `:""}${z.big?`<span class="small">${esc(z.big)}</span> `:""}${esc(z.text)}</div>
+      ${z.cause?`<div class="p-sub">原因：${esc(z.cause)}</div>`:""}${z.taisaku?`<div class="p-sub" style="color:var(--green)">対策：${esc(z.taisaku)}</div>`:""}${z.redo?`<div class="p-sub">対応時間：${esc(z.redo)}分</div>`:""}
+    </div>`).join("");
+    h += sec("💡 学び・気づき", r.learn) + sec("🎯 申し送り", r.next);
+    if((r.name || "") === S.me) h += `<button class="btn btn-light btn-block" style="margin-top:8px" data-act="repedit" data-d="${d}">自分の日報なので開いて直す</button>`;
+    return h + `</div></div>`;
+  };
+  return `
+  <div class="monthbar">
+    <button class="mbtn" data-act="repmonth" data-n="-1">‹</button>
+    <div class="mlabel">${y}年${m+1}月</div>
+    <button class="mbtn" data-act="repmonth" data-n="1">›</button>
+  </div>
+  <div class="row2">
+    <div class="field"><select data-act="repperson"><option value="">監督：全員</option>${people.map(([u,n]) => `<option value="${esc(u)}" ${u===S.repPerson?"selected":""}>${esc(n)}</option>`).join("")}</select></div>
+    ${siteFilter()}
+  </div>
+  <div class="card" style="display:flex;justify-content:space-around;text-align:center;padding:10px">
+    <div><div style="font-size:20px;font-weight:800;color:var(--navy)">${rows.length}</div><div class="small">日報</div></div>
+    <div><div style="font-size:20px;font-weight:800;color:var(--amber)">${missAll}</div><div class="small">ミス</div></div>
+    <div><div style="font-size:20px;font-weight:800;color:var(--red)">${sevN("重大")}</div><div class="small">重大</div></div>
+    <div><button class="btn btn-light" style="padding:6px 10px;font-size:12px" data-act="repreload">更新</button></div>
+  </div>
+  ${rows.length ? rows.map(card).join("") : `<div class="card small">この月の日報はありません。</div>`}`;
 }
 
 // ----- 年間カレンダー -----
@@ -582,7 +750,7 @@ function planCard(id, p, showDate){
   <div class="plan st-${esc(p.status||"未連絡")}">
     <div class="p-main">${esc(p.trade||"（業種なし）")}${p.company?`　${esc(p.company)}`:""}${p.count?`　${esc(p.count)}名`:""}</div>
     <div class="p-sub">
-      ${p.time ? `🕗 ${esc(p.time)}　` : ""}🏗️ ${esc(p.site||"（現場なし）")}
+      ${p.time ? `🕗 ${esc(p.time)}　` : ""}🏗️ ${esc(p.site||"（現場なし）")}　<span class="mtag mt-${methodOf(p)}">${methodShort(methodOf(p))}</span>
       ${multi ? `<br>📆 ${fmtDay(p.date)} 〜 ${fmtDay(p.dateTo)}` : ""}
       ${p.contact ? `<br>📞 ${esc(p.contact)}` : ""}
     </div>
@@ -615,7 +783,10 @@ function planForm(){
       <div class="field"><label>開始日</label><input type="date" id="pf-date" value="${esc(p.date)}"></div>
       <div class="field"><label>終了日（複数日なら）</label><input type="date" id="pf-dateTo" value="${esc(p.dateTo||"")}"></div>
     </div>
-    <div class="field"><label>現場名</label><input id="pf-site" list="dl-sites" value="${esc(p.site)}" placeholder="例：〇〇邸新築工事"></div>
+    <div class="row2" style="grid-template-columns:2fr 1fr">
+      <div class="field"><label>現場名</label><input id="pf-site" list="dl-sites" value="${esc(p.site)}" placeholder="例：〇〇邸新築工事"></div>
+      <div class="field"><label>工法</label><select id="pf-method">${Object.entries(METHODS).map(([k,l]) => `<option value="${k}" ${k===(p.method || siteMethod(p.site) || lsGet("kantoku_last_method","zairai"))?"selected":""}>${methodShort(k)}</option>`).join("")}</select></div>
+    </div>
     <div class="row2">
       <div class="field"><label>業種</label><input id="pf-trade" list="dl-trades" value="${esc(p.trade)}" placeholder="例：大工"></div>
       <div class="field"><label>業者・職人名</label><input id="pf-company" list="dl-companies" value="${esc(p.company)}" placeholder="例：〇〇電気"></div>
@@ -699,6 +870,11 @@ document.addEventListener("change", e => {
   toast("前回の連絡先などを入れました");
 });
 
+document.addEventListener("change", e => {
+  if(e.target.id === "pf-site"){ const m = siteMethod(e.target.value.trim()); if(m){ $("#pf-method").value = m; fillTradeList(m); } }
+  if(e.target.id === "pf-method") fillTradeList(e.target.value);
+});
+
 // ===== 段取りを文章にして共有（LINEなど） =====
 function planLine(p){
   return `・${p.trade||""}${p.company?" "+p.company:""}${p.count?" "+p.count+"名":""}${p.time?" "+p.time:""}${p.site?"（"+p.site+"）":""}【${p.status||"未連絡"}】${p.memo?"\n　"+p.memo.replace(/\n/g," "):""}`;
@@ -709,7 +885,7 @@ async function sharePlans(scope){
     const ps = plansOn(S.selDate).filter(([,p]) => p.status !== "中止");
     text = `【${fmtDay(S.selDate)}の段取り】${S.site?"\n現場："+S.site:""}\n` + ps.map(([,p]) => planLine(p)).join("\n");
     const rules = [];
-    ps.forEach(([,p]) => { const t = getTpl(p.trade); if(t && t.rules.length) rules.push(`＜${p.trade}＞\n` + t.rules.map(r => "・" + r).join("\n")); });
+    ps.forEach(([,p]) => { const t = tplOf(p); if(t && t.rules.length) rules.push(`＜${p.trade}＞\n` + t.rules.map(r => "・" + r).join("\n")); });
     if(rules.length) text += "\n\n【気を付けること】\n" + [...new Set(rules)].join("\n");
   }else{
     const t = today(), end = monthLater(t);
@@ -732,7 +908,7 @@ async function savePlan(){
   const p = {
     date: g("#pf-date"), dateTo: g("#pf-dateTo"), site: g("#pf-site"), trade: g("#pf-trade"),
     company: g("#pf-company"), count: g("#pf-count"), time: g("#pf-time"), contact: g("#pf-contact"),
-    memo: g("#pf-memo"), status: $("#pf-status").value, updatedBy: S.me, updatedAt: Date.now()
+    memo: g("#pf-memo"), status: $("#pf-status").value, method: $("#pf-method").value, updatedBy: S.me, updatedAt: Date.now()
   };
   if(!p.date){ alert("開始日を入れてください"); return; }
   if(!p.trade && !p.company){ alert("業種か業者名のどちらかは入れてください"); return; }
@@ -742,6 +918,8 @@ async function savePlan(){
     if(S.planEdit === "new"){ p.createdBy = S.me; p.createdAt = Date.now(); await push(ref(db, "kantoku_plans"), p); }
     else { const old = S.plans[S.planEdit] || {}; await set(ref(db, `kantoku_plans/${S.planEdit}`), { ...old, ...p }); }
     if(p.site) lsSet("kantoku_last_site", p.site);
+    lsSet("kantoku_last_method", p.method);
+    if(p.site && siteMethod(p.site) !== p.method) await setSiteMethod(p.site, p.method);
     S.planEdit = null; S.planCopy = null; toast("手配を保存しました"); render();
   }catch(e){ alert("保存に失敗しました：" + e.message); }
 }
@@ -883,7 +1061,7 @@ async function saveReport(){
     await set(ref(db, `kantoku_reports/${uidOf(S.me)}/${S.selDate}`), record);
     lsDel(draftKey());
     if(record.site) lsSet("kantoku_last_site", record.site);
-    S.reportDirty = false;
+    S.reportDirty = false; S.allReports = null;
     toast("日報を保存しました");
     S.view = "day"; render();
   }catch(e){
@@ -905,6 +1083,7 @@ document.addEventListener("input", e => {
 });
 document.addEventListener("change", e => {
   const el = e.target;
+  if(el.dataset.act === "repperson"){ S.repPerson = el.value; render(); return; }
   if(el.dataset.act === "site"){ S.site = el.value; lsSet("kantoku_site_filter", S.site); render(); return; }
   if(S.view === "report" && el.tagName === "SELECT"){
     if(el.dataset.f){ S.report[el.dataset.f] = el.value; saveDraft(); }
@@ -924,7 +1103,7 @@ document.addEventListener("click", async e => {
     try{ await set(ref(db, `kantoku_meta/names/${uidOf(n)}`), n); S.me = n; lsSet("kantoku_me", n); watchMyReports(); S.view = "cal"; render(); }
     catch(err){ alert("追加に失敗しました：" + err.message); }
   }
-  else if(a === "view"){ S.view = el.dataset.v; S.planEdit = null; if(S.view === "year") S.year = S.cursor.getFullYear(); render(); window.scrollTo(0,0); }
+  else if(a === "view"){ S.view = el.dataset.v; S.planEdit = null; if(S.view === "reports") S.allReports = null; if(S.view === "year") S.year = S.cursor.getFullYear(); render(); window.scrollTo(0,0); }
   else if(a === "year"){ S.year = (S.year || S.cursor.getFullYear()) + Number(el.dataset.n); render(); }
   else if(a === "openmonth"){ S.cursor = new Date(S.year || S.cursor.getFullYear(), Number(el.dataset.m), 1); S.view = "cal"; render(); }
   else if(a === "month"){ S.cursor = new Date(S.cursor.getFullYear(), S.cursor.getMonth() + Number(el.dataset.n), 1); render(); }
@@ -935,11 +1114,37 @@ document.addEventListener("click", async e => {
   else if(a === "cancelplan"){ S.planEdit = null; S.planCopy = null; render(); }
   else if(a === "copyplan"){ const src = S.plans[el.dataset.id]; if(!src) return; S.planCopy = { ...src }; delete S.planCopy.createdAt; delete S.planCopy.createdBy; S.planEdit = "new"; if(S.view === "upcoming"){ S.selDate = src.date; S.view = "day"; } render(); $("#plan-form")?.scrollIntoView({behavior:"smooth"}); }
   else if(a === "master"){ e.preventDefault(); S.view = "master"; S.tplEdit = null; S.planEdit = null; render(); window.scrollTo(0,0); }
-  else if(a === "edittpl"){ e.preventDefault(); S.tplFrom = S.view === "master" ? null : S.view; S.tplEdit = el.dataset.t; S.view = "master"; S.planEdit = null; render(); window.scrollTo(0,0); }
-  else if(a === "addtpl"){ const n = $("#new-tpl").value.trim(); if(!n) return; S.tplEdit = n; render(); }
+  else if(a === "edittpl"){ e.preventDefault(); S.tplFrom = S.view === "master" ? null : S.view; S.tplEdit = el.dataset.t; if(el.dataset.m) S.tplMethod = el.dataset.m; S.view = "master"; S.planEdit = null; render(); window.scrollTo(0,0); }
+  else if(a === "addtpl" || a === "tpladdname"){
+    const n = a === "addtpl" ? $("#new-tpl").value.trim() : el.dataset.n; if(!n) return;
+    const list = tplList(S.tplMethod); if(!list.includes(n)){ list.push(n); await saveOrder(S.tplMethod, list); }
+    S.tplFrom = null; S.tplEdit = n; render();
+  }
+  else if(a === "repopen"){ S.repOpen[el.dataset.k] = !S.repOpen[el.dataset.k]; render(); }
+  else if(a === "repmonth"){ const c = S.repMonth || new Date(); S.repMonth = new Date(c.getFullYear(), c.getMonth() + Number(el.dataset.n), 1); render(); }
+  else if(a === "repreload"){ S.allReports = null; render(); }
+  else if(a === "repedit"){ S.selDate = el.dataset.d; S.cursor = pd(S.selDate); await openReport(); window.scrollTo(0,0); }
+  else if(a === "tplmethod"){ S.tplMethod = el.dataset.m; render(); }
+  else if(a === "tplmove"){
+    const list = tplList(S.tplMethod), i = Number(el.dataset.i), j = i + Number(el.dataset.n);
+    if(j < 0 || j >= list.length) return;
+    [list[i], list[j]] = [list[j], list[i]]; S.tplOrder = { ...S.tplOrder, [S.tplMethod]: list }; render(); await saveOrder(S.tplMethod, list);
+  }
+  else if(a === "tplremove"){
+    if(!confirm(`「${S.tplEdit}」を${METHODS[S.tplMethod]}の工程一覧から外しますか？（自社用に直した内容も消えます）`)) return;
+    const list = tplList(S.tplMethod).filter(x => x !== S.tplEdit);
+    try{ await saveOrder(S.tplMethod, list); if(savedOf(S.tplMethod, S.tplEdit)) await remove(ref(db, `kantoku_templates/${S.tplMethod}/${uidOf(S.tplEdit)}`)); }catch(err){ alert("失敗しました：" + err.message); }
+    S.tplEdit = null; S.tplFrom = null; render();
+  }
+  else if(a === "tplcopy"){
+    const ot = getTpl(S.tplEdit, S.tplMethod === "se" ? "zairai" : "se"); if(!ot) return;
+    $("#te-mat").value = ot.materials.join("\n"); $("#te-rule").value = ot.rules.join("\n"); $("#te-prep").value = ot.prep.map(x => `${x.d}日前：${x.t}`).join("\n");
+    toast("コピーしました。直してから保存してください");
+  }
+  else if(a === "sitemethod"){ await setSiteMethod(el.dataset.s, el.dataset.m); toast(`${el.dataset.s}を${METHODS[el.dataset.m]}にしました`); }
   else if(a === "tplback"){ S.tplEdit = null; if(S.tplFrom){ S.view = S.tplFrom; S.tplFrom = null; } render(); }
   else if(a === "savetpl"){ await saveTpl(); }
-  else if(a === "resettpl"){ if(!confirm(`「${S.tplEdit}」の登録内容を消しますか？`)) return; try{ await remove(ref(db, `kantoku_templates/${uidOf(S.tplEdit)}`)); S.tplEdit = null; toast("消しました"); render(); }catch(err){ alert("失敗しました：" + err.message); } }
+  else if(a === "resettpl"){ if(!confirm(`「${S.tplEdit}」の登録内容を消しますか？`)) return; try{ await remove(ref(db, `kantoku_templates/${S.tplMethod}/${uidOf(S.tplEdit)}`)); const u = uidOf(S.tplEdit); if(S.tpls[u] && S.tpls[u].name) await remove(ref(db, `kantoku_templates/${u}`)); S.tplEdit = null; toast("消しました"); render(); }catch(err){ alert("失敗しました：" + err.message); } }
   else if(a === "togglechk"){ S.openChk[el.dataset.id] = !S.openChk[el.dataset.id]; render(); }
   else if(a === "chk"){ await toggleCheck(el.dataset.id, el.dataset.k); }
   else if(a === "openchk"){ const p = S.plans[el.dataset.id]; if(!p) return; S.openChk[el.dataset.id] = true; S.selDate = p.date; S.cursor = pd(p.date); S.view = "day"; render(); window.scrollTo(0,0); }
@@ -963,6 +1168,7 @@ document.addEventListener("click", async e => {
   else if(a === "mdel"){ if(!confirm("このミスを消しますか？")) return; S.report.misses.splice(Number(el.dataset.i),1); saveDraft(); renderReport(); }
 });
 
+window.addEventListener("hashchange", () => { if(location.hash === "#reports" && S.me && started && S.view !== "report"){ S.view = "reports"; S.allReports = null; render(); } });
 // 画面を閉じるとき、未保存なら警告（下書きは残る）
 window.addEventListener("beforeunload", e => { if(S.view === "report" && S.reportDirty){ e.preventDefault(); e.returnValue = ""; } });
 </script>
