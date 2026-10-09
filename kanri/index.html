@@ -40,12 +40,12 @@ mark.hl{background:#fff3b0;color:inherit;border-radius:2px;padding:0 1px}
 .bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:700;color:#fff;transition:width .4s}
 .bar-val{font-size:12px;font-weight:700;width:32px;text-align:right}
 /* 週トレンド */
-.trend-wrap{display:flex;align-items:flex-end;gap:6px;height:80px;padding-bottom:4px}
-.trend-col{display:flex;flex-direction:column;align-items:center;flex:1;gap:3px}
+.trend-wrap{display:flex;align-items:flex-end;justify-content:center;gap:6px;height:80px;padding-bottom:4px}
+.trend-col{display:flex;flex-direction:column;align-items:center;flex:1;gap:3px;max-width:72px}
 .trend-bar-wrap{flex:1;display:flex;align-items:flex-end;width:100%}
 .trend-bar{width:100%;border-radius:4px 4px 0 0;min-height:2px;transition:height .4s}
-.trend-label{font-size:9px;color:#9aa5b1;white-space:nowrap}
-.trend-val{font-size:9px;font-weight:700;color:#6b7785}
+.trend-label{font-size:10px;color:#9aa5b1;white-space:nowrap}
+.trend-val{font-size:10px;font-weight:700;color:#6b7785}
 /* 深刻度 */
 .sev-row{display:flex;gap:10px}
 .sev-card{flex:1;text-align:center;border-radius:10px;padding:12px 6px}
@@ -110,7 +110,40 @@ mark.hl{background:#fff3b0;color:inherit;border-radius:2px;padding:0 1px}
   .person-body{display:block!important}
   .day-detail{display:block!important}
 }
-@media(max-width:600px){.head{padding:14px 16px}.bar-label{width:80px;font-size:11px}}
+/* 開閉ボタン・手順書 */
+.more-btn{display:block;width:100%;background:#f4f6f8;color:#1f4e7a;border:1.5px dashed #c9d3dd;border-radius:10px;padding:9px 0;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px}
+.more-btn:hover{background:#eef4fa}
+.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+.btn-grid button{border:none;border-radius:10px;padding:11px 12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:#fff}
+.logout-btn{background:transparent;color:#cfe0ef;border:1px solid #6d8fb0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.tj-group{border:1px solid #e3e7ec;border-radius:12px;margin-bottom:10px;overflow:hidden}
+.tj-big{background:#eef4fa;color:#1f4e7a;font-size:13px;font-weight:700;padding:9px 14px;border-left:4px solid #1f4e7a}
+.tj-detail{padding:10px 14px;border-top:1px solid #eef1f4}
+.tj-detail-name{font-size:13px;font-weight:700;color:#1c2530;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tj-item{display:flex;gap:8px;align-items:flex-start;background:#f8faf9;border-left:3px solid #2f7d4f;border-radius:0 8px 8px 0;padding:7px 10px;margin-bottom:6px}
+.tj-text{flex:1;font-size:13px;line-height:1.6;color:#1c2530;white-space:pre-wrap}
+.tj-meta{font-size:11px;color:#9aa5b1;margin-top:2px}
+.tj-del{background:none;border:none;font-size:15px;cursor:pointer;color:#9aa5b1;padding:0 2px}
+.print-only{display:none}
+@media print{.print-only{display:block;font-size:18px;font-weight:800;color:#1f4e7a;margin-bottom:12px}.more-btn,.btn-grid,.logout-btn,.no-print{display:none!important}}
+@media(max-width:600px){
+  .container{padding:12px 10px}
+  .head{padding:14px 16px}
+  .head-title{font-size:18px}
+  .search-box,.search-box input{width:100%}
+  .controls{width:100%}
+  .controls select{flex:1}
+  .tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;margin-bottom:12px}
+  .tab-btn{flex:none;padding:9px 14px;white-space:nowrap}
+  .stats{grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px}
+  .stat{padding:8px 2px;border-radius:10px}
+  .stat-num{font-size:20px}
+  .stat-lbl{font-size:9px}
+  .card{padding:14px 14px}
+  .bar-label{width:96px;font-size:11px}
+  .person-header{padding:12px 14px}
+  .person-body{padding:12px 12px}
+}
 </style>
 </head>
 <body>
@@ -150,6 +183,8 @@ window.addEventListener('unhandledrejection', function(e){
         <option value="week">今週</option>
         <option value="lastweek">先週</option>
         <option value="all">全期間</option>
+        <optgroup label="月ごと" id="period-months"></optgroup>
+        <optgroup label="年ごと" id="period-years"></optgroup>
       </select>
       <select id="filter-person"><option value="">全員</option></select>
       <div class="search-box" id="search-box">
@@ -157,6 +192,7 @@ window.addEventListener('unhandledrejection', function(e){
         <button class="search-clear" id="search-clear" title="クリア">✕</button>
       </div>
       <button class="reload-btn" id="reload-btn">更新</button>
+      <button class="logout-btn" id="logout-btn" title="別のアカウントに切り替える">ログアウト</button>
     </div>
   </div>
 
@@ -169,6 +205,7 @@ window.addEventListener('unhandledrejection', function(e){
     <button class="tab-btn" id="tbtn-karte">📈 成長カルテ</button>
     <button class="tab-btn" id="tbtn-video">📹 動画ライブラリ</button>
     <button class="tab-btn" id="tbtn-meeting">📝 ミーティング議事録</button>
+    <button class="tab-btn" id="tbtn-tejun">📘 手順書</button>
     <a class="tab-btn" href="../kantoku/#reports" style="text-decoration:none;display:inline-block">👷 監督日報 ↗</a>
   </div>
 
@@ -180,6 +217,7 @@ window.addEventListener('unhandledrejection', function(e){
     <div class="stat"><div class="stat-num" id="s-learn" style="color:#2f7d4f">—</div><div class="stat-lbl">学び記録</div></div>
   </div>
 
+  <div class="print-only" id="print-title">日報サマリー</div>
   <div id="tab-summary">
     <div class="card">
       <div class="card-title"><span class="card-title-icon" style="background:#eef4fa">⏱️</span>やり直し時間（この期間の合計）
@@ -238,11 +276,11 @@ window.addEventListener('unhandledrejection', function(e){
       <div class="trend-wrap" id="chart-trend"></div>
     </div>
     <div class="card">
-      <div class="card-title"><span class="card-title-icon" style="background:#eaf5ee">💡</span>今月の学び一覧</div>
+      <div class="card-title"><span class="card-title-icon" style="background:#eaf5ee">💡</span>学び・気づき一覧<span class="period-name"></span></div>
       <div id="learn-list"></div>
     </div>
     <div class="card">
-      <div class="card-title"><span class="card-title-icon" style="background:#fdecea">⚠️</span>今月のミス内容一覧</div>
+      <div class="card-title"><span class="card-title-icon" style="background:#fdecea">⚠️</span>ミス内容一覧<span class="period-name"></span></div>
       <div id="miss-list"></div>
     </div>
     <div class="card">
@@ -255,17 +293,16 @@ window.addEventListener('unhandledrejection', function(e){
         <a href="../kantoku/#reports" style="margin-left:auto;font-size:12px;color:#1f4e7a;font-weight:700;text-decoration:none">一覧を開く ↗</a></div>
       <div id="kantoku-summary"><div style="color:#9aa5b1;font-size:13px">読み込み中...</div></div>
     </div>
-    <button class="print-btn" id="print-btn">🖨️ 印刷する</button>
-    <button class="print-btn" id="export-ai-btn" style="background:#7c3aed;margin-top:8px">🤖 AI分析用にテキストをコピー</button>
-    <!-- ダウンロードボタン群 -->
-    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-      <button id="dl-pdf-btn" style="flex:1;background:#c0392b;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📄 PDFで保存</button>
-      <button id="dl-excel-btn" style="flex:1;background:#2f7d4f;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📊 Excelで保存</button>
-    </div>
-    <!-- 報告書・ミス記録 印刷ボタン -->
-    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-      <button id="print-report-btn" style="flex:1;background:#1f4e7a;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📋 月末報告書を印刷</button>
-      <button id="print-miss-btn" style="flex:1;background:#c2710c;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📸 ミス記録(写真つき)を印刷</button>
+    <div class="card no-print">
+      <div class="card-title"><span class="card-title-icon" style="background:#eef4fa">🗂️</span>資料にする・保存する<span class="period-name"></span></div>
+      <div class="btn-grid" style="margin-top:0">
+        <button id="print-report-btn" style="background:#1f4e7a">📋 月末報告書を印刷</button>
+        <button id="print-miss-btn" style="background:#c2710c">📸 ミス記録（写真つき）を印刷</button>
+        <button id="dl-pdf-btn" style="background:#c0392b">📄 この画面をPDFで保存</button>
+        <button id="dl-excel-btn" style="background:#2f7d4f">📊 Excelで保存</button>
+        <button id="print-btn" style="background:#4a5568">🖨️ この画面を印刷</button>
+        <button id="export-ai-btn" style="background:#7c3aed">🤖 AI分析用にコピー</button>
+      </div>
     </div>
     <div id="export-ai-result" style="display:none;margin-top:10px">
       <textarea id="export-ai-text" readonly style="width:100%;min-height:200px;font-size:11px;font-family:monospace;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px;white-space:pre"></textarea>
@@ -302,6 +339,7 @@ window.addEventListener('unhandledrejection', function(e){
       <select id="karte-person" style="background:#fff;border:1.5px solid #e3e7ec;border-radius:10px;padding:10px 14px;font-size:14px;font-family:inherit;width:100%">
         <option value="">メンバーを選んでください</option>
       </select>
+      <div style="font-size:11px;color:#9aa5b1;margin-top:6px">※ 成長カルテは上の「期間」に関係なく、その人の全部の記録から作ります（グラフは直近12か月）。</div>
     </div>
     <div id="karte-body"></div>
   </div>
@@ -370,6 +408,20 @@ window.addEventListener('unhandledrejection', function(e){
       </div>
       <button id="save-video-btn" style="background:#1f4e7a;color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">動画を登録する</button>
     </div>
+  </div>
+
+  <div id="tab-tejun" style="display:none">
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon" style="background:#eaf5ee">📘</span>手順書（大工日報の「手順書に登録」でたまった注意点）</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <select id="tejun-method" style="background:#fff;border:1.5px solid #e3e7ec;border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;flex:1;min-width:140px">
+          <option value="">工法（すべて）</option><option value="zairai">在来工法</option><option value="se">SE工法</option>
+        </select>
+        <input id="tejun-search" type="text" placeholder="作業名・内容で検索" style="flex:2;min-width:180px;background:#f8fafc;border:1.5px solid #e3e7ec;border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit">
+      </div>
+      <div id="tejun-count" style="font-size:12px;color:#9aa5b1"></div>
+    </div>
+    <div id="tejun-list"></div>
   </div>
 
   <div id="tab-meeting" style="display:none">
@@ -450,8 +502,18 @@ const REDO=[{sev:"軽微",color:"#2f7d4f",bg:"#eaf5ee",label:"30分未満"},{sev
 let NINKU_YEN=Number(localStorage.getItem("nippo_ninku_yen")||18000);
 let WORK_HOURS=Number(localStorage.getItem("nippo_work_hours")||8);
 function hourlyRate(){return WORK_HOURS>0?NINKU_YEN/WORK_HOURS:0;}
-// 管理者のみ金額を見るための合言葉
-const MONEY_PASS=localStorage.getItem("nippo_money_pass")||"Daiku";
+// 金額を見られる人：監督用アカウントでログインしている人（パスワード不要）、
+// それ以外は管理者パスワード。パスワードそのものはページに書かず、照合用の値（SHA-256）だけを置く。
+const ADMIN_EMAIL="zoza@hamasakigumi.co";
+const MONEY_PASS_HASH="39e59b9ca0d95e0aa1ff9175a368378b509e928f47ffc925a3f9820918e74fa9";
+async function sha256Hex(t){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("");}
+function isAdminUser(){const u=firebase.auth().currentUser;return !!(u&&u.email&&u.email.toLowerCase()===ADMIN_EMAIL);}
+// 単価：監督用アカウントのときは全端末で共有（kantoku_meta/rate）、それ以外はこの端末に保存
+async function loadRate(){
+  if(!isAdminUser())return;
+  try{const sn=await get(ref(db,"kantoku_meta/rate"));const v=sn.exists()?sn.val():null;
+    if(v){if(v.ninkuYen>0)NINKU_YEN=Number(v.ninkuYen);if(v.workHours>0)WORK_HOURS=Number(v.workHours);updateMoneyDisplay();}}catch(e){}
+}
 let moneyShown=false;
 let lastRedoMinutes=0;
 const METHOD_LABEL={zairai:"在来工法",se:"SE工法"};
@@ -479,13 +541,31 @@ function getSearchTerm(){
   return el?el.value.trim().toLowerCase():"";
 }
 function escapeRegExp(s){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
+// 文字をそのまま表示する（< や & が入っていても画面が崩れないように）
+function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function highlight(text,term){
-  if(!text)return text||"";
-  if(!term)return text;
+  if(!text)return "";
+  const safe=esc(text);
+  if(!term)return safe;
   try{
-    const re=new RegExp(`(${escapeRegExp(term)})`,"gi");
-    return String(text).replace(re,'<mark class="hl">$1</mark>');
-  }catch(e){return text}
+    const re=new RegExp(`(${escapeRegExp(esc(term))})`,"gi");
+    return safe.replace(re,'<mark class="hl">$1</mark>');
+  }catch(e){return safe}
+}
+// ==== 開閉できる一覧（最初の数件だけ出して、ボタンで全部表示／閉じる） ====
+const expandedLists={};
+function renderCollapsible(el,items,key,first,unit){
+  if(!el)return;
+  first=first||5;unit=unit||"件";
+  if(items.length<=first){el.innerHTML=items.join("");return;}
+  const open=!!expandedLists[key];
+  el.innerHTML=(open?items:items.slice(0,first)).join("")+
+    `<button class="more-btn" data-key="${key}">${open?"▲ 閉じる":`▼ すべて表示（残り${items.length-first}${unit}）`}</button>`;
+  el.querySelector(".more-btn").addEventListener("click",()=>{
+    expandedLists[key]=!open;
+    renderCollapsible(el,items,key,first,unit);
+    if(open)el.scrollIntoView({block:"nearest"});
+  });
 }
 // ミス1件が検索語にマッチするか
 function missMatches(ms,term){
@@ -546,7 +626,7 @@ function updateMoneyDisplay(){
     const setBox=document.getElementById("rate-setting");if(setBox)setBox.style.display="none";
   }
 }
-function saveRate(){
+async function saveRate(){
   const y=Number(document.getElementById("in-ninku-yen").value);
   const h=Number(document.getElementById("in-work-hours").value);
   if(y>0)NINKU_YEN=y;
@@ -554,13 +634,22 @@ function saveRate(){
   localStorage.setItem("nippo_ninku_yen",String(NINKU_YEN));
   localStorage.setItem("nippo_work_hours",String(WORK_HOURS));
   updateMoneyDisplay();
-  alert("単価を保存しました");
+  if(isAdminUser()){
+    try{await set(ref(db,"kantoku_meta/rate"),{ninkuYen:NINKU_YEN,workHours:WORK_HOURS,updated:Date.now()});alert("単価を保存しました（監督用アカウントで開くと、どの端末でも同じ単価になります）");return;}
+    catch(e){}
+  }
+  alert("単価をこの端末に保存しました");
 };
-function toggleMoney(){
+async function toggleMoney(){
   if(moneyShown){moneyShown=false;updateMoneyDisplay();document.getElementById("money-toggle").textContent="金額を表示";return;}
-  const p=prompt("管理者パスワードを入力してください");
-  if(p===MONEY_PASS){moneyShown=true;updateMoneyDisplay();document.getElementById("money-toggle").textContent="金額を隠す";}
-  else if(p!==null){alert("パスワードが違います");}
+  let ok=isAdminUser();
+  if(!ok){
+    const p=prompt("管理者パスワードを入力してください");
+    if(p===null)return;
+    ok=(await sha256Hex(p))===MONEY_PASS_HASH;
+    if(!ok){alert("パスワードが違います");return;}
+  }
+  moneyShown=true;updateMoneyDisplay();document.getElementById("money-toggle").textContent="金額を隠す";
 };
 const pad=n=>String(n).padStart(2,"0");
 const fmtDate=k=>{const[y,m,d]=k.split("-");const wd=["日","月","火","水","木","金","土"][new Date(k).getDay()];return`${+m}月${+d}日（${wd}）`};
@@ -569,7 +658,9 @@ const fmtShort=k=>{const[,m,d]=k.split("-");return`${+m}/${+d}`};
 function getRange(){
   const now=new Date();const period=document.getElementById("filter-period").value;
   let from,to;
-  if(period==="month"){from=new Date(now.getFullYear(),now.getMonth(),1);to=new Date(now.getFullYear(),now.getMonth()+1,0)}
+  if(period.startsWith("m:")){const[y,m]=period.slice(2).split("-").map(Number);from=new Date(y,m-1,1);to=new Date(y,m,0)}
+  else if(period.startsWith("y:")){const y=Number(period.slice(2));from=new Date(y,0,1);to=new Date(y,11,31)}
+  else if(period==="month"){from=new Date(now.getFullYear(),now.getMonth(),1);to=new Date(now.getFullYear(),now.getMonth()+1,0)}
   else if(period==="lastmonth"){from=new Date(now.getFullYear(),now.getMonth()-1,1);to=new Date(now.getFullYear(),now.getMonth(),0)}
   else if(period==="week"){const d=now.getDay();from=new Date(now);from.setDate(now.getDate()-d);to=new Date(now)}
   else if(period==="lastweek"){const d=now.getDay();from=new Date(now);from.setDate(now.getDate()-d-7);to=new Date(now);to.setDate(now.getDate()-d-1)}
@@ -587,6 +678,7 @@ function getWeekLabel(dateKey){
 
 // ==== 監督日報の集計 ====
 let kantokuMissCache=null; // null=読めない／[]=この期間なし
+let kantokuMissHtml=[];
 async function renderKantokuSummary(from,to){
   const el=document.getElementById("kantoku-summary"); if(!el)return;
   let all;
@@ -617,17 +709,18 @@ async function renderKantokuSummary(from,to){
   </div>`;
   html+='<div id="kantoku-bar"></div>';
   if(misses.length){
-    html+='<div style="font-size:12px;font-weight:700;color:#6b7785;margin:10px 0 6px">ミスの内容</div>';
-    html+=misses.sort((a,b)=>b.date.localeCompare(a.date)).map(m=>`
+    html+='<div style="font-size:12px;font-weight:700;color:#6b7785;margin:10px 0 6px">ミスの内容</div><div id="kantoku-miss-list"></div>';
+    kantokuMissHtml=misses.sort((a,b)=>b.date.localeCompare(a.date)).map(m=>`
       <div style="border-left:3px solid #6b46c1;padding:7px 10px;margin-bottom:8px;background:#f8f7fd;border-radius:0 8px 8px 0">
-        <div style="font-size:11px;color:#6b46c1;font-weight:700;margin-bottom:3px">${fmtDate(m.date)} ${m.personName}${m.site?`（${m.site}）`:""}${m.big?`　${m.big}`:""}${m.sev?`　${m.sev}`:""}</div>
-        <div style="font-size:13px;color:#1c2530;line-height:1.5">${m.text||""}</div>
-        ${m.cause?`<div style="font-size:12px;color:#6b7785;margin-top:3px">原因: ${m.cause}</div>`:""}
-        ${m.taisaku?`<div style="font-size:12px;color:#2f7d4f;margin-top:3px">✅ 対策: ${m.taisaku}</div>`:""}
+        <div style="font-size:11px;color:#6b46c1;font-weight:700;margin-bottom:3px">${fmtDate(m.date)} ${esc(m.personName)}${m.site?`（${esc(m.site)}）`:""}${m.big?`　${esc(m.big)}`:""}${m.sev?`　${m.sev}`:""}</div>
+        <div style="font-size:13px;color:#1c2530;line-height:1.5">${esc(m.text)}</div>
+        ${m.cause?`<div style="font-size:12px;color:#6b7785;margin-top:3px">原因: ${esc(m.cause)}</div>`:""}
+        ${m.taisaku?`<div style="font-size:12px;color:#2f7d4f;margin-top:3px">✅ 対策: ${esc(m.taisaku)}</div>`:""}
         ${renderPhotoRow(m)}
-      </div>`).join('');
+      </div>`);
   }
   el.innerHTML=html;
+  if(misses.length)renderCollapsible(document.getElementById("kantoku-miss-list"),kantokuMissHtml,"kmiss",3);
   const byBig={};misses.forEach(m=>{const k=m.big||"未分類";byBig[k]=(byBig[k]||0)+1});
   if(misses.length)renderBar("kantoku-bar",Object.entries(byBig).sort((a,b)=>b[1]-a[1]),"#6b46c1");
 }
@@ -647,10 +740,37 @@ function renderBar(containerId,entries,color){
 }
 
 let allEntriesCache=[];
+let rawReportsCache={}; // 期間に関係なく全部の日報（成長カルテ用）
 let allMissesCache=[];
 let allLearnsCache=[];
 let currentRangeCache={from:null,to:null};
 let checklistCache={};
+
+// データのある最初の月から今月まで、月ごと・年ごとの選択肢を作る
+function fillPeriodOptions(allData){
+  const sel=document.getElementById("filter-period");
+  const mg=document.getElementById("period-months"),yg=document.getElementById("period-years");
+  if(!mg||!yg)return;
+  let min=null;
+  Object.values(allData||{}).forEach(days=>Object.keys(days||{}).forEach(k=>{if(/^\d{4}-\d{2}/.test(k)&&(!min||k<min))min=k;}));
+  const now=new Date();
+  const cur=`${now.getFullYear()}-${pad(now.getMonth()+1)}`;
+  const start=min?min.slice(0,7):cur;
+  const months=[];
+  let [y,m]=cur.split("-").map(Number);
+  while(`${y}-${pad(m)}`>=start&&months.length<240){months.push(`${y}-${pad(m)}`);m--;if(m===0){m=12;y--;}}
+  const keep=sel.value;
+  mg.innerHTML=months.map(ym=>{const[yy,mm]=ym.split("-");return `<option value="m:${ym}">${yy}年${+mm}月</option>`}).join("");
+  const years=[...new Set(months.map(x=>x.slice(0,4)))];
+  yg.innerHTML=years.map(yy=>`<option value="y:${yy}">${yy}年（1年分）</option>`).join("");
+  if([...sel.options].some(o=>o.value===keep))sel.value=keep;
+}
+function updatePeriodNames(){
+  const sel=document.getElementById("filter-period");
+  const t=sel.selectedOptions[0]?sel.selectedOptions[0].textContent.replace("（1年分）",""):"";
+  document.querySelectorAll(".period-name").forEach(el=>el.textContent=`（${t}）`);
+  const pt=document.getElementById("print-title");if(pt)pt.textContent=`日報サマリー　${getPeriodLabel()}`;
+}
 
 window.loadData=async function(){
   const{from,to}=getRange();
@@ -673,6 +793,7 @@ window.loadData=async function(){
     return;
   }
   const allData=snap.val();
+  rawReportsCache=allData;
   const personSel=document.getElementById("filter-person");
   const curVal=personSel.value;
   personSel.innerHTML='<option value="">全員</option>';
@@ -681,6 +802,8 @@ window.loadData=async function(){
     const o=document.createElement("option");o.value=uid;o.textContent=firstDay?.name||uid;personSel.appendChild(o);
   });
   if(curVal)personSel.value=curVal;
+  fillPeriodOptions(allData);
+  updatePeriodNames();
 
   allEntriesCache=[];
   let totalDays=0,totalMiss=0,totalSev=0,totalLearn=0;
@@ -760,11 +883,11 @@ window.loadData=async function(){
   const recurEl=document.getElementById("recur-list");
   if(recurItems.length===0){recurEl.innerHTML='<div style="color:#9aa5b1;font-size:13px">再発の候補はありません</div>'}
   else{
-    recurEl.innerHTML=recurItems.map(x=>`
+    renderCollapsible(recurEl,recurItems.reverse().map(x=>`
       <div style="border-left:3px solid #c0392b;background:#fdecea;border-radius:6px;padding:8px 10px;margin-bottom:6px">
-        <div style="font-size:11px;color:#c0392b;font-weight:700;margin-bottom:2px">${(x.date||"").slice(5)}　${METHOD_LABEL[x.method]||"在来"}／${x.detail||x.big||""}</div>
-        <div style="font-size:13px;color:#1c2530">${x.text||""}</div>
-      </div>`).join('');
+        <div style="font-size:11px;color:#c0392b;font-weight:700;margin-bottom:2px">${fmtDate(x.date)} ${esc(x.personName)}　${METHOD_LABEL[x.method]||"在来"}／${esc(x.detail||x.big||"")}</div>
+        <div style="font-size:13px;color:#1c2530">${esc(x.text)}</div>
+      </div>`),"recur",5);
   }
 
   // 深刻度
@@ -790,8 +913,8 @@ window.loadData=async function(){
 
   // 週別トレンド
   const byWeek={};
-  allMisses.forEach(x=>{const w=getWeekLabel(x.date);byWeek[w]=(byWeek[w]||0)+1});
-  const weekEntries=Object.entries(byWeek).sort((a,b)=>a[0].localeCompare(b[0]));
+  allMisses.forEach(x=>{const d=new Date(x.date);d.setDate(d.getDate()-d.getDay());const k=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;byWeek[k]=(byWeek[k]||0)+1});
+  const weekEntries=Object.entries(byWeek).sort((a,b)=>a[0].localeCompare(b[0])).slice(-16).map(([k,c])=>[fmtShort(k)+"〜",c]);
   const maxW=Math.max(1,...weekEntries.map(x=>x[1]));
   const trendEl=document.getElementById("chart-trend");
   if(weekEntries.length===0){trendEl.innerHTML='<div style="color:#9aa5b1;font-size:13px">データなし</div>'}
@@ -809,12 +932,12 @@ window.loadData=async function(){
   const learnsShown=allLearns.filter(x=>!searchTerm||(x.learn&&x.learn.toLowerCase().includes(searchTerm))||(x.personName&&x.personName.toLowerCase().includes(searchTerm)));
   if(learnsShown.length===0){learnEl.innerHTML=`<div style="color:#9aa5b1;font-size:13px">${searchTerm?'検索語に一致する学び記録はありません':'この期間の学び記録はありません'}</div>`}
   else{
-    learnEl.innerHTML=learnsShown.sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`
+    renderCollapsible(learnEl,learnsShown.sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`
       <div style="border-left:3px solid #2f7d4f;padding:8px 12px;margin-bottom:10px;background:#f8faf9;border-radius:0 8px 8px 0">
-        <div style="font-size:11px;color:#2f7d4f;font-weight:700;margin-bottom:3px">${fmtDate(x.date)} ${x.personName}</div>
+        <div style="font-size:11px;color:#2f7d4f;font-weight:700;margin-bottom:3px">${fmtDate(x.date)} ${esc(x.personName)}</div>
         <div style="font-size:13px;color:#1c2530;line-height:1.6;white-space:pre-wrap">${highlight(x.learn,searchTerm)}</div>
         ${renderPhotoRow(x.rec)}
-      </div>`).join('');
+      </div>`),"learn",5);
   }
 
   // ── ミス内容一覧 ──
@@ -826,23 +949,25 @@ window.loadData=async function(){
     }else{
       const SEV_COLOR={軽微:"#2f7d4f",中程度:"#c2710c",重大:"#c0392b"};
       const SEV_BG={軽微:"#eaf5ee",中程度:"#fdf3e3",重大:"#fdecea"};
-      missListEl.innerHTML=missesShown.sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`
+      renderCollapsible(missListEl,missesShown.sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`
         <div style="border-left:3px solid ${SEV_COLOR[x.sev]||"#c2710c"};padding:8px 12px;margin-bottom:10px;background:${SEV_BG[x.sev]||"#fdf8f4"};border-radius:0 8px 8px 0">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
-            <span style="font-size:11px;color:${SEV_COLOR[x.sev]||"#c2710c"};font-weight:700">${fmtDate(x.date)} ${x.personName}</span>
-            ${x.big?`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#fdf3e3;color:#c2710c">${x.big}</span>`:''}
-            ${x.detail?`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#eef1f4;color:#6b7785">${x.detail}</span>`:''}
+            <span style="font-size:11px;color:${SEV_COLOR[x.sev]||"#c2710c"};font-weight:700">${fmtDate(x.date)} ${esc(x.personName)}</span>
+            ${x.big?`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#fdf3e3;color:#c2710c">${esc(x.big)}</span>`:''}
+            ${x.detail?`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#eef1f4;color:#6b7785">${esc(x.detail)}</span>`:''}
             ${x.sev?`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:${SEV_BG[x.sev]};color:${SEV_COLOR[x.sev]}">${x.sev}</span>`:''}
           </div>
           <div style="font-size:13px;color:#1c2530;line-height:1.6;white-space:pre-wrap">${highlight(x.text||"",searchTerm)}</div>
           ${x.cause?`<div style="font-size:12px;color:#6b7785;margin-top:4px">原因: ${highlight(x.cause,searchTerm)}</div>`:''}
-          ${x.taisaku?`<div style="font-size:12px;color:#2f7d4f;margin-top:4px;padding:3px 8px;background:#eaf5ee;border-radius:4px">✅ 対策: ${x.taisaku}</div>`:''}
-        </div>`).join('');
+          ${x.taisaku?`<div style="font-size:12px;color:#2f7d4f;margin-top:4px;padding:3px 8px;background:#eaf5ee;border-radius:4px">✅ 対策: ${highlight(x.taisaku,searchTerm)}</div>`:''}
+          ${renderPhotoRow(x)}
+        </div>`),"miss",5);
     }
   }
 
   // ── 学びの傾向（キーワードでグループ化） ──
   const learnTrendEl=document.getElementById("learn-trend");
+  if(learnTrendEl && allLearns.length===0){learnTrendEl.innerHTML='<div style="color:#9aa5b1;font-size:13px">この期間の学び記録はありません</div>';}
   if(learnTrendEl && allLearns.length>0){
     // キーワードカテゴリ定義（現場で出やすい学びに合わせて設定）
     const LEARN_CATS=[
@@ -883,7 +1008,7 @@ window.loadData=async function(){
     if(entries.length===0){
       learnTrendEl.innerHTML='<div style="color:#9aa5b1;font-size:13px">データなし</div>';
     }else{
-      learnTrendEl.innerHTML=entries.map(([label,items])=>`
+      renderCollapsible(learnTrendEl,entries.map(([label,items])=>`
         <div style="margin-bottom:14px">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
             <div style="font-size:12px;font-weight:700;color:#1c2530;min-width:160px">${label}</div>
@@ -895,11 +1020,11 @@ window.loadData=async function(){
           <div style="padding-left:4px">
             ${items.slice(0,3).map(x=>`
               <div style="font-size:11px;color:#6b7785;padding:3px 0;border-bottom:1px dashed #e3e7ec;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-                <span style="color:#9aa5b1;margin-right:6px">${fmtShort(x.date)} ${x.personName}</span>${(x.learn||"").split('\n')[0].slice(0,40)}${(x.learn||"").length>40?'…':''}
+                <span style="color:#9aa5b1;margin-right:6px">${fmtShort(x.date)} ${esc(x.personName)}</span>${esc((x.learn||"").split('\n')[0].slice(0,40))}${(x.learn||"").length>40?'…':''}
               </div>`).join('')}
-            ${items.length>3?`<div style="font-size:11px;color:#9aa5b1;padding-top:3px">他 ${items.length-3}件</div>`:''}
+            ${items.length>3?`<div style="font-size:11px;color:#9aa5b1;padding-top:3px">他 ${items.length-3}件（「学び・気づき一覧」で全部見られます）</div>`:''}
           </div>
-        </div>`).join('');
+        </div>`),"ltrend",4,"グループ");
     }
   }
 
@@ -940,7 +1065,7 @@ function renderLogs(personData,searchTerm){
     const personSev=entries.reduce((s,[,v])=>s+(v.misses||[]).filter(m=>m.sev==="重大").length,0);
     const sec=document.createElement("div");sec.className="person-section";
     const ph=document.createElement("div");ph.className="person-header";
-    ph.innerHTML=`<div class="person-name">${displayName}</div>
+    ph.innerHTML=`<div class="person-name">${esc(displayName)}</div>
       <div class="person-meta">
         <span>${entries.length}日${searchTerm?`（一致${visibleEntries.length}日）`:''}</span>
         <span style="color:#c2710c">ミス${personMiss}件</span>
@@ -951,7 +1076,10 @@ function renderLogs(personData,searchTerm){
     const pb=document.createElement("div");pb.className="person-body open";
     const byWeek={};
     visibleEntries.forEach(([dateKey,v])=>{const w=getWeekLabel(dateKey);if(!byWeek[w])byWeek[w]=[];byWeek[w].push([dateKey,v])});
-    Object.entries(byWeek).forEach(([wl,days])=>{
+    const weekList=Object.entries(byWeek);
+    const showAllWeeks=!!searchTerm||!!expandedLists["logs_"+uid];
+    weekList.forEach(([wl,days],wi)=>{
+      if(!showAllWeeks&&wi>=2)return;
       const ws=document.createElement("div");ws.style.marginBottom="16px";
       ws.innerHTML=`<div class="week-label">${wl}の週</div>`;
       days.forEach(([dateKey,v])=>{
@@ -972,8 +1100,8 @@ function renderLogs(personData,searchTerm){
           html+=`<div class="meta-row">
             ${v.weather?`<span>天候: ${v.weather}</span>`:''}
             ${v.site?`<span>現場: ${highlight(v.site,searchTerm)}</span>`:''}
-            ${v.ninku?`<span>人工: ${v.ninku}</span>`:''}
-            ${v.members?`<span>メンバー: ${v.members}</span>`:''}
+            ${v.ninku?`<span>人工: ${esc(v.ninku)}</span>`:''}
+            ${v.members?`<span>メンバー: ${esc(v.members)}</span>`:''}
           </div>`;
         }
         if(v.work)html+=`<div class="detail-block"><span class="detail-tag tag-work">WORK</span><div class="detail-text">${highlight(v.work,searchTerm)}</div></div>`;
@@ -982,25 +1110,32 @@ function renderLogs(personData,searchTerm){
           misses.forEach(ms=>{
             const sv=REDO.find(r=>r.sev===ms.sev);
             html+=`<div class="miss-item"><div class="miss-tags">
-              ${ms.big?`<span class="miss-tag" style="background:#fdf3e3;color:#c2710c">${ms.big}</span>`:''}
-              ${ms.detail?`<span class="miss-tag" style="background:#eef1f4;color:#6b7785">${ms.detail}</span>`:''}
+              ${ms.big?`<span class="miss-tag" style="background:#fdf3e3;color:#c2710c">${esc(ms.big)}</span>`:''}
+              ${ms.detail?`<span class="miss-tag" style="background:#eef1f4;color:#6b7785">${esc(ms.detail)}</span>`:''}
               ${ms.sev&&sv?`<span class="miss-tag" style="background:${sv.bg};color:${sv.color}">${ms.sev}</span>`:''}
             </div>
             <div class="miss-text">${highlight(ms.text,searchTerm)}</div>
             ${ms.cause?`<div class="miss-cause">原因: ${highlight(ms.cause,searchTerm)}</div>`:''}
+            ${ms.taisaku?`<div class="miss-cause" style="color:#2f7d4f">✅ 対策: ${highlight(ms.taisaku,searchTerm)}</div>`:''}
             ${renderPhotoRow(ms)}
             </div>`;
           });
           html+=`</div>`;
         }
         if(v.learn)html+=`<div class="detail-block"><span class="detail-tag tag-learn">LEARN</span><div class="detail-text">${highlight(v.learn,searchTerm)}</div>${renderPhotoRow(v)}</div>`;
-        if(v.next)html+=`<div class="detail-block"><span class="detail-tag tag-next">NEXT</span><div class="detail-text">${v.next}</div></div>`;
+        if(v.next)html+=`<div class="detail-block"><span class="detail-tag tag-next">NEXT</span><div class="detail-text">${highlight(v.next,searchTerm)}</div></div>`;
         dd.innerHTML=html;
         dh.addEventListener("click",()=>{dd.classList.toggle("open")});
         dc.append(dh,dd);ws.appendChild(dc);
       });
       pb.appendChild(ws);
     });
+    if(!searchTerm&&weekList.length>2){
+      const mb=document.createElement("button");mb.className="more-btn";
+      mb.textContent=expandedLists["logs_"+uid]?"▲ 直近2週だけにする":`▼ 前の週も表示（残り${weekList.length-2}週）`;
+      mb.addEventListener("click",()=>{expandedLists["logs_"+uid]=!expandedLists["logs_"+uid];renderLogs(personData,searchTerm);});
+      pb.appendChild(mb);
+    }
     ph.addEventListener("click",()=>pb.classList.toggle("open"));
     sec.append(ph,pb);body.appendChild(sec);
   });
@@ -1127,7 +1262,9 @@ function renderKarte(){
   const body=document.getElementById("karte-body");
   if(!sel||!body)return;
   const members={};
-  (allEntriesCache||[]).forEach(({uid,displayName,dateKey,rec})=>{
+  const everything=[];
+  Object.entries(rawReportsCache||{}).forEach(([uid,days])=>Object.entries(days||{}).forEach(([dateKey,rec])=>{if(rec)everything.push({uid,displayName:rec.name||uid,dateKey,rec});}));
+  everything.forEach(({uid,displayName,dateKey,rec})=>{
     if(!members[uid])members[uid]={name:displayName,months:{}};
     const ym=dateKey.slice(0,7);
     if(!members[uid].months[ym])members[uid].months[ym]={miss:0,learn:0,redoMin:0,sev:0,missList:[],learnList:[]};
@@ -1185,14 +1322,14 @@ function renderKarte(){
     <div style="background:#fff;border:1px solid #e3e7ec;border-radius:14px;padding:16px;margin-bottom:12px">
       <div style="font-size:13px;font-weight:700;color:#6b7785;margin-bottom:12px">📉 月別ミス件数の推移</div>
       <div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding-bottom:4px">
-        ${monthList.map(ym=>{const d=member.months[ym];const pct=Math.round(d.miss/maxMiss*60)+4;const [,mm]=ym.split("-");return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="font-size:10px;font-weight:700;color:#c2710c">${d.miss}</div><div style="width:100%;border-radius:4px 4px 0 0;background:${d.miss===0?"#e3e7ec":"#c2710c"};height:${pct}px"></div><div style="font-size:9px;color:#9aa5b1">${+mm}月</div></div>`;}).join('')}
+        ${monthList.slice(-12).map(ym=>{const d=member.months[ym];const pct=Math.round(d.miss/maxMiss*60)+4;const [,mm]=ym.split("-");return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="font-size:10px;font-weight:700;color:#c2710c">${d.miss}</div><div style="width:100%;border-radius:4px 4px 0 0;background:${d.miss===0?"#e3e7ec":"#c2710c"};height:${pct}px"></div><div style="font-size:9px;color:#9aa5b1">${+mm}月</div></div>`;}).join('')}
       </div>
       <div style="font-size:11px;color:#9aa5b1;margin-top:4px">棒が右へ下がれば改善のサインです</div>
     </div>
     <div style="background:#fff;border:1px solid #e3e7ec;border-radius:14px;padding:16px;margin-bottom:12px">
       <div style="font-size:13px;font-weight:700;color:#6b7785;margin-bottom:12px">📗 月別学び記録の推移</div>
       <div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding-bottom:4px">
-        ${monthList.map(ym=>{const d=member.months[ym];const pct=Math.round(d.learn/maxLearn*60)+4;const [,mm]=ym.split("-");return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="font-size:10px;font-weight:700;color:#2f7d4f">${d.learn}</div><div style="width:100%;border-radius:4px 4px 0 0;background:${d.learn===0?"#e3e7ec":"#2f7d4f"};height:${pct}px"></div><div style="font-size:9px;color:#9aa5b1">${+mm}月</div></div>`;}).join('')}
+        ${monthList.slice(-12).map(ym=>{const d=member.months[ym];const pct=Math.round(d.learn/maxLearn*60)+4;const [,mm]=ym.split("-");return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="font-size:10px;font-weight:700;color:#2f7d4f">${d.learn}</div><div style="width:100%;border-radius:4px 4px 0 0;background:${d.learn===0?"#e3e7ec":"#2f7d4f"};height:${pct}px"></div><div style="font-size:9px;color:#9aa5b1">${+mm}月</div></div>`;}).join('')}
       </div>
       <div style="font-size:11px;color:#9aa5b1;margin-top:4px">記録が多いほど振り返りが習慣になっています</div>
     </div>
@@ -1486,20 +1623,60 @@ async function saveMeeting(){
 
 let eduLoaded=false;
 function switchTab(tab){
-  ["summary","logs","edu","karte","video","meeting"].forEach(t=>{
+  ["summary","logs","edu","karte","video","meeting","tejun"].forEach(t=>{
     document.getElementById("tab-"+t).style.display=t===tab?"block":"none";
   });
-  ["summary","logs","edu","karte","video","meeting"].forEach(t=>{
+  ["summary","logs","edu","karte","video","meeting","tejun"].forEach(t=>{
     const b=document.getElementById("tbtn-"+t);
     if(b)b.classList.toggle("active",t===tab);
   });
   if(tab==="edu"&&!eduLoaded){eduLoaded=true;renderEdu();}
   if(tab==="karte")renderKarte();
   if(tab==="video")renderVideoLib();
+  if(tab==="tejun")renderTejun();
+}
+
+// ==== 手順書（大工日報の「手順書に登録」でたまった対策） ====
+let tejunLoaded=false,tejunCache=[];
+const TEJUN_METHOD={zairai:"在来工法",se:"SE工法"};
+async function renderTejun(){
+  const listEl=document.getElementById("tejun-list");
+  if(!tejunLoaded){
+    listEl.innerHTML='<div class="no-data">読み込み中...</div>';
+    try{
+      const sn=await get(ref(db,"tejun"));const all=sn.exists()?sn.val():{};
+      tejunCache=[];
+      Object.entries(all||{}).forEach(([method,bigs])=>Object.entries(bigs||{}).forEach(([big,details])=>Object.entries(details||{}).forEach(([detail,items])=>Object.entries(items||{}).forEach(([key,it])=>{
+        if(it&&it.text)tejunCache.push({method,big,detail,key,text:it.text,by:it.by||"",date:it.date||"",ts:it.ts||0});
+      }))));
+      tejunLoaded=true;
+    }catch(e){listEl.innerHTML='<div class="no-data">手順書の読み込みに失敗しました</div>';return;}
+  }
+  const mf=document.getElementById("tejun-method").value;
+  const q=(document.getElementById("tejun-search").value||"").trim().toLowerCase();
+  const rows=tejunCache.filter(x=>(!mf||x.method===mf)&&(!q||`${x.big} ${x.detail} ${x.text} ${x.by}`.toLowerCase().includes(q)));
+  document.getElementById("tejun-count").textContent=tejunCache.length?`${rows.length}件（全${tejunCache.length}件）`:"";
+  if(rows.length===0){listEl.innerHTML=`<div class="no-data">${tejunCache.length?"条件に合う手順書はありません":"まだ手順書の登録がありません。大工日報でミスに対策を書いて「手順書に登録」を押すと、ここにたまります。"}</div>`;return;}
+  const groups={};
+  rows.forEach(x=>{const g=`${x.method}|${x.big}`;(groups[g]=groups[g]||{}),(groups[g][x.detail]=groups[g][x.detail]||[]).push(x);});
+  listEl.innerHTML=Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0])).map(([g,dets])=>{
+    const[method,big]=g.split("|");
+    return `<div class="tj-group"><div class="tj-big">${TEJUN_METHOD[method]||esc(method)}／${esc(big)}</div>${
+      Object.entries(dets).map(([detail,items])=>`<div class="tj-detail"><div class="tj-detail-name">${esc(detail)}<span style="font-size:11px;color:#9aa5b1;font-weight:400">${items.length}件</span></div>${
+        items.sort((a,b)=>b.ts-a.ts).map(it=>`<div class="tj-item"><div style="flex:1"><div class="tj-text">${highlight(it.text,q)}</div><div class="tj-meta">${it.date?fmtDate(it.date):""} ${esc(it.by)}</div></div><button class="tj-del" title="削除" data-path="${esc(`tejun/${it.method}/${it.big}/${it.detail}/${it.key}`)}">🗑️</button></div>`).join("")
+      }</div>`).join("")
+    }</div>`;
+  }).join("");
+  listEl.querySelectorAll(".tj-del").forEach(b=>b.addEventListener("click",async()=>{
+    if(!confirm("この手順書の項目を削除しますか？（元に戻せません）"))return;
+    try{await remove(ref(db,b.dataset.path));tejunLoaded=false;renderTejun();}catch(e){alert("削除に失敗しました");}
+  }));
 }
 
 document.getElementById("reload-btn").addEventListener("click",()=>{
   loadData();
+  tejunLoaded=false;
+  if(document.getElementById("tab-tejun").style.display!=="none")renderTejun();
   eduLoaded=false;
   if(document.getElementById("tab-edu").style.display!=="none")renderEdu();
 });
@@ -1520,6 +1697,10 @@ document.getElementById("video-search").addEventListener("input",()=>{
   videoSearchTimer=setTimeout(filterAndRenderVideos,250);
 });
 document.getElementById("tbtn-meeting").addEventListener("click",()=>switchTab("meeting"));
+document.getElementById("tbtn-tejun").addEventListener("click",()=>switchTab("tejun"));
+document.getElementById("tejun-method").addEventListener("change",renderTejun);
+let tejunSearchTimer=null;
+document.getElementById("tejun-search").addEventListener("input",()=>{clearTimeout(tejunSearchTimer);tejunSearchTimer=setTimeout(renderTejun,250);});
 document.getElementById("print-btn").addEventListener("click",()=>window.print());
 
 // ==== AI分析用エクスポート ====
@@ -1576,7 +1757,7 @@ function buildAiExportText(){
 
   const learns=allLearnsCache||[];
   if(learns.length){
-    t+=`\n----- 今月の学び一覧 -----\n`;
+    t+=`\n----- この期間の学び一覧 -----\n`;
     learns.forEach(l=>{ t+=`・${l.date} ${l.personName}: ${l.learn}\n`; });
   }
 
@@ -1673,6 +1854,8 @@ function getPeriodLabel(){
   const v=document.getElementById("filter-period").value;
   const now=new Date();
   const y=now.getFullYear(),m=now.getMonth()+1;
+  if(v.startsWith("m:")){const[yy,mm]=v.slice(2).split("-");return `${yy}年${+mm}月`;}
+  if(v.startsWith("y:"))return `${v.slice(2)}年`;
   if(v==="month")return `${y}年${m}月`;
   if(v==="lastmonth"){const lm=m===1?12:m-1;const ly=m===1?y-1:y;return `${ly}年${lm}月`;}
   if(v==="week")return `${y}年${m}月_今週`;
@@ -1884,7 +2067,7 @@ h2{font-size:14px;font-weight:700;color:#1f4e7a;background:#eef4fa;padding:6px 1
 </style></head><body>
 <h1>月次業務報告書 — ${label}</h1>
 <div class="meta"><span>株式会社濱崎組</span><span>出力日：${new Date().toLocaleDateString("ja-JP")}</span></div>
-<h2>① 今月の概況</h2>
+<h2>① 概況</h2>
 <div class="stats">
   <div class="stat"><div class="stat-n">${misses.length}</div><div class="stat-l">ミス合計</div></div>
   <div class="stat"><div class="stat-n" style="color:#c0392b">${bySev["重大"]}</div><div class="stat-l">重大ミス</div></div>
@@ -1900,8 +2083,8 @@ h2{font-size:14px;font-weight:700;color:#1f4e7a;background:#eef4fa;padding:6px 1
 </div>
 <h2>③ 作業別ミス件数</h2>
 ${byBigRows.slice(0,10).map(([k,v])=>`<div class="bar-row"><div class="bar-label">${k}</div><div class="bar-bg"><div class="bar-fill" style="width:${Math.round(v/maxBig*100)}%"></div></div><div class="bar-val">${v}件</div></div>`).join('')}
-<h2>④ 今月の学び・気づき</h2>
-${learns.length===0?'<div style="color:#9aa5b1;font-size:12px">この期間の学び記録はありません</div>':learns.slice(0,15).map(x=>`<div class="learn-item"><div class="learn-date">${x.date} ${x.personName}</div><div class="learn-text">${x.learn}</div></div>`).join('')}
+<h2>④ 学び・気づき${learns.length>15?`（新しい順に15件／全${learns.length}件）`:""}</h2>
+${learns.length===0?'<div style="color:#9aa5b1;font-size:12px">この期間の学び記録はありません</div>':[...learns].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,15).map(x=>`<div class="learn-item"><div class="learn-date">${x.date} ${esc(x.personName)}</div><div class="learn-text">${esc(x.learn)}</div></div>`).join('')}
 <div class="sign-row">
   <div class="sign-box"><div class="sign-inner"></div>作成者</div>
   <div class="sign-box"><div class="sign-inner"></div>確認者</div>
@@ -1994,9 +2177,16 @@ document.getElementById("login-btn").addEventListener("click",async()=>{
     document.getElementById("login-err").textContent="メールまたはパスワードが違います";
   }
 });
+["login-mail","login-pass"].forEach(id=>document.getElementById(id).addEventListener("keydown",e=>{if(e.key==="Enter")document.getElementById("login-btn").click();}));
+document.getElementById("logout-btn").addEventListener("click",async()=>{
+  if(!confirm("ログアウトしますか？（別のアカウントでログインし直せます）"))return;
+  moneyShown=false;
+  try{await firebase.auth().signOut();}catch(e){}
+});
 firebase.auth().onAuthStateChanged(u=>{
   document.getElementById("login").style.display=u?"none":"flex";
-  if(u)loadData();
+  if(u){loadData();loadRate();tejunLoaded=false;eduLoaded=false;}
+  const mt=document.getElementById("money-toggle");if(mt){mt.textContent="金額を表示";updateMoneyDisplay();}
 });
 </script>
 </body>

@@ -82,7 +82,10 @@ function closeLightbox(){
 document.getElementById("lb-close").addEventListener("click",closeLightbox);
 document.getElementById("lb-overlay").addEventListener("click",(e)=>{if(e.target.id==="lb-overlay")closeLightbox()});
 function $(id){return document.getElementById(id)}
-function mk(tag,attrs={},children=[]){const el=document.createElement(tag);Object.entries(attrs).forEach(([k,v])=>{if(k==="style"&&typeof v==="object")Object.assign(el.style,v);else if(k.startsWith("on"))el.addEventListener(k.slice(2).toLowerCase(),v);else el.setAttribute(k,v)});if(!Array.isArray(children))children=[children];children.forEach(c=>el.appendChild(typeof c==="string"?document.createTextNode(c):c));return el}
+// 数字だけの指定（fontSize:13 など）は px を付けないとブラウザに無視されるので、ここで付ける
+const UNITLESS=new Set(["lineHeight","fontWeight","opacity","zIndex","flex","flexGrow","flexShrink","order"]);
+function applyStyle(el,v){Object.entries(v).forEach(([k,x])=>{el.style[k]=(typeof x==="number"&&!UNITLESS.has(k))?x+"px":x})}
+function mk(tag,attrs={},children=[]){const el=document.createElement(tag);Object.entries(attrs).forEach(([k,v])=>{if(k==="style"&&typeof v==="object")applyStyle(el,v);else if(k.startsWith("on"))el.addEventListener(k.slice(2).toLowerCase(),v);else el.setAttribute(k,v)});if(!Array.isArray(children))children=[children];children.forEach(c=>el.appendChild(typeof c==="string"?document.createTextNode(c):c));return el}
 
 // ==== 写真：リサイズしてCloudflare Worker経由でR2にアップロード ====
 function resizeImageToBlob(file,maxDim=1280,quality=0.75){
@@ -218,6 +221,44 @@ async function loadMonthRecs(){
   }
 }
 
+// ==== 手順書（ミスの対策から登録された注意点）を見る ====
+let tejunMethod="zairai";
+function renderTejunList(body){
+  const top=mk("div",{style:{display:"flex",gap:6,marginBottom:10}});
+  Object.keys(METHOD_LABEL).forEach(m=>{top.appendChild(mk("button",{style:{flex:1,background:tejunMethod===m?C.navyBg:"#fff",color:tejunMethod===m?C.navy:C.sub,border:`1.5px solid ${tejunMethod===m?C.navy:C.line}`,borderRadius:9,padding:"9px 0",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"},onClick:()=>{tejunMethod=m;reloadMain()}},METHOD_LABEL[m]))});
+  body.appendChild(top);
+  body.appendChild(mk("div",{style:{fontSize:12,color:C.sub,margin:"0 2px 10px",lineHeight:1.5}},"ミスの対策から「手順書に登録」されたものが、作業ごとに並びます。作業の前に読んでおきましょう。"));
+  const box=mk("div",{},[mk("div",{style:{textAlign:"center",padding:"30px 0",color:C.faint,fontSize:14}},"読み込み中…")]);
+  body.appendChild(box);
+  get(ref(db,`tejun/${tejunMethod}`)).then(snap=>{
+    box.innerHTML="";
+    const data=snap.exists()?snap.val():{};
+    const bigs=Object.keys(data);
+    if(bigs.length===0){box.appendChild(mk("div",{style:{textAlign:"center",padding:"40px 0",color:C.faint,fontSize:14}},"まだ登録はありません"));return}
+    bigs.forEach(big=>{
+      box.appendChild(mk("div",{style:{fontSize:13,fontWeight:700,color:C.navy,background:C.navyBg,borderLeft:`4px solid ${C.navy}`,borderRadius:8,padding:"8px 12px",margin:"6px 0 8px"}},big));
+      Object.entries(data[big]||{}).forEach(([detail,items])=>{
+        const card=mk("div",{style:{background:C.card,border:`1px solid ${C.line}`,borderRadius:12,padding:"12px 14px",marginBottom:10}});
+        card.appendChild(mk("div",{style:{fontSize:12,fontWeight:700,color:C.sub,marginBottom:6}},detail));
+        Object.values(items||{}).sort((a,b)=>(b.ts||0)-(a.ts||0)).forEach(it=>{
+          const row=mk("div",{style:{borderTop:`1px dashed ${C.line}`,padding:"7px 0"}});
+          row.appendChild(mk("div",{style:{fontSize:14,color:C.ink,lineHeight:1.5}},`✅ ${it.text||""}`));
+          row.appendChild(mk("div",{style:{fontSize:11,color:C.faint,marginTop:2}},`${it.date?fmtShort(it.date):""} ${it.by||""}`));
+          card.appendChild(row);
+        });
+        box.appendChild(card);
+      });
+    });
+  }).catch(()=>{box.innerHTML="";box.appendChild(mk("div",{style:{textAlign:"center",padding:"30px 0",color:C.red,fontSize:13}},"読み込みに失敗しました"))});
+}
+
+// ==== 下書き（保存前に閉じても消えないように、この端末に自動で残す） ====
+let draftTimer=null,draftBase="";
+const draftKey=()=>`nippo_draft_${currentUser}_${editKey}`;
+const formState=()=>JSON.stringify({fWeather,fSite,fNinku,fMembers,fWork,fMisses,fLearn,fNext,fLearnPhotos});
+function saveDraft(){if(!editKey)return;const st=formState();if(st===draftBase){localStorage.removeItem(draftKey());return}try{localStorage.setItem(draftKey(),JSON.stringify({ts:Date.now(),state:JSON.parse(st)}))}catch(e){}}
+function stopDraft(){if(draftTimer){clearInterval(draftTimer);draftTimer=null}}
+
 function renderMain(root){
   const y=cursor.getFullYear(),m=cursor.getMonth();
   const monthPrefix=`${y}-${pad(m+1)}`;
@@ -254,7 +295,7 @@ function renderMain(root){
   });
 
   const tabs=mk("div",{style:{display:"flex",gap:6,padding:"0 14px 10px"}});
-  [["cal","カレンダー"],["analysis",`分析（${allMisses.length}）`],["learn",`学び（${monthLearn.length}）`]].forEach(([k,l])=>{
+  [["cal","カレンダー"],["analysis",`分析（${allMisses.length}）`],["learn",`学び（${monthLearn.length}）`],["tejun","手順書"]].forEach(([k,l])=>{
     const b=mk("button",{style:{flex:1,background:monthTab===k?C.navy:"transparent",color:monthTab===k?"#fff":C.sub,border:`1.5px solid ${monthTab===k?C.navy:C.line}`,borderRadius:10,padding:"9px 0",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"},onClick:()=>{monthTab=k;reloadMain()}},l);
     tabs.appendChild(b);
   });
@@ -346,11 +387,14 @@ function renderMain(root){
     }
   }
 
+  if(monthTab==="tejun"){renderTejunList(body)}
+
   const spacer=mk("div",{style:{height:30}});body.appendChild(spacer);
   root.append(head,monthBar,sumRow,tabs,body);
 }
 
 async function reloadMain(){
+  if(draftTimer){saveDraft();const had=localStorage.getItem(draftKey());stopDraft();editKey=null;if(had)showToast("下書きを残しました（次に開くと戻ります）")}
   await loadMonthRecs();
   const root=document.getElementById("root");
   root.innerHTML="";
@@ -369,6 +413,12 @@ function openEdit(key){
     const initM=methodOfSite(fSite)||"zairai";
     mMethod=initM;const cats=catsFor(initM);const fb=Object.keys(cats)[0]||"";
     mBig=fb;mDetail=(cats[fb]&&cats[fb][0])||"";mText="";mCause="";mRedo="";mPhotos=[];
+    draftBase=formState();
+    try{const d=JSON.parse(localStorage.getItem(draftKey())||"null");
+      if(d&&d.state&&d.ts>(r.updated||0)){const t=d.state;fWeather=t.fWeather;fSite=t.fSite;fNinku=t.fNinku;fMembers=t.fMembers;fWork=t.fWork;fMisses=t.fMisses||[];fLearn=t.fLearn;fNext=t.fNext;fLearnPhotos=t.fLearnPhotos||[];setTimeout(()=>showToast("下書きを復元しました"),300)}
+      else if(d)localStorage.removeItem(draftKey());
+    }catch(e){}
+    stopDraft();draftTimer=setInterval(saveDraft,1500);
     renderEdit();
   });
 }
@@ -548,8 +598,19 @@ function renderEdit(){
   body.appendChild(sectionCard("4","明日やること・申し送り",C.sub,nextTA));
 
   const saveBtn=mk("button",{style:{width:"100%",background:C.navy,color:"#fff",border:"none",borderRadius:12,padding:"15px 0",fontSize:16,fontWeight:800,cursor:"pointer",fontFamily:"inherit",marginTop:4},onClick:async()=>{
+    // 「＋ このミスを追加」を押し忘れたミスを取りこぼさない
+    if(mText.trim()){
+      if(confirm("「＋ このミスを追加」を押していないミスがあります。\nこのミスも入れて保存しますか？\n（キャンセル＝このミスは入れずに保存）")){
+        const sv=sevOf(mRedo);
+        fMisses.push({method:mMethod,big:mBig,detail:mDetail,text:mText.trim(),cause:mCause.trim(),redo:mRedo,sev:sv?sv.sev:"",photos:mPhotos});
+      }
+      mText="";mCause="";mRedo="";mPhotos=[];
+    }
+    saveBtn.disabled=true;saveBtn.textContent="保存中…";
     const data={weather:fWeather,site:fSite,ninku:fNinku,members:fMembers,work:fWork,misses:fMisses,learn:fLearn,learnPhotos:fLearnPhotos,next:fNext,updated:Date.now(),name:currentUser};
-    await set(ref(db,`reports/${currentUser}/${editKey}`),data);
+    try{await set(ref(db,`reports/${currentUser}/${editKey}`),data);}
+    catch(e){saveBtn.disabled=false;saveBtn.textContent="保存する";saveDraft();showToast("保存できませんでした。電波の良い所でもう一度");return;}
+    stopDraft();localStorage.removeItem(draftKey());
     showToast("保存しました");
     setTimeout(()=>reloadMain(),600);
   }},"保存する");
