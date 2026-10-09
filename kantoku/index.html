@@ -186,6 +186,8 @@ const fbApp = initializeApp(firebaseConfig);
 const db = getDatabase(fbApp);
 const auth = getAuth(fbApp);
 
+// 画面に出す版（更新が反映されたかの確認用）
+const APP_VER = "10/09-2 業者登録";
 // ===== 定数 =====
 const WX = ["晴れ","曇り","雨","雪","強風"];
 const MISS_CATS = ["現場管理","安全","工程","資材","職人とのやり取り","その他"];
@@ -432,7 +434,7 @@ function header(){
     <div><div class="head-title">現場監督日報・段取り</div><div class="head-sub">株式会社濱崎組</div></div>
     <button class="name-chip" data-act="names">${S.me ? "👤 " + esc(S.me) : "名前を選ぶ"}</button>
   </div>
-  <div class="links"><a href="../">大工日報 →</a><a href="../kanri/">日報管理 →</a><a href="#" data-act="master">⚙ 工程ごとの材料・ルール</a><a href="#" data-act="logout" style="color:var(--faint)">ログアウト</a></div>`;
+  <div class="links"><a href="../">大工日報 →</a><a href="../kanri/">日報管理 →</a><a href="#" data-act="master">⚙ 工程ごとの材料・ルール</a><a href="#" data-act="logout" style="color:var(--faint)">ログアウト</a><span style="color:var(--faint);font-size:11px">版 ${APP_VER}</span></div>`;
 }
 function tabs(){
   const t = (v,l) => `<button class="tab ${S.view===v||(v==="cal"&&S.view==="day")?"on":""}" data-act="view" data-v="${v}">${l}</button>`;
