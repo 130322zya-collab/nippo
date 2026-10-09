@@ -62,6 +62,11 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--navy);ba
 .rules{margin:0 0 0 18px;font-size:13px;line-height:1.7}
 .badge{display:inline-block;background:var(--red);color:#fff;border-radius:9px;font-size:10px;padding:0 5px;margin-left:2px;line-height:15px;vertical-align:1px}
 .rep-h{display:flex;justify-content:space-between;gap:8px;width:100%;background:none;border:none;text-align:left;font-size:14px;color:var(--ink);padding:0;line-height:1.6}
+/* 業者ボタン */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1.5px solid var(--line);background:#fff;border-radius:18px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--ink)}
+.chip span{font-size:11px;margin-left:3px}
+.chip.on{background:var(--navyBg);border-color:var(--navy);color:var(--navy)}
 /* 写真 */
 .ph-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
 .ph{position:relative;width:64px;height:64px}
@@ -285,6 +290,8 @@ const S = {
   tplEdit: null,                      // 編集中の工程名
   tplMethod: "zairai",                // 工程マスタで見ている工法
   sites: {},                          // 現場 -> 工法
+  companies: {},                      // 業者の登録（業種・電話など）
+  compEdit: null,                     // 業者一覧で編集中の業者
   tplOrder: {},                       // 工法ごとの工程の並び順
   allReports: null,                   // 日報一覧（全監督）
   repPerson: "",                      // 日報一覧の絞り込み
@@ -362,6 +369,12 @@ function startData(){
     S.tpls = snap.exists() ? snap.val() : {};
     if(S.view !== "report" && !S.planEdit && S.view !== "master") render();
   }, err => showDbError(err));
+  onValue(ref(db, "kantoku_meta/companies"), snap => {
+    S.companies = snap.exists() ? snap.val() : {};
+    refreshLists();
+    if(S.planEdit && $("#pf-trade")) showCompChips();
+    if(S.view === "master" && !S.tplEdit && !S.compEdit) render();
+  });
   onValue(ref(db, "kantoku_meta/sites"), snap => {
     S.sites = snap.exists() ? snap.val() : {};
     refreshLists();
@@ -404,6 +417,7 @@ function watchMyReports(){
 function refreshLists(){
   const sites = new Set(), comps = new Set(), trades = new Set(TRADES);
   Object.values(S.plans).forEach(p => { if(p.site) sites.add(p.site); if(p.company) comps.add(p.company); if(p.trade) trades.add(p.trade); });
+  Object.values(S.companies||{}).forEach(c => { if(c && c.name) comps.add(c.name); });
   Object.values(S.myReports).forEach(r => { if(r && r.site) sites.add(r.site); });
   Object.values(S.sites||{}).forEach(x => { if(x && x.name) sites.add(x.name); });
   $("#dl-sites").innerHTML = [...sites].map(s => `<option value="${esc(s)}">`).join("");
@@ -573,7 +587,8 @@ function viewMaster(){
       ${Object.entries(METHODS).map(([k,l]) => `<button class="st ${sm===k?"on s-確定":""}" style="flex:0 0 58px" data-act="sitemethod" data-s="${esc(sn)}" data-m="${k}">${methodShort(k)}</button>`).join("")}
       <button class="x" style="flex:0 0 32px" data-act="delsite" data-s="${esc(sn)}">✕</button>
     </div>`; }).join("") : `<div class="small">まだ現場がありません。上の欄から追加してください。</div>`}
-  </div>`;
+  </div>
+  ${companyCard()}`;
 }
 function viewTplEdit(){
   const n = S.tplEdit, m = S.tplMethod || "zairai", t = getTpl(n, m) || { materials:[], rules:[], prep:[], custom:false };
@@ -654,6 +669,7 @@ function render(){
   else if(v === "report") return renderReport();
   $("#app").innerHTML = `<div class="wrap">${header()}${v==="names"?"":tabs()}${body}</div>`;
   if(v === "gantt") scrollGanttToToday();
+  if(S.planEdit) showCompChips();
 }
 
 // ----- 名前選択 -----
@@ -942,6 +958,7 @@ function planForm(){
       <div class="field"><label>業種</label><input id="pf-trade" list="dl-trades" value="${esc(p.trade)}" placeholder="例：大工"></div>
       <div class="field"><label>業者・職人名</label><input id="pf-company" list="dl-companies" value="${esc(p.company)}" placeholder="例：〇〇電気"></div>
     </div>
+    <div id="pf-comp-chips" style="margin:-4px 0 10px"></div>
     <div class="row2">
       <div class="field"><label>人数</label><input id="pf-count" type="number" inputmode="numeric" value="${esc(p.count)}" placeholder="例：2"></div>
       <div class="field"><label>時間</label><input id="pf-time" value="${esc(p.time)}" placeholder="例：8:00〜"></div>
@@ -1010,16 +1027,99 @@ function viewUpcoming(){
   return html;
 }
 
-// ===== 業者名を入れたら、前回の連絡先・業種・人数を自動で入れる =====
+// ===== 業者の登録（業種ごと） =====
+const compTrades = c => toArr(c.trades).length ? toArr(c.trades) : (c.trade ? [c.trade] : []);
+// 業種に合う業者（登録済み＋以前の手配に出てきた業者）
+function companiesFor(trade){
+  const out = {};
+  Object.values(S.companies||{}).forEach(c => {
+    if(!c || !c.name) return;
+    if(!trade || compTrades(c).includes(trade)) out[c.name] = { ...c, saved:true };
+  });
+  Object.values(S.plans).sort((a,b) => (a.updatedAt||0) - (b.updatedAt||0)).forEach(p => {
+    if(!p.company || out[p.company] || (trade && p.trade !== trade)) return;
+    if(S.companies[uidOf(p.company)]) return; // 登録済みだが別の業種
+    out[p.company] = { name:p.company, trades:[p.trade], contact:p.contact||"", count:p.count||"", saved:false };
+  });
+  return Object.values(out).sort((a,b) => a.name.localeCompare(b.name, "ja"));
+}
+function showCompChips(){
+  const box = $("#pf-comp-chips"); if(!box) return;
+  const trade = ($("#pf-trade").value || "").trim();
+  const list = companiesFor(trade), cur = ($("#pf-company").value || "").trim();
+  if(!list.length){ box.innerHTML = trade ? `<div class="small">「${esc(trade)}」の業者はまだ登録がありません。業者名を入れて保存すると、次から選べます。</div>` : ""; return; }
+  box.innerHTML = `<div class="small" style="margin-bottom:4px">${trade ? `「${esc(trade)}」の登録業者` : "登録業者"}（タップで入力）</div>
+    <div class="chips">${list.map(c => `<button type="button" class="chip ${c.name===cur?"on":""}" data-act="pickcomp" data-n="${esc(c.name)}">${esc(c.name)}${c.contact?`<span>📞</span>`:""}</button>`).join("")}</div>`;
+}
+function pickCompany(name){
+  const c = companiesFor("").find(x => x.name === name) || companiesFor($("#pf-trade").value.trim()).find(x => x.name === name);
+  if(!c) return;
+  $("#pf-company").value = c.name;
+  if(c.contact) $("#pf-contact").value = c.contact;
+  if(!$("#pf-count").value.trim() && c.count) $("#pf-count").value = c.count;
+  if(!$("#pf-trade").value.trim() && compTrades(c)[0]){ $("#pf-trade").value = compTrades(c)[0]; }
+  if(c.memo && !$("#pf-memo").value.trim()) $("#pf-memo").value = c.memo;
+  showCompChips();
+}
+// 手配を保存したら業者を登録・更新（業種・電話・人数）
+async function upsertCompany(p){
+  if(!p.company) return;
+  const u = uidOf(p.company), old = S.companies[u] || {};
+  const trades = compTrades(old); if(p.trade && !trades.includes(p.trade)) trades.push(p.trade);
+  const rec = { ...old, name:p.company, trades, contact: p.contact || old.contact || "", count: p.count || old.count || "", updatedAt: Date.now() };
+  delete rec.trade;
+  try{ await set(ref(db, `kantoku_meta/companies/${u}`), rec); }catch(e){}
+}
+document.addEventListener("input", e => { if(e.target.id === "pf-trade" || e.target.id === "pf-company") showCompChips(); });
 document.addEventListener("change", e => {
   if(e.target.id !== "pf-company") return;
   const name = e.target.value.trim(); if(!name) return;
-  const last = Object.values(S.plans).filter(p => p.company === name).sort((a,b) => (b.updatedAt||0) - (a.updatedAt||0))[0];
-  if(!last) return;
-  const fill = (id, v) => { const el = $(id); if(el && !el.value.trim() && v) el.value = v; };
-  fill("#pf-contact", last.contact); fill("#pf-trade", last.trade); fill("#pf-count", last.count);
-  toast("前回の連絡先などを入れました");
+  if(companiesFor("").some(c => c.name === name)){ pickCompany(name); toast("登録している連絡先などを入れました"); }
 });
+
+// ----- 業者の一覧（工程マスタ画面の中） -----
+function companyCard(){
+  const all = Object.entries(S.companies||{}).filter(([,c]) => c && c.name);
+  const byTrade = {};
+  all.forEach(([u,c]) => { const ts = compTrades(c); (ts.length ? ts : ["（業種なし）"]).forEach(t => (byTrade[t] = byTrade[t] || []).push([u,c])); });
+  const order = tplList("zairai");
+  const trades = Object.keys(byTrade).sort((a,b) => { const ia = order.indexOf(a), ib = order.indexOf(b); return (ia<0?999:ia) - (ib<0?999:ib) || a.localeCompare(b,"ja"); });
+  const ed = S.compEdit, ec = ed && ed !== "new" ? S.companies[ed] : null;
+  const form = ed ? `<div class="card" style="border:2px solid var(--navy);margin:8px 0">
+      <div class="card-title">${ed === "new" ? "＋ 業者を登録" : "✏️ 業者を編集"}</div>
+      <div class="field"><label>業者・職人名</label><input id="cf-name" value="${esc(ec ? ec.name : "")}" placeholder="例：〇〇電気"></div>
+      <div class="field"><label>業種（複数ならカンマ区切り）</label><input id="cf-trades" list="dl-trades" value="${esc(ec ? compTrades(ec).join("、") : "")}" placeholder="例：電気"></div>
+      <div class="row2">
+        <div class="field"><label>電話番号</label><input id="cf-contact" type="tel" value="${esc(ec ? ec.contact||"" : "")}" placeholder="090-xxxx-xxxx"></div>
+        <div class="field"><label>いつもの人数</label><input id="cf-count" type="number" inputmode="numeric" value="${esc(ec ? ec.count||"" : "")}"></div>
+      </div>
+      <div class="field"><label>メモ（担当者・注意点など）</label><textarea id="cf-memo" rows="2">${esc(ec ? ec.memo||"" : "")}</textarea></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" style="flex:1" data-act="compcancel">キャンセル</button>
+        <button class="btn btn-navy" style="flex:2" data-act="compsave">保存</button>
+      </div>
+    </div>` : "";
+  return `<div class="card" id="comp-card">
+    <div class="card-title"><span>👷 業者の登録</span>${ed ? "" : `<button class="btn btn-light" style="padding:5px 10px;font-size:12px" data-act="compnew">＋ 業者を登録</button>`}</div>
+    <div class="small" style="margin-bottom:8px">手配を保存すると自動で登録されます。手配を入れるとき、業種を選ぶとここの業者が出てきます。</div>
+    ${(() => { const n = companiesFor("").filter(c => !c.saved).length; return n && !ed ? `<button class="btn btn-ghost btn-block" style="margin-bottom:8px;font-size:13px" data-act="compimport">以前の手配に出てくる業者 ${n} 件をまとめて登録</button>` : ""; })()}
+    ${form}
+    ${trades.length ? trades.map(t => `<div class="site-h">${esc(t)}</div>` + byTrade[t].sort((a,b)=>a[1].name.localeCompare(b[1].name,"ja")).map(([u,c]) => `<div class="tpl-row">
+      <button class="tpl-name" data-act="compedit" data-u="${esc(u)}"><span>${esc(c.name)}</span><span class="small">${c.contact?esc(c.contact):""}${c.count?`・${esc(c.count)}名`:""}</span></button>
+      <button class="x" style="flex:0 0 32px;height:40px" data-act="compdel" data-u="${esc(u)}">✕</button>
+    </div>`).join("")).join("") : `<div class="small">まだ業者の登録はありません。</div>`}
+  </div>`;
+}
+async function saveCompany(){
+  const name = $("#cf-name").value.trim(); if(!name){ alert("業者名を入れてください"); return; }
+  const trades = $("#cf-trades").value.split(/[,、，\s]+/).map(x => x.trim()).filter(Boolean);
+  const rec = { name, trades, contact:$("#cf-contact").value.trim(), count:$("#cf-count").value.trim(), memo:$("#cf-memo").value.trim(), updatedAt:Date.now() };
+  try{
+    if(S.compEdit && S.compEdit !== "new" && S.compEdit !== uidOf(name)) await remove(ref(db, `kantoku_meta/companies/${S.compEdit}`)); // 名前を変えたとき
+    await set(ref(db, `kantoku_meta/companies/${uidOf(name)}`), rec);
+    S.compEdit = null; toast("業者を保存しました"); render(); $("#comp-card")?.scrollIntoView();
+  }catch(e){ alert("保存に失敗しました：" + e.message); }
+}
 
 document.addEventListener("change", e => {
   if(e.target.id === "pf-site"){ const m = siteMethod(e.target.value.trim()); if(m){ $("#pf-method").value = m; fillTradeList(m); } }
@@ -1071,6 +1171,7 @@ async function savePlan(){
     if(p.site) lsSet("kantoku_last_site", p.site);
     lsSet("kantoku_last_method", p.method);
     if(p.site && siteMethod(p.site) !== p.method) await setSiteMethod(p.site, p.method);
+    await upsertCompany(p);
     S.planEdit = null; S.planCopy = null; toast("手配を保存しました"); render();
   }catch(e){ alert("保存に失敗しました：" + e.message); }
 }
@@ -1359,6 +1460,17 @@ document.addEventListener("click", async e => {
     const list = tplList(S.tplMethod); if(!list.includes(n)){ list.push(n); await saveOrder(S.tplMethod, list); }
     S.tplFrom = null; S.tplEdit = n; render();
   }
+  else if(a === "pickcomp"){ pickCompany(el.dataset.n); }
+  else if(a === "compimport"){
+    const list = companiesFor("").filter(c => !c.saved);
+    for(const c of list){ const rec = { name:c.name, trades:compTrades(c).filter(Boolean), contact:c.contact||"", count:c.count||"", updatedAt:Date.now() }; try{ await set(ref(db, `kantoku_meta/companies/${uidOf(c.name)}`), rec); }catch(err){} }
+    toast(`${list.length}件の業者を登録しました`);
+  }
+  else if(a === "compnew"){ S.compEdit = "new"; render(); $("#comp-card")?.scrollIntoView({behavior:"smooth"}); }
+  else if(a === "compedit"){ S.compEdit = el.dataset.u; render(); $("#comp-card")?.scrollIntoView({behavior:"smooth"}); }
+  else if(a === "compcancel"){ S.compEdit = null; render(); $("#comp-card")?.scrollIntoView(); }
+  else if(a === "compsave"){ await saveCompany(); }
+  else if(a === "compdel"){ const c = S.companies[el.dataset.u]; if(!c || !confirm(`「${c.name}」の登録を消しますか？（過去の手配は消えません）`)) return; try{ await remove(ref(db, `kantoku_meta/companies/${el.dataset.u}`)); toast("消しました"); }catch(err){ alert("失敗しました：" + err.message); } }
   else if(a === "ganttstop"){ S.ganttStop = !S.ganttStop; render(); }
   else if(a === "logout"){ e.preventDefault(); if(!confirm("ログアウトしますか？（この端末の大工日報・日報管理もログアウトされます）")) return; await signOut(auth); location.reload(); }
   else if(a === "repopen"){ S.repOpen[el.dataset.k] = !S.repOpen[el.dataset.k]; render(); }
