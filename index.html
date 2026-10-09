@@ -197,7 +197,8 @@ function renderNameEntry(root){
 }
 
 let editKey=null;
-let fWeather="晴れ",fSite="",fNinku="",fMembers="",fWork="",fMisses=[],fLearn="",fNext="",fLearnPhotos=[];
+let fWeather="晴れ",fSite="",fNinku="",fMembers="",fWork="",fMisses=[],fLearn="",fNext="",fLearnPhotos=[],fMethod="zairai";
+let viewMethod=""; // 分析・学びタブの絞り込み（""=すべて）
 let mMethod="zairai",mBig="",mDetail="",mText="",mCause="",mRedo="",mPhotos=[];
 let cursor=new Date();
 let monthTab="cal";
@@ -255,7 +256,7 @@ function renderTejunList(body){
 // ==== 下書き（保存前に閉じても消えないように、この端末に自動で残す） ====
 let draftTimer=null,draftBase="";
 const draftKey=()=>`nippo_draft_${currentUser}_${editKey}`;
-const formState=()=>JSON.stringify({fWeather,fSite,fNinku,fMembers,fWork,fMisses,fLearn,fNext,fLearnPhotos});
+const formState=()=>JSON.stringify({fWeather,fSite,fNinku,fMembers,fWork,fMisses,fLearn,fNext,fLearnPhotos,fMethod});
 function saveDraft(){if(!editKey)return;const st=formState();if(st===draftBase){localStorage.removeItem(draftKey());return}try{localStorage.setItem(draftKey(),JSON.stringify({ts:Date.now(),state:JSON.parse(st)}))}catch(e){}}
 function stopDraft(){if(draftTimer){clearInterval(draftTimer);draftTimer=null}}
 
@@ -266,8 +267,10 @@ function renderMain(root){
   const myRecs={};
   Object.entries(recs).forEach(([k,v])=>{if(v._user===currentUser)myRecs[v._date]=v});
   const myEntries=Object.entries(myRecs).sort((a,b)=>a[0].localeCompare(b[0]));
-  const allMisses=[];myEntries.forEach(([,v])=>(v.misses||[]).forEach(ms=>allMisses.push({...ms,date:v._date})));
-  const monthLearn=myEntries.filter(([,v])=>v.learn&&v.learn.trim());
+  const allMissesAll=[];myEntries.forEach(([,v])=>(v.misses||[]).forEach(ms=>allMissesAll.push({...ms,method:ms.method||v.method||"zairai",date:v._date})));
+  const monthLearnAll=myEntries.filter(([,v])=>v.learn&&v.learn.trim());
+  const allMisses=viewMethod?allMissesAll.filter(x=>x.method===viewMethod):allMissesAll;
+  const monthLearn=viewMethod?monthLearnAll.filter(([,v])=>v.method===viewMethod):monthLearnAll;
   const totalNinku=myEntries.reduce((s,[,v])=>s+(parseFloat(v.ninku)||0),0);
 
   const head=mk("div",{style:{background:C.card,padding:"16px 18px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`1px solid ${C.line}`}});
@@ -287,7 +290,7 @@ function renderMain(root){
   monthBar.append(prev,mlabel,next);
 
   const sumRow=mk("div",{style:{display:"flex",gap:8,padding:"0 14px 12px"}});
-  [[myEntries.length,"出勤日数",C.navy],[totalNinku,"のべ人工",C.ink],[allMisses.length,"ミス合計",C.amber],[monthLearn.length,"学び記録",C.green]].forEach(([v,l,c])=>{
+  [[myEntries.length,"出勤日数",C.navy],[totalNinku,"のべ人工",C.ink],[allMissesAll.length,"ミス合計",C.amber],[monthLearnAll.length,"学び記録",C.green]].forEach(([v,l,c])=>{
     const s=mk("div",{style:{flex:1,background:C.card,borderRadius:12,padding:"10px 4px",textAlign:"center",border:`1px solid ${C.line}`}});
     s.appendChild(mk("div",{style:{fontSize:20,fontWeight:800,color:c}},String(v)));
     s.appendChild(mk("div",{style:{fontSize:10,color:C.faint}},l));
@@ -295,12 +298,23 @@ function renderMain(root){
   });
 
   const tabs=mk("div",{style:{display:"flex",gap:6,padding:"0 14px 10px"}});
-  [["cal","カレンダー"],["analysis",`分析（${allMisses.length}）`],["learn",`学び（${monthLearn.length}）`],["tejun","手順書"]].forEach(([k,l])=>{
+  [["cal","カレンダー"],["analysis",`分析（${allMissesAll.length}）`],["learn",`学び（${monthLearnAll.length}）`],["tejun","手順書"]].forEach(([k,l])=>{
     const b=mk("button",{style:{flex:1,background:monthTab===k?C.navy:"transparent",color:monthTab===k?"#fff":C.sub,border:`1.5px solid ${monthTab===k?C.navy:C.line}`,borderRadius:10,padding:"9px 0",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"},onClick:()=>{monthTab=k;reloadMain()}},l);
     tabs.appendChild(b);
   });
 
   const body=mk("div",{style:{padding:"0 14px"}});
+
+  // 分析・学びは 在来／SE を分けて見られる
+  if(monthTab==="analysis"||monthTab==="learn"){
+    const mrow=mk("div",{style:{display:"flex",gap:6,marginBottom:10}});
+    [["","すべて",allMissesAll.length,monthLearnAll.length],["zairai","在来工法"],["se","SE工法"]].forEach(([k,l])=>{
+      const n=monthTab==="analysis"?(k?allMissesAll.filter(x=>x.method===k).length:allMissesAll.length):(k?monthLearnAll.filter(([,v])=>v.method===k).length:monthLearnAll.length);
+      const on=viewMethod===k;
+      mrow.appendChild(mk("button",{style:{flex:1,background:on?C.navyBg:"#fff",color:on?C.navy:C.sub,border:`1.5px solid ${on?C.navy:C.line}`,borderRadius:9,padding:"7px 0",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"},onClick:()=>{viewMethod=k;reloadMain()}},`${l}（${n}）`));
+    });
+    body.appendChild(mrow);
+  }
 
   if(monthTab==="cal"){
     const card=mk("div",{style:{background:C.card,borderRadius:14,padding:"14px 15px",marginBottom:12,border:`1px solid ${C.line}`}});
@@ -331,7 +345,7 @@ function renderMain(root){
 
   if(monthTab==="analysis"){
     if(allMisses.length===0){
-      const e=mk("div",{style:{textAlign:"center",padding:"48px 0",color:C.faint,fontSize:14}},"この月のミス記録はありません");
+      const e=mk("div",{style:{textAlign:"center",padding:"48px 0",color:C.faint,fontSize:14}},viewMethod?`この月の${METHOD_LABEL[viewMethod]}のミス記録はありません`:"この月のミス記録はありません");
       body.appendChild(e);
     }else{
       const bySev={};allMisses.forEach(x=>{if(x.sev)bySev[x.sev]=(bySev[x.sev]||0)+1});
@@ -363,7 +377,8 @@ function renderMain(root){
         const rhead=mk("div",{style:{display:"flex",alignItems:"center",gap:6,marginBottom:7,flexWrap:"wrap"}});
         const db2=mk("span",{style:{fontSize:12,fontWeight:700,padding:"3px 9px",borderRadius:20,color:C.amber,background:C.amberBg}},`${fmtShort(ms.date)}（${wdOf(ms.date)}）`);
         const tb=mk("span",{style:{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,color:C.sub,background:"#eef1f4"}},ms.detail||ms.big||"");
-        rhead.append(db2,tb);
+        const mt=mk("span",{style:{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,color:C.navy,background:C.navyBg}},ms.method==="se"?"SE":"在来");
+        rhead.append(db2,mt,tb);
         if(ms.sev&&sv)rhead.appendChild(mk("span",{style:{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,color:sv.color,background:sv.bg}},ms.sev));
         card.appendChild(rhead);
         card.appendChild(mk("div",{style:{fontSize:14,color:C.ink,lineHeight:1.5,whiteSpace:"pre-wrap"}},ms.text));
@@ -374,12 +389,14 @@ function renderMain(root){
   }
 
   if(monthTab==="learn"){
-    if(monthLearn.length===0){body.appendChild(mk("div",{style:{textAlign:"center",padding:"48px 0",color:C.faint,fontSize:14}},"この月の学び記録はありません"))}
+    if(monthLearn.length===0){body.appendChild(mk("div",{style:{textAlign:"center",padding:"48px 0",color:C.faint,fontSize:14}},viewMethod?`この月の${METHOD_LABEL[viewMethod]}の学び記録はありません`:"この月の学び記録はありません"))}
     else{
       monthLearn.forEach(([k,v])=>{
         const card=mk("button",{style:{display:"block",width:"100%",textAlign:"left",background:C.card,borderRadius:12,padding:"12px 14px",marginBottom:10,border:`1px solid ${C.line}`,borderLeft:`4px solid ${C.green}`,cursor:"pointer",fontFamily:"inherit"},onClick:()=>openEdit(k)});
         const rhead=mk("div",{style:{display:"flex",alignItems:"center",gap:6,marginBottom:7}});
         rhead.appendChild(mk("span",{style:{fontSize:12,fontWeight:700,padding:"3px 9px",borderRadius:20,color:C.green,background:C.greenBg}},`${fmtShort(k)}（${wdOf(k)}）`));
+        if(v.method)rhead.appendChild(mk("span",{style:{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,color:C.navy,background:C.navyBg}},v.method==="se"?"SE":"在来"));
+        if(v.site)rhead.appendChild(mk("span",{style:{fontSize:11,color:C.sub}},v.site));
         card.appendChild(rhead);
         card.appendChild(mk("div",{style:{fontSize:14,color:C.ink,lineHeight:1.5,whiteSpace:"pre-wrap"}},v.learn));
         body.appendChild(card);
@@ -410,12 +427,13 @@ function openEdit(key){
     fWeather=r.weather||"晴れ";fSite=r.site||currentSite;fNinku=r.ninku!=null?String(r.ninku):"";
     fMembers=r.members||"";fWork=r.work||"";fMisses=Array.isArray(r.misses)?r.misses:[];
     fLearn=r.learn||"";fNext=r.next||"";fLearnPhotos=Array.isArray(r.learnPhotos)?r.learnPhotos:[];
-    const initM=methodOfSite(fSite)||"zairai";
+    fMethod=r.method||methodOfSite(fSite)||localStorage.getItem("nippo_method")||"zairai";
+    const initM=fMethod;
     mMethod=initM;const cats=catsFor(initM);const fb=Object.keys(cats)[0]||"";
     mBig=fb;mDetail=(cats[fb]&&cats[fb][0])||"";mText="";mCause="";mRedo="";mPhotos=[];
     draftBase=formState();
     try{const d=JSON.parse(localStorage.getItem(draftKey())||"null");
-      if(d&&d.state&&d.ts>(r.updated||0)){const t=d.state;fWeather=t.fWeather;fSite=t.fSite;fNinku=t.fNinku;fMembers=t.fMembers;fWork=t.fWork;fMisses=t.fMisses||[];fLearn=t.fLearn;fNext=t.fNext;fLearnPhotos=t.fLearnPhotos||[];setTimeout(()=>showToast("下書きを復元しました"),300)}
+      if(d&&d.state&&d.ts>(r.updated||0)){const t=d.state;fWeather=t.fWeather;fSite=t.fSite;fNinku=t.fNinku;fMembers=t.fMembers;fWork=t.fWork;fMisses=t.fMisses||[];fLearn=t.fLearn;fNext=t.fNext;fLearnPhotos=t.fLearnPhotos||[];if(t.fMethod){fMethod=t.fMethod;mMethod=t.fMethod;}setTimeout(()=>showToast("下書きを復元しました"),300)}
       else if(d)localStorage.removeItem(draftKey());
     }catch(e){}
     stopDraft();draftTimer=setInterval(saveDraft,1500);
@@ -444,7 +462,12 @@ function renderEdit(){
   ninEl.value=fNinku;ninEl.addEventListener("input",e=>{fNinku=e.target.value});
   const memEl=input(fMembers,"山田、田中",v=>{fMembers=v});
   const siteEl=input(fSite,"○○様邸",v=>{fSite=v;currentSite=v;localStorage.setItem("nippo_site",v)});
-  body.appendChild(card(label("天候"),wxRow,mk("div",{style:{height:10}}),label("現場名"),siteEl,mk("div",{style:{height:10}}),label("人工数"),ninEl,mk("div",{style:{height:10}}),label("一緒に作業した人"),memEl));
+  // 現場名を入れ終わったとき、その現場の工法を覚えていれば合わせる
+  siteEl.addEventListener("change",()=>{const m=methodOfSite(fSite.trim());if(m&&m!==fMethod){fMethod=m;setMissMethod(m);renderEdit();showToast(`${fSite}は${METHOD_LABEL[m]}にしました`)}});
+  function setMissMethod(m){mMethod=m;const c2=catsFor(m);const fb=Object.keys(c2)[0]||"";mBig=fb;mDetail=(c2[fb]&&c2[fb][0])||"";}
+  const methodRowTop=mk("div",{style:{display:"flex",gap:6}});
+  Object.keys(METHOD_LABEL).forEach(k=>{const on=fMethod===k;methodRowTop.appendChild(mk("button",{style:{flex:1,background:on?C.navyBg:"#fff",color:on?C.navy:C.sub,border:`1.5px solid ${on?C.navy:C.line}`,borderRadius:9,padding:"9px 0",fontSize:13,fontWeight:on?700:600,cursor:"pointer",fontFamily:"inherit"},onClick:()=>{fMethod=k;setMissMethod(k);renderEdit()}},METHOD_LABEL[k]))});
+  body.appendChild(card(label("天候"),wxRow,mk("div",{style:{height:10}}),label("現場名"),siteEl,mk("div",{style:{height:10}}),label("この現場の工法（ミスと学びはこの工法で記録されます）"),methodRowTop,mk("div",{style:{height:10}}),label("人工数"),ninEl,mk("div",{style:{height:10}}),label("一緒に作業した人"),memEl));
 
   function sectionCard(n,title,color,...children){
     const c=mk("div",{style:{background:C.card,borderRadius:14,padding:"14px 15px",marginBottom:12,border:`1px solid ${C.line}`}});
@@ -520,7 +543,7 @@ function renderEdit(){
     }
     const addBox=mk("div",{style:{background:"#fafbfc",border:`1.5px dashed ${C.line}`,borderRadius:12,padding:"12px"}});
     const cats=catsFor(mMethod);const bigs=Object.keys(cats);const details=cats[mBig]||[];
-    addBox.appendChild(mk("div",{style:{fontSize:11,fontWeight:700,color:C.amber,marginBottom:5}},"工法"));
+    addBox.appendChild(mk("div",{style:{fontSize:11,fontWeight:700,color:C.amber,marginBottom:5}},"工法（ふつうは上で選んだ工法のまま）"));
     const methodRow=mk("div",{style:{display:"flex",gap:6,marginBottom:10}});
     Object.keys(METHOD_LABEL).forEach(mk2=>{const b=mk("button",{style:{flex:1,background:mMethod===mk2?C.navyBg:"#fff",color:mMethod===mk2?C.navy:C.sub,border:`1.5px solid ${mMethod===mk2?C.navy:C.line}`,borderRadius:9,padding:"9px 0",fontSize:13,fontWeight:mMethod===mk2?700:600,cursor:"pointer",fontFamily:"inherit"},onClick:()=>{mMethod=mk2;const c2=catsFor(mk2);const fb=Object.keys(c2)[0]||"";mBig=fb;mDetail=(c2[fb]&&c2[fb][0])||"";const old=sec;old.replaceWith(renderMissSection())}},METHOD_LABEL[mk2]);methodRow.appendChild(b)});
     addBox.appendChild(methodRow);
@@ -575,7 +598,7 @@ function renderEdit(){
 
   const learnTA=textarea(fLearn,"気づき・次への改善",3,v=>{fLearn=v});
   function renderLearnSection(){
-    const sec=sectionCard("3","学んだこと・次はこうする",C.green,learnTA);
+    const sec=sectionCard("3",`学んだこと・次はこうする（${METHOD_LABEL[fMethod]}）`,C.green,learnTA);
     const learnPhotoWrap=renderPhotoPicker(fLearnPhotos,async(file)=>{
       showToast("アップロード中…");
       try{
@@ -607,7 +630,12 @@ function renderEdit(){
       mText="";mCause="";mRedo="";mPhotos=[];
     }
     saveBtn.disabled=true;saveBtn.textContent="保存中…";
-    const data={weather:fWeather,site:fSite,ninku:fNinku,members:fMembers,work:fWork,misses:fMisses,learn:fLearn,learnPhotos:fLearnPhotos,next:fNext,updated:Date.now(),name:currentUser};
+    const data={weather:fWeather,site:fSite,method:fMethod,ninku:fNinku,members:fMembers,work:fWork,misses:fMisses,learn:fLearn,learnPhotos:fLearnPhotos,next:fNext,updated:Date.now(),name:currentUser};
+    try{
+      localStorage.setItem("nippo_method",fMethod);
+      const nm=(fSite||"").trim();
+      if(nm){sites=sites.filter(x=>x.name!==nm);sites.push({name:nm,method:fMethod});localStorage.setItem("nippo_sites",JSON.stringify(sites.slice(-50)));}
+    }catch(e){}
     try{await set(ref(db,`reports/${currentUser}/${editKey}`),data);}
     catch(e){saveBtn.disabled=false;saveBtn.textContent="保存する";saveDraft();showToast("保存できませんでした。電波の良い所でもう一度");return;}
     stopDraft();localStorage.removeItem(draftKey());
