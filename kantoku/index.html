@@ -187,7 +187,7 @@ const db = getDatabase(fbApp);
 const auth = getAuth(fbApp);
 
 // 画面に出す版（更新が反映されたかの確認用）
-const APP_VER = "10/09-2 業者登録";
+const APP_VER = "10/16 終わった現場";
 // ===== 定数 =====
 const WX = ["晴れ","曇り","雨","雪","強風"];
 const MISS_CATS = ["現場管理","安全","工程","資材","職人とのやり取り","その他"];
@@ -422,7 +422,7 @@ function refreshLists(){
   Object.values(S.companies||{}).forEach(c => { if(c && c.name) comps.add(c.name); });
   Object.values(S.myReports).forEach(r => { if(r && r.site) sites.add(r.site); });
   Object.values(S.sites||{}).forEach(x => { if(x && x.name) sites.add(x.name); });
-  $("#dl-sites").innerHTML = [...sites].map(s => `<option value="${esc(s)}">`).join("");
+  $("#dl-sites").innerHTML = [...sites].filter(s => !isDoneSite(s)).map(s => `<option value="${esc(s)}">`).join("");
   $("#dl-companies").innerHTML = [...comps].map(s => `<option value="${esc(s)}">`).join("");
   fillTradeList("zairai");
 }
@@ -585,10 +585,16 @@ function viewMaster(){
       <select id="new-site-m" style="width:78px;flex:0 0 78px">${Object.entries(METHODS).map(([k]) => `<option value="${k}">${methodShort(k)}</option>`).join("")}</select>
       <button class="btn btn-navy" data-act="addsite" style="white-space:nowrap;padding:10px 12px">追加</button>
     </div>
-    ${sites.length ? sites.map(sn => { const sm = siteMethod(sn); return `<div class="tpl-row"><span style="flex:1;font-size:14px;font-weight:700">${esc(sn)}</span>
+    ${sites.filter(n => !isDoneSite(n)).length ? sites.filter(n => !isDoneSite(n)).map(sn => { const sm = siteMethod(sn); return `<div class="tpl-row"><span style="flex:1;font-size:14px;font-weight:700">${esc(sn)}</span>
       ${Object.entries(METHODS).map(([k,l]) => `<button class="st ${sm===k?"on s-確定":""}" style="flex:0 0 58px" data-act="sitemethod" data-s="${esc(sn)}" data-m="${k}">${methodShort(k)}</button>`).join("")}
+      <button class="st" style="flex:0 0 52px" data-act="donesite" data-s="${esc(sn)}" title="工事が終わったら押す">完了</button>
       <button class="x" style="flex:0 0 32px" data-act="delsite" data-s="${esc(sn)}">✕</button>
-    </div>`; }).join("") : `<div class="small">まだ現場がありません。上の欄から追加してください。</div>`}
+    </div>`; }).join("") : `<div class="small">進行中の現場はありません。上の欄から追加してください。</div>`}
+    <div class="small" style="margin-top:8px">工事が終わった現場は「完了」を押すと、手配や日報の現場の候補に出なくなります（記録はそのまま残ります）。</div>
+    ${(() => { const d = sites.filter(isDoneSite); if(!d.length) return ""; return `<button class="btn btn-ghost btn-block" style="margin-top:10px;font-size:13px" data-act="toggledone">${S.showDone ? "▲" : "▼"} ✅ 終わった現場（${d.length}）</button>
+      ${S.showDone ? d.map(sn => { const r = siteRec(sn) || {}; return `<div class="tpl-row" style="opacity:.8"><span style="flex:1;font-size:14px">${esc(sn)} <span class="small">${methodShort(siteMethod(sn) || "zairai")}${r.doneAt ? "・" + esc(r.doneAt) + " 完了" : ""}</span></span>
+        <button class="st" style="flex:0 0 104px;white-space:nowrap" data-act="undonesite" data-s="${esc(sn)}">進行中に戻す</button>
+      </div>`; }).join("") : ""}`; })()}
   </div>
   ${companyCard()}`;
 }
@@ -629,7 +635,7 @@ async function saveTpl(){
 }
 async function setSiteMethod(site, method){
   if(!site) return;
-  try{ await set(ref(db, `kantoku_meta/sites/${uidOf(site)}`), { name:site, method }); }
+  try{ await set(ref(db, `kantoku_meta/sites/${uidOf(site)}`), { ...(siteRec(site) || {}), name:site, method }); }
   catch(e){ alert("現場の工法を保存できませんでした：" + e.message); }
 }
 // 業種の候補（工法ごとの並び順＋手配で使った業種）
@@ -646,11 +652,20 @@ function pendingCount(){
 }
 // 登録した現場＋手配に出てくる現場
 function allSites(){ return [...new Set([...Object.values(S.sites||{}).map(x => x && x.name), ...Object.values(S.plans).map(p => p.site)].filter(Boolean))].sort(); }
+// 終わった現場：記録は残したまま、プルダウンや入力候補に出さない
+function siteRec(n){ return (S.sites||{})[uidOf(n)] || null; }
+function isDoneSite(n){ const r = siteRec(n); return !!(r && r.done); }
+function activeSites(){ return allSites().filter(n => !isDoneSite(n)); }
+function doneSites(){ return allSites().filter(isDoneSite); }
+function siteOptions(sel){
+  const done = doneSites();
+  return activeSites().map(s => `<option ${s===sel?"selected":""}>${esc(s)}</option>`).join("")
+    + (done.length ? `<optgroup label="✅ 終わった現場">${done.map(s => `<option value="${esc(s)}" ${s===sel?"selected":""}>${esc(s)}（終了）</option>`).join("")}</optgroup>` : "");
+}
 function siteFilter(){
-  const sites = allSites();
   return `<div class="field"><select data-act="site">
     <option value="">すべての現場</option>
-    ${sites.map(s => `<option ${s===S.site?"selected":""}>${esc(s)}</option>`).join("")}
+    ${siteOptions(S.site)}
     <option value="__add">＋ 現場を追加する…</option>
   </select></div>`;
 }
@@ -795,13 +810,14 @@ const DAY_W = 22, LABEL_W = 118;
 function viewGantt(){
   const sites = allSites();
   if(!sites.length) return `<div class="card small">まだ現場がありません。「⚙ 工程ごとの材料・ルール」の下で現場を追加するか、手配を入れると出てきます。</div>`;
-  if(!S.ganttSite || !sites.includes(S.ganttSite)) S.ganttSite = (S.site && sites.includes(S.site)) ? S.site : sites[0];
+  const act = activeSites();
+  if(!S.ganttSite || !sites.includes(S.ganttSite)) S.ganttSite = (S.site && sites.includes(S.site)) ? S.site : (act[0] || sites[0]);
   const site = S.ganttSite, method = siteMethod(site) || "zairai", order = tplList(method);
   const rows = Object.entries(S.plans).filter(([,p]) => p.site === site && (S.ganttStop || p.status !== "中止"))
     .sort((a,b) => { const ia = order.indexOf(a[1].trade), ib = order.indexOf(b[1].trade);
       return (ia<0?999:ia) - (ib<0?999:ib) || a[1].date.localeCompare(b[1].date); });
   const sel = `<div class="row2" style="grid-template-columns:2fr 1fr">
-    <div class="field"><select data-act="ganttsite">${sites.map(x => `<option ${x===site?"selected":""}>${esc(x)}</option>`).join("")}</select></div>
+    <div class="field"><select data-act="ganttsite">${siteOptions(site)}</select></div>
     <div class="field"><button class="btn btn-ghost btn-block" style="padding:10px 4px;font-size:12px" data-act="ganttstop">${S.ganttStop?"中止も表示中":"中止は非表示"}</button></div>
   </div>`;
   if(!rows.length) return sel + `<div class="card small">この現場の手配はまだありません。カレンダーで日付を選んで「＋ 手配を追加」から入れてください（現場名に「${esc(site)}」を選ぶ）。</div>`;
@@ -1508,6 +1524,17 @@ document.addEventListener("click", async e => {
     if(!confirm(`「${n}」を一覧から消しますか？`)) return;
     try{ await remove(ref(db, `kantoku_meta/sites/${uidOf(n)}`)); toast("消しました"); }catch(err){ alert("失敗しました：" + err.message); }
   }
+  else if(a === "donesite"){
+    const n = el.dataset.s;
+    const future = Object.values(S.plans).filter(p => p.site === n && (p.dateTo || p.date) >= today() && p.status !== "中止").length;
+    if(!confirm(`「${n}」を終わった現場にしますか？\n手配・日報・工程表の記録はそのまま残ります。手配や日報の現場の候補に出なくなります。${future ? `\n\n※ 今日以降の手配がまだ${future}件あります。` : ""}`)) return;
+    try{ await set(ref(db, `kantoku_meta/sites/${uidOf(n)}`), { ...(siteRec(n) || {}), name:n, method:siteMethod(n) || "zairai", done:true, doneAt:today() }); if(S.site === n){ S.site = ""; } toast(`「${n}」を終わった現場にしました`); }catch(err){ alert("失敗しました：" + err.message); }
+  }
+  else if(a === "undonesite"){
+    const n = el.dataset.s, r = { ...(siteRec(n) || {}), name:n, method:siteMethod(n) || "zairai" }; delete r.done; delete r.doneAt;
+    try{ await set(ref(db, `kantoku_meta/sites/${uidOf(n)}`), r); toast(`「${n}」を進行中に戻しました`); }catch(err){ alert("失敗しました：" + err.message); }
+  }
+  else if(a === "toggledone"){ S.showDone = !S.showDone; render(); }
   else if(a === "sitemethod"){ await setSiteMethod(el.dataset.s, el.dataset.m); toast(`${el.dataset.s}を${METHODS[el.dataset.m]}にしました`); }
   else if(a === "tplback"){ S.tplEdit = null; if(S.tplFrom){ S.view = S.tplFrom; S.tplFrom = null; } render(); }
   else if(a === "savetpl"){ await saveTpl(); }

@@ -198,7 +198,8 @@ function renderNameEntry(root){
 
 let editKey=null;
 let fWeather="晴れ",fSite="",fNinku="",fMembers="",fWork="",fMisses=[],fLearn="",fNext="",fLearnPhotos=[],fMethod="zairai";
-let viewMethod=""; // 分析・学びタブの絞り込み（""=すべて）
+let viewMethod="";
+let editExisted=false; // この日の日報がもう保存されているか（削除ボタンを出す） // 分析・学びタブの絞り込み（""=すべて）
 let mMethod="zairai",mBig="",mDetail="",mText="",mCause="",mRedo="",mPhotos=[];
 let cursor=new Date();
 let monthTab="cal";
@@ -424,6 +425,7 @@ function openEdit(key){
   const dbRef=ref(db,`reports/${currentUser}/${key}`);
   get(dbRef).then(snap=>{
     const r=snap.exists()?snap.val():{};
+    editExisted=snap.exists();
     fWeather=r.weather||"晴れ";fSite=r.site||currentSite;fNinku=r.ninku!=null?String(r.ninku):"";
     fMembers=r.members||"";fWork=r.work||"";fMisses=Array.isArray(r.misses)?r.misses:[];
     fLearn=r.learn||"";fNext=r.next||"";fLearnPhotos=Array.isArray(r.learnPhotos)?r.learnPhotos:[];
@@ -643,6 +645,26 @@ function renderEdit(){
     setTimeout(()=>reloadMain(),600);
   }},"保存する");
   body.appendChild(saveBtn);
+  // 間違えて保存した日報を消す
+  if(editExisted){
+    const delBtn=mk("button",{style:{width:"100%",background:"#fff",color:C.red,border:`1.5px solid ${C.red}`,borderRadius:12,padding:"12px 0",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginTop:14},onClick:async()=>{
+      if(!confirm(`${fmtFull(editKey)}の日報を削除しますか？\nミス・学び・写真も一緒に消えます。元に戻せません。`))return;
+      if(!confirm("本当に削除しますか？"))return;
+      delBtn.disabled=true;delBtn.textContent="削除中…";
+      try{
+        const snap=await get(ref(db,`reports/${currentUser}/${editKey}`));
+        const old=snap.exists()?snap.val():{};
+        await set(ref(db,`reports/${currentUser}/${editKey}`),null);
+        const urls=[...(old.learnPhotos||[]),...((old.misses||[]).flatMap(m=>m.photos||[]))];
+        urls.forEach(deletePhotoByUrl);
+      }catch(e){delBtn.disabled=false;delBtn.textContent="🗑 この日の日報を削除";showToast("削除できませんでした。電波を確認してもう一度");return;}
+      stopDraft();try{localStorage.removeItem(draftKey())}catch(e){}
+      editExisted=false;showToast("削除しました");
+      setTimeout(()=>reloadMain(),600);
+    }},"🗑 この日の日報を削除");
+    body.appendChild(delBtn);
+    body.appendChild(mk("div",{style:{fontSize:11,color:C.faint,textAlign:"center",marginTop:6}},"違う日に書いてしまったときなどに使います。直すだけなら、書き直して「保存する」。"));
+  }
   body.appendChild(mk("div",{style:{height:30}}));
   app.append(head,body);
   root.appendChild(app);
