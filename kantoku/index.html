@@ -92,6 +92,11 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--navy);ba
 .sup-list{display:flex;flex-direction:column;gap:6px;margin-top:8px;border-top:1px solid var(--line);padding-top:8px}
 .sup-btn{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;background:#fff;border:1.5px solid var(--navy);color:var(--navy);border-radius:10px;padding:9px 12px;font-size:13px;font-weight:700}
 .sup-btn span{font-size:11px;font-weight:400;color:var(--sub)}
+.paste-card>summary{cursor:pointer;font-weight:700;color:var(--navy);font-size:14px;list-style:none}
+.paste-card>summary::-webkit-details-marker{display:none}
+.paste-card>summary::after{content:" ▼";font-size:11px}
+.paste-card[open]>summary::after{content:" ▲"}
+.paste-steps{margin:10px 0 10px 18px;padding:0;line-height:1.7}
 .chip{border:1.5px solid var(--line);background:#fff;border-radius:18px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--ink)}
 .chip span{font-size:11px;margin-left:3px}
 .chip.on{background:var(--navyBg);border-color:var(--navy);color:var(--navy)}
@@ -216,7 +221,7 @@ const db = getDatabase(fbApp);
 const auth = getAuth(fbApp);
 
 // 画面に出す版（更新が反映されたかの確認用）
-const APP_VER = "11/16 日報に写真";
+const APP_VER = "11/16-2 Claudeで日報";
 // ===== 定数 =====
 const WX = ["晴れ","曇り","雨","雪","強風"];
 const MISS_CATS = ["現場管理","安全","工程","資材","職人とのやり取り","その他"];
@@ -1463,6 +1468,118 @@ async function openReport(){
 }
 function saveDraft(){ S.reportDirty = true; lsSet(draftKey(), { ...S.report, _at: Date.now() }); }
 
+// ===== Claudeで作った日報を貼り付けて入れる =====
+const AI_RULE = `あなたは現場監督の日報係です。このあと私が今日の出来事をざっくり話すので、下の「返す形」のとおりに整えて、その文だけを返してください。
+
+ルール
+・話に出てこないことは書かない（推測で足さない）。分からない項目は行ごと省く
+・数量・寸法・人数は、私が言った数字だけを使う
+・施主の名前・住所・電話番号は書かない（現場名はそのまま）
+・天候は「晴れ／曇り／雨／雪／強風」のどれか
+・ミスの分類は「現場管理／安全／工程／資材／職人とのやり取り／その他」のどれか
+・ミスの時間は、対応・やり直しにかかった分数（数字だけ）
+・出面は「業種・業者名・人数」の順。今日の手配と同じなら手配の内容を使う
+・文は短く、現場の言葉のまま
+
+返す形（この形以外の説明は付けない）
+【監督日報】
+日付：YYYY-MM-DD
+天候：晴れ
+＃現場：（現場名）
+出面：（業種）・（業者名）・（人数）名
+様子：（進み具合・状況）
+安全：（KY・検査・立会い・打合せ）
+＃現場：（2つ目の現場があれば同じ形で）
+＃ミス
+現場：（現場名）
+分類：（分類）
+内容：（何が起きたか）
+原因：（分かれば）
+時間：（分）
+対策：（次はどうするか）
+＃学び：（今日感じたこと）
+＃申し送り：（明日以降に確認すること）`;
+
+async function copyAiPrompt(){
+  const plans = plansOn(S.selDate).filter(([,p]) => p.status !== "中止");
+  const planText = plans.length
+    ? plans.map(([,p]) => `・${p.site||"現場未定"}：${p.trade||""} ${p.company||""}${p.count?` ${p.count}名`:""}${p.time?` ${p.time}`:""}（${p.status||"未連絡"}）`).join("\n")
+    : "（手配なし）";
+  const text = `${AI_RULE}\n\n記入者：${S.me}\n日付：${S.selDate}\nこの日の手配：\n${planText}\n\nーーー ここから今日の出来事 ーーー\n`;
+  try{ await navigator.clipboard.writeText(text); toast("依頼文をコピーしました。Claudeに貼って、続けて今日のことを話してください"); }
+  catch(e){ prompt("この文をコピーしてClaudeに貼ってください", text); }
+}
+
+function parseAiReport(text){
+  const out = { date:"", weather:"", visits:[], misses:[], learn:"", next:"" };
+  let cur = null, curKey = null;
+  const norm = t => t.replace(/[：]/g, ":").replace(/^[＃#]\s*/, "#");
+  const setVal = (obj, key, val) => { obj[key] = obj[key] ? obj[key] + "\n" + val : val; };
+  for(const raw of String(text).split(/\r?\n/)){
+    const line = norm(raw.trim());
+    if(!line || /^【監督日報】/.test(line)) continue;
+    let m;
+    if((m = line.match(/^#\s*現場\s*:(.*)$/))){ cur = { site:m[1].trim(), work:"", anzen:"", demen:[] }; out.visits.push(cur); curKey = null; continue; }
+    if(/^#\s*ミス/.test(line)){ cur = { site:"", big:"", text:"", cause:"", redo:"", taisaku:"" }; cur._miss = true; out.misses.push(cur); curKey = null; continue; }
+    if((m = line.match(/^#\s*学び\s*:?(.*)$/))){ cur = out; curKey = "learn"; if(m[1].trim()) setVal(out, "learn", m[1].trim()); continue; }
+    if((m = line.match(/^#\s*申し送り\s*:?(.*)$/))){ cur = out; curKey = "next"; if(m[1].trim()) setVal(out, "next", m[1].trim()); continue; }
+    m = line.match(/^([^:]{1,8}):(.*)$/);
+    if(m){
+      const k = m[1].trim(), v = m[2].trim();
+      if(k === "日付"){ out.date = v.replace(/\//g, "-"); curKey = null; continue; }
+      if(k === "天候"){ out.weather = WX.find(w => v.includes(w)) || ""; curKey = null; continue; }
+      if(cur && !cur._miss && cur !== out){
+        if(k === "出面"){
+          const ps = v.split(/[・,，、\/／]/).map(x => x.trim()).filter(Boolean);
+          const cnt = (ps.length > 1 && /\d/.test(ps[ps.length-1])) ? ps.pop().replace(/[^\d.]/g, "") : "";
+          cur.demen.push({ trade: ps[0] || "", company: ps.slice(1).join(" "), count: cnt });
+          curKey = null; continue;
+        }
+        const map = { "様子":"work", "現場の様子":"work", "安全":"anzen", "安全・検査・打合せ":"anzen", "打合せ":"anzen" };
+        if(map[k]){ curKey = map[k]; if(v) setVal(cur, curKey, v); continue; }
+      }
+      if(cur && cur._miss){
+        const map = { "現場":"site", "分類":"big", "内容":"text", "原因":"cause", "時間":"redo", "対策":"taisaku" };
+        if(map[k]){
+          curKey = map[k];
+          if(curKey === "big") cur.big = MISS_CATS.find(c => v.includes(c)) || (v ? "その他" : "");
+          else if(curKey === "redo") cur.redo = (v.match(/\d+/) || [""])[0];
+          else if(v) setVal(cur, curKey, v);
+          continue;
+        }
+      }
+    }
+    // 見出しなしの行は、直前の項目の続き
+    if(cur && curKey && curKey !== "redo" && curKey !== "big") setVal(cur, curKey, raw.trim());
+  }
+  return out;
+}
+
+function applyPastedReport(){
+  const text = ($("#paste-text")?.value || "").trim();
+  if(!text){ alert("Claudeが返した「【監督日報】」の文を貼ってください"); return; }
+  const p = parseAiReport(text);
+  if(!p.visits.length && !p.misses.length && !p.learn && !p.next){ alert("読み取れませんでした。「【監督日報】」から始まる文をそのまま貼ってください"); return; }
+  if(p.date && p.date !== S.selDate && !confirm(`貼った文の日付は ${p.date} ですが、開いているのは ${S.selDate} の日報です。このまま入れますか？`)) return;
+  const r = S.report;
+  const filled = r.visits.some(v => v.work.trim() || v.anzen.trim()) || r.misses.some(m => m.text.trim()) || r.learn.trim() || r.next.trim();
+  if(filled && !confirm("今の入力欄に書いてある内容を、貼った内容で置き換えます。（写真と、手配から入れた出面は残ります）よろしいですか？")) return;
+  if(p.weather) r.weather = p.weather;
+  if(p.visits.length){
+    r.visits = p.visits.map(v => {
+      const old = r.visits.find(o => o.site && o.site === v.site);
+      return { site:v.site, work:v.work||"", anzen:v.anzen||"",
+        demen: v.demen.length ? v.demen : (old && old.demen.length ? old.demen : demenFromPlans(v.site)),
+        photos: old ? old.photos : [] };
+    });
+  }
+  if(p.misses.length) r.misses = p.misses.map((m,i) => ({ site:m.site||"", big:m.big||"", text:m.text||"", cause:m.cause||"", redo:m.redo||"", taisaku:m.taisaku||"", sev:"", photos:(r.misses[i] && r.misses[i].photos) || [] }));
+  if(p.learn) r.learn = p.learn;
+  if(p.next) r.next = p.next;
+  S.pasteOpen = false; S.reportNote = "Claudeの文を入れました。中身を確かめて、写真があれば足してから「保存」を押してください";
+  saveDraft(); renderReport(); window.scrollTo({ top:0, behavior:"smooth" });
+}
+
 function renderReport(){
   const r = S.report;
   const vsites = r.visits.map(v => v.site.trim()).filter(Boolean);
@@ -1516,6 +1633,18 @@ function renderReport(){
       <span style="width:60px"></span>
     </div>
     ${S.reportNote ? `<div class="info">${esc(S.reportNote)}</div>` : ""}
+    <details class="card paste-card" id="paste-card" ${S.pasteOpen ? "open" : ""}>
+      <summary>🤖 Claudeで日報を作る（話して → 貼るだけ）</summary>
+      <ol class="small paste-steps">
+        <li>「依頼文をコピー」を押して、Claudeに貼る（今日の手配も一緒に入る）</li>
+        <li>続けて、今日あったことをざっくり話す・書く</li>
+        <li>Claudeが返した「【監督日報】」の文をコピーして、下の欄に貼る</li>
+        <li>「入力欄に入れる」→ 中身を確かめて「保存」</li>
+      </ol>
+      <button class="btn btn-light btn-block" data-act="aiprompt">📋 Claude用の依頼文をコピー</button>
+      <textarea id="paste-text" rows="5" placeholder="ここにClaudeが返した【監督日報】の文を貼り付け" style="margin-top:8px"></textarea>
+      <button class="btn btn-navy btn-block" data-act="pasteapply" style="margin-top:8px">⬇ 入力欄に入れる</button>
+    </details>
     <div class="card">
       <div class="card-title"><span>📋 基本情報</span><span class="small">${r.visits.length}現場・出面 計${allTotal}名</span></div>
       <div class="row2">
@@ -1718,6 +1847,8 @@ document.addEventListener("click", async e => {
   else if(a === "report"){ await openReport(); window.scrollTo(0,0); }
   else if(a === "repback"){ if(S.reportDirty && !confirm("保存していない内容は下書きとして端末に残ります。戻りますか？")) return; S.view = "day"; render(); }
   else if(a === "saverep"){ await saveReport(); }
+  else if(a === "aiprompt"){ await copyAiPrompt(); }
+  else if(a === "pasteapply"){ applyPastedReport(); }
   else if(a === "dmadd"){ S.report.visits[Number(el.dataset.v)].demen.push({trade:"",company:"",count:""}); saveDraft(); renderReport(); }
   else if(a === "dmdel"){ S.report.visits[Number(el.dataset.v)].demen.splice(Number(el.dataset.i),1); saveDraft(); renderReport(); }
   else if(a === "vadd"){ S.report.visits.push(emptyVisit()); saveDraft(); renderReport(); document.querySelectorAll(".visit")[S.report.visits.length-1]?.scrollIntoView({behavior:"smooth"}); }
