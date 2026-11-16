@@ -1806,10 +1806,36 @@ function buildAiExportText(){
     t+=`\n----- 監督日報のミス（${kantokuMissCache.length}件） -----\n`;
     kantokuMissCache.forEach(m=>{ t+=`・${m.date} ${m.personName}${m.site?"（"+m.site+"）":""} ${m.big||""}${m.sev?"／"+m.sev:""}: ${m.text||""}${m.cause?`（原因: ${m.cause}）`:""}${m.taisaku?`（対策: ${m.taisaku}）`:""}\n`; });
   }
-  t+=`\n----- AIへの依頼 -----\n`;
-  t+=`上記データをもとに、月一の定例会議（60分）で話す内容を整理してください。\n`;
-  t+=`①先月の振り返り（ミス傾向）②再発防止の論点 ③育成の進捗と自己評価とのズレ ④来月の目標案\n`;
-  t+=`の4点を、会議でそのまま使える形（要点箇条書き）でまとめてください。\n`;
+  // 前回の議事録（持ち越し事項の確認用）
+  const lastMeeting=(meetingsCache||[])[0];
+  if(lastMeeting){
+    t+=`\n----- 前回の会議（${lastMeeting.date||""}）の議事録 -----\n`;
+    if(lastMeeting.notice)t+=`周知事項: ${lastMeeting.notice}\n`;
+    if(lastMeeting.countermeasure)t+=`決めたミス対策: ${lastMeeting.countermeasure}\n`;
+    if(lastMeeting.goal)t+=`今月の目標: ${lastMeeting.goal}\n`;
+    if(lastMeeting.members)t+=`参加者: ${lastMeeting.members}\n`;
+  }
+  t+=`\n===== Claudeへの依頼（このまま送信してください） =====\n`;
+  t+=`上のデータを分析して、月一の定例会議（60分）で使える資料を作ってください。\n\n`;
+  t+=`以下の形式でお願いします：\n\n`;
+  t+=`①先月の振り返り（ミス傾向）\n`;
+  t+=`　- 全体件数・深刻度・やり直し時間から見える傾向\n`;
+  t+=`　- 特定の現場・作業・人に偏りがないか\n`;
+  t+=`　- データ入力の課題があれば指摘\n\n`;
+  t+=`②再発防止の論点\n`;
+  t+=`　- 学びの記録とミスの記録を照らし合わせて、手順書化する価値がある内容を抽出\n`;
+  t+=`　- 同じ人・同じ工程で繰り返しているミスがないか\n`;
+  t+=`　- 前回の会議で決めた対策・目標が守れているか（持ち越し事項）\n`;
+  t+=`　- 会議で個別確認すべき事例をピックアップ\n\n`;
+  t+=`③育成の進捗とズレ\n`;
+  t+=`　- 育成チェックのデータがあれば、自己評価と他者評価のズレを指摘\n`;
+  t+=`　- 学びの記録の量・質からメンバーの状態を推測（褒めるポイント／フォローが必要なポイント）\n\n`;
+  t+=`④来月の目標案（決定事項）\n`;
+  t+=`　- 具体的で検証可能な目標を3〜4個、担当者が分かる形で提案\n\n`;
+  t+=`その後、以下も作成してください：\n`;
+  t+=`- 上記をもとにしたWord資料（グラフ画像つき）\n`;
+  t+=`- 参加者に配る「記入シート」（Word・書き込み欄つき）\n`;
+  t+=`- データのグラフ化（現場別・作業別・深刻度別のミス件数、メンバー別の学び記録件数）\n`;
   return t;
 }
 
@@ -1820,7 +1846,7 @@ document.getElementById("export-ai-btn").addEventListener("click",()=>{
   document.getElementById("export-ai-text").select();
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(text)
-      .then(()=>{ alert("テキストを生成してコピーしました。ClaudeやChatGPTに貼り付けてください。"); })
+      .then(()=>{ alert("データと依頼文をまとめてコピーしました。\nClaudeに貼り付けて、そのまま送信してください。\n（送る前に、施主名や住所が入っていないかだけ確認してください）"); })
       .catch(()=>{ alert("自動コピーができませんでした。下の欄が選択状態になっているので、そのままコピー（Ctrl+C／⌘+C）してください。"); });
   }else{
     alert("テキストを生成しました。下の欄が選択状態になっているので、そのままコピー（Ctrl+C／⌘+C）してください。");
