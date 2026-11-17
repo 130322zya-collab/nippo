@@ -314,7 +314,7 @@ const db = getDatabase(fbApp);
 const auth = getAuth(fbApp);
 
 // 画面に出す版（更新が反映されたかの確認用）
-const APP_VER = "11/17 新デザイン";
+const APP_VER = "11/17 工程をClaudeと直す";
 // ===== 定数 =====
 const WX = ["晴れ","曇り","雨","雪","強風"];
 const MISS_CATS = ["現場管理","安全","工程","資材","職人とのやり取り","その他"];
@@ -864,6 +864,22 @@ function viewTplEdit(){
     <div class="card-title">${METHODS[m]}「${esc(n)}」</div>
     ${t.custom ? "" : `<div class="info" style="font-weight:600">${getTpl(n, m) ? "今は標準の例です。保存すると自社用になります。" : "まだ登録がありません。"}</div>`}
     ${ot ? `<button class="btn btn-ghost btn-block" style="margin-bottom:10px;font-size:13px" data-act="tplcopy">${METHODS[other]}の内容を下にコピーする</button>` : ""}
+    <details class="paste-card" id="tpl-ai" style="margin-bottom:12px;padding:10px 12px;border:1px solid var(--line);background:#fbfbf8" ${S.tplAiOpen ? "open" : ""}>
+      <summary>Claudeと一緒に直す</summary>
+      <ol class="small paste-steps">
+        <li>下に「どう直したいか」を書く（話して入力もできます）</li>
+        <li>「依頼文をコピー」→ Claudeに貼る（今の材料・ルール・段取りも一緒に入る）</li>
+        <li>Claudeが返した「【工程の標準】」の文を一番下の欄に貼る</li>
+        <li>「入力欄に入れる」→ 中身を確かめて「保存」</li>
+      </ol>
+      <div class="field" style="margin-bottom:8px"><label>どう直したいか</label>
+        <textarea id="tpl-ask" rows="3" placeholder="例：雨の日の段取りを足して／ルールを新人にも分かる言葉に直して／重複をまとめて">${esc(S.tplAsk || "")}</textarea></div>
+      ${recentMisses().length ? `<label style="display:flex;gap:6px;align-items:center;font-size:13px;margin-bottom:8px"><input type="checkbox" id="tpl-miss" style="width:auto" ${S.tplMiss === false ? "" : "checked"}> 最近の日報のミス・対策（${recentMisses().length}件）も一緒に送る</label>` : ""}
+      <button class="btn btn-light btn-block" data-act="tplaiprompt">Claude用の依頼文をコピー</button>
+      <textarea id="tpl-paste" rows="5" placeholder="ここにClaudeが返した【工程の標準】の文を貼り付け" style="margin-top:8px"></textarea>
+      <button class="btn btn-navy btn-block" data-act="tplaiapply" style="margin-top:8px">⬇ 入力欄に入れる</button>
+      <div class="small" style="margin-top:6px">入れただけでは保存されません。数字や日数はClaudeの案なので、必ず確かめてから保存してください。</div>
+    </details>
     <div class="field"><label>必要な材料（1行に1つ）</label><textarea id="te-mat" rows="5">${esc(t.materials.join("\n"))}</textarea></div>
     <div class="field"><label>気を付けるルール・検査・仕様（1行に1つ）</label><textarea id="te-rule" rows="5">${esc(t.rules.join("\n"))}</textarea></div>
     <div class="field"><label>事前の段取り（1行に1つ。「7日前：近隣挨拶」の形で）</label><textarea id="te-prep" rows="5">${esc(t.prep.map(x => `${x.d}日前：${x.t}`).join("\n"))}</textarea>
@@ -874,6 +890,94 @@ function viewTplEdit(){
     </div>
     ${inList ? `<button class="btn btn-ghost btn-block" style="margin-top:10px;font-size:13px;color:var(--red)" data-act="tplremove">この工程を一覧から外す</button>` : ""}
   </div>`;
+}
+// ----- 工程の標準をClaudeと一緒に直す（依頼文コピー → 貼り付け） -----
+function recentMisses(){
+  const from = addDays(today(), -90), out = [];
+  Object.entries(S.myReports || {}).filter(([d]) => d >= from).sort((a,b) => b[0].localeCompare(a[0])).forEach(([d, r]) => {
+    (r && r.misses || []).forEach(m => { if(m && (m.text || "").trim()) out.push({ d, ...m }); });
+  });
+  return out.slice(0, 15);
+}
+async function copyTplPrompt(){
+  const m = S.tplMethod || "zairai", n = S.tplEdit;
+  const lines = id => $(id).value.split("\n").map(x => x.trim()).filter(Boolean);
+  const mat = lines("#te-mat"), rule = lines("#te-rule"), prep = lines("#te-prep").map(parsePrep);
+  const ask = ($("#tpl-ask").value || "").trim();
+  S.tplAsk = ask; S.tplAiOpen = true;
+  const useMiss = $("#tpl-miss") ? $("#tpl-miss").checked : false;
+  S.tplMiss = useMiss;
+  const list = a => a.length ? a.map(x => "・" + x).join("\n") : "（まだなし）";
+  const misses = useMiss ? recentMisses().map(x => `・${x.d} ${x.big ? "［" + x.big + "］" : ""}${x.text}${x.taisaku ? " → 対策：" + x.taisaku : ""}`).join("\n") : "";
+  const text = `あなたは建築会社の現場監督の補佐です。下の「工程の標準（材料・ルール・事前の段取り）」を、私の希望どおりに書き直してください。
+
+決まり
+・工法：${METHODS[m]}　工程：${n}
+・私が頼んだところだけ直す。頼まれていない行はそのまま残す
+・数量・寸法・日数は、今の内容か私が言った数字だけを使う。分からない数字は「（要確認）」と書く
+・施主の名前・住所・物件名は書かない
+・1行に1つ、短く、現場の言葉で。新人が読んでも分かるように
+・段取りは「7日前：近隣挨拶」の形。当日は「0日前：」
+${misses ? "・下の「最近のミス」は、この工程に関係するものだけをルールや段取りに反映する\n" : ""}
+返す形（この形以外の説明は付けない）
+【工程の標準】
+＃材料
+・（1行に1つ）
+＃ルール
+・（1行に1つ）
+＃段取り
+・7日前：（内容）
+【変えたところ】
+・（何をどう変えたか、短く）
+
+ーーー 今の内容 ーーー
+＃材料
+${list(mat)}
+＃ルール
+${list(rule)}
+＃段取り
+${list(prep.map(x => `${x.d}日前：${x.t}`))}
+${misses ? `\nーーー 最近のミス（監督日報から） ーーー\n${misses}\n` : ""}
+ーーー 直したいこと ーーー
+${ask || "（この下に書きます）"}
+`;
+  try{ await navigator.clipboard.writeText(text); toast(ask ? "依頼文をコピーしました。Claudeに貼ってください" : "コピーしました。Claudeに貼って、続けて直したいことを話してください"); }
+  catch(e){ prompt("この文をコピーしてClaudeに貼ってください", text); }
+}
+function parseTplAi(text){
+  const out = { materials:null, rules:null, prep:null, changes:[] };
+  let key = null;
+  for(const raw of String(text).split(/\r?\n/)){
+    const line = raw.trim().replace(/^[#＃]\s*/, "#");
+    if(!line) continue;
+    if(/^【工程の標準】/.test(line)){ key = null; continue; }
+    if(/^【変えたところ】/.test(line)){ key = "changes"; continue; }
+    if(/^#\s*材料/.test(line)){ key = "materials"; out.materials = []; continue; }
+    if(/^#\s*(ルール|気を付ける)/.test(line)){ key = "rules"; out.rules = []; continue; }
+    if(/^#\s*(段取り|事前)/.test(line)){ key = "prep"; out.prep = []; continue; }
+    if(!key) continue;
+    const v = line.replace(/^[・\-\*•●]\s*/, "").trim();
+    if(!v || /^（?まだなし）?$/.test(v)) continue;
+    out[key].push(v);
+  }
+  return out;
+}
+function applyTplAi(){
+  const text = ($("#tpl-paste").value || "").trim();
+  if(!text){ alert("Claudeが返した「【工程の標準】」の文を貼ってください"); return; }
+  const p = parseTplAi(text);
+  if(!p.materials && !p.rules && !p.prep){ alert("読み取れませんでした。「【工程の標準】」から始まる文をそのまま貼ってください"); return; }
+  const set1 = (id, arr) => { if(!arr) return; const el = $(id); const v = arr.join("\n"); if(el.value.trim() !== v){ el.value = v; el.style.outline = "2px solid var(--orange)"; el.style.background = "#fff7e8"; } };
+  set1("#te-mat", p.materials);
+  set1("#te-rule", p.rules);
+  set1("#te-prep", p.prep && p.prep.map(parsePrep).map(x => `${x.d}日前：${x.t}`));
+  $("#tpl-paste").value = "";
+  $("#tpl-ai").open = false; S.tplAiOpen = false;
+  const note = "Claudeの案を入れました（オレンジ枠が変わったところ）。中身を確かめてから「保存」を押してください。" + (p.changes.length ? "\n\n変えたところ\n" + p.changes.map(x => "・" + x).join("\n") : "");
+  let box = $("#tpl-ai-note");
+  if(!box){ box = document.createElement("div"); box.className = "info"; box.id = "tpl-ai-note"; box.style.whiteSpace = "pre-wrap"; $("#tpl-ai").before(box); }
+  box.textContent = note;
+  box.scrollIntoView({ behavior:"smooth", block:"start" });
 }
 function parsePrep(line){
   const m = line.match(/^\s*(\d+)\s*日?\s*前?\s*[:：|｜、,]?\s*(.+)$/);
@@ -944,6 +1048,7 @@ function render(){
   $("#app").innerHTML = `<div class="wrap">${header()}${v==="names"?"":tabs()}${body}</div>${v==="names"?"":bottomNav()}`;
   if(v === "gantt") scrollGanttToToday();
   if(S.planEdit) showCompChips();
+  if(v === "master" && S.tplEdit && $("#tpl-ai")) HM.mics($("#tpl-ai"), "#tpl-paste");
 }
 
 // ----- 名前選択 -----
@@ -1921,7 +2026,7 @@ document.addEventListener("click", async e => {
   else if(a === "cancelplan"){ S.planEdit = null; S.planCopy = null; render(); }
   else if(a === "copyplan"){ const src = S.plans[el.dataset.id]; if(!src) return; S.planCopy = { ...src }; delete S.planCopy.createdAt; delete S.planCopy.createdBy; S.planEdit = "new"; if(S.view === "upcoming"){ S.selDate = src.date; S.view = "day"; } render(); $("#plan-form")?.scrollIntoView({behavior:"smooth"}); }
   else if(a === "master"){ e.preventDefault(); S.view = "master"; S.tplEdit = null; S.planEdit = null; render(); window.scrollTo(0,0); }
-  else if(a === "edittpl"){ e.preventDefault(); S.tplFrom = S.view === "master" ? null : S.view; S.tplEdit = el.dataset.t; if(el.dataset.m) S.tplMethod = el.dataset.m; S.view = "master"; S.planEdit = null; render(); window.scrollTo(0,0); }
+  else if(a === "edittpl"){ e.preventDefault(); S.tplFrom = S.view === "master" ? null : S.view; S.menu = false; S.tplEdit = el.dataset.t; S.tplAsk = ""; S.tplAiOpen = false; if(el.dataset.m) S.tplMethod = el.dataset.m; S.view = "master"; S.planEdit = null; render(); window.scrollTo(0,0); }
   else if(a === "addtpl" || a === "tpladdname"){
     const n = a === "addtpl" ? $("#new-tpl").value.trim() : el.dataset.n; if(!n) return;
     const list = tplList(S.tplMethod); if(!list.includes(n)){ list.push(n); await saveOrder(S.tplMethod, list); }
@@ -2018,6 +2123,8 @@ document.addEventListener("click", async e => {
   else if(a === "repback"){ if(S.reportDirty && !confirm("保存していない内容は下書きとして端末に残ります。戻りますか？")) return; S.view = "day"; render(); }
   else if(a === "saverep"){ await saveReport(); }
   else if(a === "aiprompt"){ await copyAiPrompt(); }
+  else if(a === "tplaiprompt"){ await copyTplPrompt(); }
+  else if(a === "tplaiapply"){ applyTplAi(); }
   else if(a === "pasteapply"){ applyPastedReport(); }
   else if(a === "dmadd"){ S.report.visits[Number(el.dataset.v)].demen.push({trade:"",company:"",count:""}); saveDraft(); renderReport(); }
   else if(a === "dmdel"){ S.report.visits[Number(el.dataset.v)].demen.splice(Number(el.dataset.i),1); saveDraft(); renderReport(); }
