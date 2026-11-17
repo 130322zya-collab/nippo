@@ -272,7 +272,8 @@ function renderTodayPanel(body,myRecs,myEntries,totalNinku,nMiss,nLearn){
     k2.append(`${fmtShort(lk)}と同じ現場・メンバーで書く`,mk("small",{},lv.site||""));
     box.appendChild(k2);
   }
-  if(window.HMPush&&HMPush.state()!=="on"){const k3=mk("button",{class:"hm-key2",style:{marginTop:"12px"},onClick:()=>HM.pushSetup({app:"daiku",name:currentUser,onChange:reloadMain})});k3.append("書き忘れの通知を受け取る",mk("small",{},"月〜土 17:15"));box.appendChild(k3)}
+  if(window.HMPush&&HMPush.state()!=="on"){const k3=mk("button",{class:"hm-key2",style:{marginTop:"12px"},onClick:()=>HM.pushSetup({app:"daiku",name:currentUser,onChange:reloadMain})});k3.append("書き忘れの通知を受け取る",mk("small",{},"月〜土 17:15・19:00"));box.appendChild(k3)}
+  else if(window.HMPush&&!r){const off=HMPush.isOff();const k4=mk("button",{class:"hm-key2",style:{marginTop:"12px"},onClick:()=>HMPush.toggleOff(currentUser,reloadMain)});k4.append(off?"今日の通知を元に戻す":"今日は休み（通知を止める）",mk("small",{},off?"止めています":"17:15・19:00"));box.appendChild(k4)}
   body.appendChild(box);
   const y=cursor.getFullYear(),m=cursor.getMonth();
   body.appendChild(mk("div",{class:"hm-h"},`${m+1}月の記録`));

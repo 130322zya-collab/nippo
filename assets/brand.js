@@ -39,7 +39,7 @@
   };
 })();
 
-/* ---- 日報の書き忘れ通知（17:15） ---- */
+/* ---- 日報の書き忘れ通知（17:15・19:00） ---- */
 (function(){
   const API = "https://hamasaki-nippo-notify.zoza.workers.dev";
   const KEY = "hamasaki1147";
@@ -67,7 +67,7 @@
     if(st === "none"){ alert("この端末・ブラウザは通知に対応していません。\niPhoneはiOS 16.4以降で、ホーム画面に追加して使ってください。"); return; }
     if(st === "denied"){ alert("通知がオフになっています。\n端末の「設定」→ 通知 → このアプリ（大工日報／監督日報）で、通知を許可してください。"); return; }
     if(st === "on"){
-      if(confirm(`${opts.name}さんの通知は設定済みです（月〜土の17:15、日報がまだのときだけ）。\n\nテストの通知を今送りますか？\n（キャンセルで通知を止める方を選べます）`)){
+      if(confirm(`${opts.name}さんの通知は設定済みです（月〜土の17:15と19:00、日報がまだのときだけ）。\n\nテストの通知を今送りますか？\n（キャンセルで通知を止める方を選べます）`)){
         try{ const r = await send("/test", { app:opts.app, name:opts.name }); alert(r.sent ? "テストの通知を送りました。数秒で届きます。" : "通知を送れませんでした。もう一度設定し直してください。"); }catch(e){ alert("通信できませんでした：" + e.message); }
       }else if(confirm("この端末の通知を止めますか？")){
         try{ const reg = await navigator.serviceWorker.getRegistration(scope()); const sub = reg && await reg.pushManager.getSubscription();
@@ -76,7 +76,7 @@
       }
       return;
     }
-    if(!confirm(`月〜土の17:15に、日報をまだ書いていなければ、この端末に通知を出します。\n${opts.name}さんの通知として登録しますか？`)) return;
+    if(!confirm(`月〜土の17:15に、日報をまだ書いていなければ、この端末に通知を出します。\n19:00になってもまだなら、もう一度だけ通知します。\n${opts.name}さんの通知として登録しますか？`)) return;
     try{
       const perm = await Notification.requestPermission();
       if(perm !== "granted"){ alert("通知が許可されませんでした。設定から許可するとあとで使えます。"); return; }
@@ -86,9 +86,21 @@
       if(!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: u8(VAPID) });
       await send("/subscribe", { app:opts.app, name:opts.name, sub:sub.toJSON() });
       localStorage.setItem("hm_push_on", "1");
-      alert("通知を設定しました。月〜土の17:15に、日報がまだなら通知が届きます。");
+      alert("通知を設定しました。月〜土の17:15（まだなら19:00にもう一度）に、日報がまだなら通知が届きます。");
       if(opts.onChange) opts.onChange();
     }catch(e){ alert("通知を設定できませんでした：" + e.message); }
   }
-  window.HMPush = { setup, state };
+  const dayKey = () => { const d = new Date(Date.now() + 9*3600*1000); return d.toISOString().slice(0,10); };
+  const isOff = () => { try{ return localStorage.getItem("hm_off") === dayKey(); }catch(e){ return false; } };
+  async function toggleOff(name, onChange){
+    const cancel = isOff();
+    if(!cancel && !confirm("今日は休みにして、今日の通知（17:15・19:00）を止めますか？")) return;
+    try{
+      await send("/off", { name, cancel });
+      if(cancel) localStorage.removeItem("hm_off"); else localStorage.setItem("hm_off", dayKey());
+      alert(cancel ? "今日の通知を元に戻しました" : "今日の通知を止めました。明日からはまた届きます。");
+      if(onChange) onChange();
+    }catch(e){ alert("通信できませんでした：" + e.message); }
+  }
+  window.HMPush = { setup, state, isOff, toggleOff };
 })();
