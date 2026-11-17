@@ -636,7 +636,7 @@ function viewToday(){
   ${dlv.length ? `<div class="hm-h"><span>今日の納品</span></div><div class="hm-sheet" style="padding:0 4px">${dlv.map(x => ordRow(x)).join("")}</div>` : ""}
   <div style="margin-top:20px">
     <button class="hm-key" data-act="todayrep">${rep ? "今日の日報を見る・直す" : "今日の日報を書く"}<small>${rep ? "書いてあります" : "まだ書いていません"}</small></button>
-    ${!window.HMPush ? "" : HMPush.state() !== "on" ? `<button class="hm-key2" data-act="pushsetup" style="margin-top:12px">書き忘れの通知を受け取る<small>月〜土 17:15・19:00</small></button>`
+    ${!window.HMPush ? "" : HMPush.state() !== "on" ? `<button class="hm-key2" data-act="pushsetup" style="margin-top:12px">書き忘れの通知を受け取る<small>平日 17:15・19:00</small></button>`
       : rep ? "" : `<button class="hm-key2" data-act="dayoff" style="margin-top:12px">${HMPush.isOff() ? "今日の通知を元に戻す" : "今日は休み（通知を止める）"}<small>${HMPush.isOff() ? "止めています" : "17:15・19:00"}</small></button>`}
   </div>
   <div class="hm-h"><span>明日 ${fmtDay(tm)} の手配 ${tps.length}件</span><button data-act="day" data-d="${tm}">明日を開く</button></div>
