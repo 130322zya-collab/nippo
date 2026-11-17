@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <title>日報管理・月次ミーティング | 株式会社濱崎組</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="../assets/icon-kanri-180.png">
+<meta name="theme-color" content="#6e4f26">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="日報管理">
+<link rel="stylesheet" href="../assets/brand.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;background:#f4f6f8;color:#1c2530;min-height:100vh}
@@ -155,6 +162,56 @@ mark.hl{background:#fff3b0;color:inherit;border-radius:2px;padding:0 1px}
   .person-header{padding:12px 14px}
   .person-body{padding:12px 12px}
 }
+
+/* ===== 案2：野帳・判子（11/17） ===== */
+body{font-family:var(--font);background:var(--paper);color:var(--sumi);font-size:15px}
+.container{padding:0 16px 24px}
+.head{background:#6e4f26;border-radius:0;margin:0 -16px;padding:16px 20px 14px}
+.head-title{font-size:21px;font-weight:700}
+.head-sub{color:rgba(255,255,255,.72);font-size:12px}
+.hm-rule.k{margin:0 -16px 0}
+.controls select,.search-box input,.reload-btn{border-radius:3px;font-size:14px;min-height:38px;border-bottom:2px solid #c9b48e}
+.logout-btn{border-radius:3px;min-height:38px;font-size:13px;color:#fff;border-color:rgba(255,255,255,.45)}
+.tabs{gap:0;margin:0 -16px 18px;padding:0 16px;background:#fff;border-bottom:2px solid var(--sumi);flex-wrap:nowrap;overflow-x:auto}
+.tab-btn,.tabs a.tab-btn{border:none;border-radius:0;background:transparent;color:var(--sub);font-size:15px;padding:14px 14px;white-space:nowrap}
+.tab-btn.active{background:var(--sumi);color:#fff}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:0;background:#fff;border-top:2px solid var(--sumi);border-bottom:1px solid var(--line);margin-bottom:18px}
+.stat{border:none;border-left:1px solid var(--line);border-radius:0;text-align:left;padding:12px 16px}
+.stat:first-child{border-left:none}
+.stat-num{font-size:30px;font-weight:700}
+.stat-lbl{font-size:13px;color:var(--sub)}
+.card{border:none;border-top:2px solid var(--sumi);border-radius:0;padding:16px 18px}
+.card-title{font-size:16px;color:var(--sumi)}
+.card-title-icon{display:none}
+.bar-label{font-size:14px}
+.bar-bg{border-radius:0;background:#eef0ec}
+.bar-fill{border-radius:0}
+.bar-val{font-size:14px}
+.sev-card{border-radius:3px}
+.sev-lbl{font-size:13px}.sev-sub{font-size:11px}
+.trend-label,.trend-val{font-size:12px}
+.person-section{border:none;border-top:2px solid var(--sumi);border-radius:0}
+.person-header{background:#fff}
+.person-name{color:var(--ai);font-size:16px}
+.person-meta{font-size:13px}
+button,select,input,textarea{font-family:var(--font)}
+.no-data{font-size:15px}
+.ts-table{width:100%;border-collapse:collapse;font-size:15px}
+.ts-table th{text-align:left;font-size:13px;color:var(--sub);padding:8px 10px;border-bottom:2px solid var(--sumi);background:#f6f7f4;font-weight:700}
+.ts-table td{padding:10px;border-bottom:1px solid var(--line)}
+.ts-table td:last-child{width:96px}
+.ts-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media(max-width:600px){
+  .head{padding:12px 14px}
+  .stats{grid-template-columns:repeat(5,1fr)}
+  .stat{padding:10px 4px;text-align:center}
+  .stat-num{font-size:22px}
+  .stat-lbl{font-size:12px}
+  .filt-toggle{background:rgba(255,255,255,.12)!important;border:1.5px solid rgba(255,255,255,.45)!important;border-radius:3px!important}
+  .ts-table th:nth-child(2),.ts-table td:nth-child(2){display:none}
+  .tab-btn,.tabs a.tab-btn{font-size:14px;padding:13px 12px}
+}
+@media print{.hm-rule{display:none}.head{background:#fff}}
 </style>
 </head>
 <body>
@@ -183,10 +240,10 @@ window.addEventListener('unhandledrejection', function(e){
 </script>
 <div class="container">
   <div class="head">
-    <div>
+    <div class="hm-brand"><div class="hm-mark" aria-hidden="true"><svg viewBox="0 0 26 26"><path d="M4 2h4v16h16v4H4z" fill="#d4ad6e"/><path d="M8 5h3M8 8h2M8 11h3M8 14h2M11 18v-3M14 18v-2M17 18v-3M20 18v-2" stroke="#d4ad6e" stroke-width="1.2"/></svg></div><div>
       <div class="head-title">日報管理・月次ミーティング</div>
-      <div class="head-sub">株式会社濱崎組 — 代表専用</div>
-    </div>
+      <div class="head-sub">株式会社濱崎組</div>
+    </div></div>
     <button class="filt-toggle" id="filt-toggle" type="button" aria-expanded="false"><span id="filt-sum">今月・全員</span><b>▼ 変える</b></button>
     <div class="controls">
       <select id="filter-period">
@@ -209,19 +266,21 @@ window.addEventListener('unhandledrejection', function(e){
     </div>
   </div>
 
+  <div class="hm-rule k"></div>
   <div class="search-hit-count" id="search-hit-count" style="display:none"></div>
 
   <div class="tabs">
-    <button class="tab-btn active" id="tbtn-summary">📊 月次サマリー</button>
-    <button class="tab-btn" id="tbtn-logs">📋 日別ログ</button>
-    <button class="tab-btn" id="tbtn-edu">🎓 育成チェック</button>
-    <button class="tab-btn" id="tbtn-karte">📈 成長カルテ</button>
-    <button class="tab-btn" id="tbtn-video">📹 動画</button>
-    <button class="tab-btn" id="tbtn-meeting">📝 議事録</button>
-    <button class="tab-btn" id="tbtn-tejun">📘 手順書</button>
-    <a class="tab-btn" href="../kantoku/#reports" style="text-decoration:none;display:inline-block">👷 監督日報 ↗</a>
+    <button class="tab-btn active" id="tbtn-summary">月次サマリー</button>
+    <button class="tab-btn" id="tbtn-logs">日別ログ</button>
+    <button class="tab-btn" id="tbtn-edu">育成チェック</button>
+    <button class="tab-btn" id="tbtn-karte">成長カルテ</button>
+    <button class="tab-btn" id="tbtn-video">動画</button>
+    <button class="tab-btn" id="tbtn-meeting">議事録</button>
+    <button class="tab-btn" id="tbtn-tejun">手順書</button>
+    <a class="tab-btn" href="../kantoku/#reports" style="text-decoration:none;display:inline-block">監督日報を開く</a>
   </div>
 
+  <div class="card" id="today-status" style="display:none"></div>
   <div class="stats">
     <div class="stat"><div class="stat-num" id="s-members" style="color:#1f4e7a">—</div><div class="stat-lbl">出勤人数</div></div>
     <div class="stat"><div class="stat-num" id="s-days" style="color:#1c2530">—</div><div class="stat-lbl">提出日数</div></div>
@@ -820,6 +879,7 @@ window.loadData=async function(){
   if(typeof updateFiltSum==="function")updateFiltSum();
   fillPeriodOptions(allData);
   updatePeriodNames();
+  renderTodayStatus(allData);
 
   allEntriesCache=[];
   let totalDays=0,totalMiss=0,totalSev=0,totalLearn=0;
@@ -1726,6 +1786,40 @@ document.getElementById("tejun-method").addEventListener("change",renderTejun);
 let tejunSearchTimer=null;
 document.getElementById("tejun-search").addEventListener("input",()=>{clearTimeout(tejunSearchTimer);tejunSearchTimer=setTimeout(renderTejun,250);});
 document.getElementById("print-btn").addEventListener("click",()=>window.print());
+
+// ==== 今日の提出状況（直近30日に日報を書いた人が対象） ====
+async function renderTodayStatus(allData){
+  const el=document.getElementById("today-status"); if(!el) return;
+  const d=new Date(), p2=n=>String(n).padStart(2,"0");
+  const key=`${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+  const from=new Date(d); from.setDate(from.getDate()-30);
+  const fromKey=`${from.getFullYear()}-${p2(from.getMonth()+1)}-${p2(from.getDate())}`;
+  const rows=[];
+  Object.entries(allData||{}).forEach(([uid,days])=>{
+    const ks=Object.keys(days||{}); if(!ks.some(k=>k>=fromKey)) return;
+    const last=ks.sort().slice(-1)[0], nm=(days[last]&&days[last].name)||uid, t=days[key];
+    rows.push({nm, kind:"大工", done:!!t, site:t?(t.site||""):""});
+  });
+  try{
+    if(isAdminUser()){
+      const ks=await get(ref(db,"kantoku_reports"));
+      if(ks.exists()) Object.entries(ks.val()).forEach(([uid,days])=>{
+        const k2=Object.keys(days||{}); if(!k2.some(k=>k>=fromKey)) return;
+        const last=k2.sort().slice(-1)[0], nm=(days[last]&&days[last].name)||uid, t=days[key];
+        rows.push({nm, kind:"監督", done:!!t, site:t?(t.site||""):""});
+      });
+    }
+  }catch(e){}
+  if(!rows.length){ el.style.display="none"; return; }
+  rows.sort((a,b)=>(a.done-b.done)||a.kind.localeCompare(b.kind,"ja")||a.nm.localeCompare(b.nm,"ja"));
+  const done=rows.filter(r=>r.done).length, left=rows.length-done;
+  const wd=["日","月","火","水","木","金","土"][d.getDay()];
+  el.style.display="";
+  el.innerHTML=`<div class="card-title ts-head">今日 ${d.getMonth()+1}月${d.getDate()}日（${wd}）の日報　<span class="hm-stamp sm green">提出 ${done}人</span>${left?`<span class="hm-stamp sm red">まだ ${left}人</span>`:""}</div>
+  <table class="ts-table"><tr><th>名前</th><th>日報</th><th>現場</th><th>状態</th></tr>
+  ${rows.map(r=>`<tr><td>${esc(r.nm)}</td><td>${r.kind}</td><td>${esc(r.site)||"―"}</td><td><span class="hm-stamp sm ${r.done?"green":"red"}">${r.done?"提出":"未提出"}</span></td></tr>`).join("")}</table>
+  <div style="font-size:13px;color:var(--faint);margin-top:8px">直近30日に日報を書いた人を出しています。休みの人も「未提出」に出ます。</div>`;
+}
 
 // ==== AI分析用エクスポート ====
 function buildAiExportText(){

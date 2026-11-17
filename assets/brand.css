@@ -1,0 +1,76 @@
+/* 濱崎組 現場アプリ 共通デザイン（大工日報・監督日報・日報管理）
+   形のもと：工事黒板（今日やること）・判子（状態）・野帳（一覧と書く欄）・差し金（ロゴと見出しの線）
+   色の決まり：赤＝危ない・期限切れ・未連絡・未発注／橙＝要確認・まもなく・連絡済・発注済／緑＝完了・確定・納品済
+   藍＝押すボタン・選んでいるもの／檜＝ロゴと目盛り線だけ */
+@import url("https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap");
+:root{
+  --sumi:#1f2428; --sub:#56606a; --faint:#7a838b; --line:#d6dad4; --paper:#eceee9; --card:#ffffff; --field:#fbfbf8;
+  --ai:#1f4a73; --ai-deep:#13314f; --ai-bg:#e3eaf2;
+  --hinoki:#d4ad6e; --board:#2f4a3c; --board-frame:#8a6a43; --chalk:#f4f3ea;
+  --red:#b3302a; --red-bg:#fbe8e5; --orange:#a35800; --orange-bg:#fcefdc; --green:#2a6f46; --green-bg:#e2f0e7;
+  --font:'BIZ UDPGothic','Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+  --nav-h:62px; --r:5px;
+}
+/* ---- 上の帯とロゴ ---- */
+.hm-top{background:var(--ai);color:#fff}
+.hm-top.sumi{background:#22282d}
+.hm-top.cha{background:#6e4f26}
+.hm-top-in{max-width:640px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) 14px 10px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.hm-brand{display:flex;align-items:center;gap:11px;min-width:0}
+.hm-mark{flex:none;width:38px;height:38px;border-radius:6px;background:rgba(255,255,255,.08);display:grid;place-items:center}
+.hm-mark svg{width:26px;height:26px;display:block}
+.hm-name{font-size:19px;font-weight:700;color:#fff;letter-spacing:.04em;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-co{font-size:12px;color:rgba(255,255,255,.72);margin-top:2px;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-menu-btn{flex:none;height:40px;padding:0 13px;border:1.5px solid rgba(255,255,255,.4);border-radius:4px;background:transparent;color:#fff;font:700 14px var(--font);cursor:pointer}
+.hm-menu-btn[aria-expanded="true"]{background:#fff;color:var(--sumi)}
+.hm-menu{max-width:640px;margin:0 auto;padding:4px 14px 12px;display:flex;flex-wrap:wrap;gap:8px}
+.hm-menu a,.hm-menu button{display:inline-flex;align-items:center;height:42px;padding:0 14px;border-radius:4px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;font:700 14px var(--font);text-decoration:none;cursor:pointer}
+.hm-menu .ver{color:rgba(255,255,255,.6);font-size:12px;align-self:center}
+/* 見出しの下の目盛り線（差し金） */
+.hm-rule{height:7px;background:
+  linear-gradient(var(--hinoki),var(--hinoki)) left bottom/100% 2px no-repeat,
+  repeating-linear-gradient(90deg,var(--hinoki) 0 2px,transparent 2px 12px) left bottom/100% 7px no-repeat}
+/* ---- 工事黒板（今日やること） ---- */
+.hm-board{background:var(--board);border:6px solid var(--board-frame);border-radius:3px;color:var(--chalk);padding:12px 14px 6px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}
+.hm-board-t{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-bottom:1.5px solid rgba(244,243,234,.5);padding-bottom:7px;margin-bottom:2px}
+.hm-board-t b{font-size:20px;letter-spacing:.05em}
+.hm-board-t span{font-size:14px;opacity:.85}
+.hm-board-row{display:flex;align-items:center;gap:10px;width:100%;min-height:50px;padding:6px 0;border:none;border-bottom:1px dashed rgba(244,243,234,.28);background:none;color:inherit;font:700 16px var(--font);text-align:left;cursor:pointer}
+.hm-board-row:last-child{border-bottom:none}
+.hm-board-row .k{flex:1}
+.hm-board-row .n{font-size:26px;min-width:40px;text-align:right}
+.hm-board-row .n.r{color:#ffa597}.hm-board-row .n.o{color:#f6c983}.hm-board-row .n.g{color:#b2e3c1}.hm-board-row .n.z{color:rgba(244,243,234,.5)}
+.hm-board-row .go{font-size:13px;border:1px solid rgba(244,243,234,.45);padding:3px 9px;border-radius:2px;opacity:.9}
+/* ---- 野帳（一覧の紙） ---- */
+.hm-sheet{background:#fff;border-top:2px solid var(--sumi);border-bottom:1px solid var(--line)}
+.hm-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:15px;font-weight:700;color:var(--sub);margin:20px 2px 7px}
+.hm-h a,.hm-h button{font:700 14px var(--font);color:var(--ai);background:none;border:none;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:4px 0}
+/* ---- 判子（状態） ---- */
+.hm-stamp{display:inline-grid;place-items:center;min-width:46px;min-height:46px;padding:2px 4px;border:2px solid currentColor;border-radius:4px;font:700 13px/1.15 var(--font);text-align:center;background:#fff;flex:none}
+.hm-stamp.tilt{transform:rotate(-4deg)}
+.hm-stamp.sm{min-width:0;min-height:0;padding:1px 7px;font-size:13px;border-width:1.5px;border-radius:3px}
+.hm-stamp.red{color:var(--red)}.hm-stamp.orange{color:var(--orange)}.hm-stamp.green{color:var(--green)}.hm-stamp.ai{color:var(--ai)}.hm-stamp.gray{color:var(--faint)}
+/* ---- 押しボタン ---- */
+.hm-key{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:60px;padding:0 18px;background:var(--ai);color:#fff;border:none;border-radius:var(--r);box-shadow:0 4px 0 var(--ai-deep);font:700 18px var(--font);text-align:left;cursor:pointer;text-decoration:none}
+.hm-key small{font-size:13px;font-weight:400;opacity:.85}
+.hm-key:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ai-deep)}
+.hm-key2{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:52px;padding:0 16px;background:#fff;color:var(--ai);border:2px solid var(--ai);border-radius:var(--r);box-shadow:0 3px 0 var(--ai-bg);font:700 15px var(--font);text-align:left;cursor:pointer}
+.hm-key2 small{font-size:13px;font-weight:400;color:var(--sub)}
+.hm-key2:active{transform:translateY(2px);box-shadow:none}
+/* ---- 下に固定するボタン列 ---- */
+.hm-nav{position:fixed;left:0;right:0;bottom:0;z-index:50;background:#fff;border-top:2px solid var(--sumi);padding-bottom:env(safe-area-inset-bottom)}
+.hm-nav-in{max-width:640px;margin:0 auto;display:flex}
+.hm-nav button,.hm-nav a{flex:1;min-width:0;height:var(--nav-h);background:none;border:none;color:var(--faint);font:700 12px var(--font);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-decoration:none;position:relative;cursor:pointer}
+.hm-nav svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.hm-nav .on{color:#fff;background:var(--ai)}
+.hm-nav .hm-dot{position:absolute;top:6px;left:calc(50% + 6px);min-width:18px;height:18px;border-radius:2px;background:var(--red);color:#fff;font-size:11px;line-height:18px;padding:0 4px}
+/* ---- 書く欄（罫線）と音声入力 ---- */
+.hm-ruled{background-color:var(--field)!important;background-image:repeating-linear-gradient(transparent 0 calc(1.6em - 1px),#e4e7e0 calc(1.6em - 1px) 1.6em)!important;line-height:1.6!important;background-attachment:local!important;padding-top:10px!important;background-position:0 10px!important}
+.hm-mic{display:inline-flex;align-items:center;gap:8px;margin-top:7px;height:42px;padding:0 14px;border-radius:3px;border:1.5px solid var(--sumi);background:#fff;color:var(--sumi);font:700 14px var(--font);cursor:pointer}
+.hm-mic i{width:10px;height:10px;border-radius:50%;background:var(--red);flex:none}
+.hm-mic.rec{border-color:var(--red);color:#fff;background:var(--red)}
+.hm-mic.rec i{background:#fff;animation:hm-blink 1s infinite}
+@keyframes hm-blink{50%{opacity:.2}}
+:focus-visible{outline:3px solid var(--hinoki);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

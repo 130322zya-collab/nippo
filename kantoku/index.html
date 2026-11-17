@@ -4,9 +4,17 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
 <title>現場監督日報・段取り | 株式会社濱崎組</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="../assets/icon-kantoku-180.png">
+<meta name="theme-color" content="#22282d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="監督日報">
+<link rel="stylesheet" href="../assets/brand.css">
+<script src="../assets/brand.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-:root{--ink:#1c2530;--sub:#6b7785;--faint:#9aa5b1;--line:#e3e7ec;--bg:#f4f6f8;--navy:#1f4e7a;--navyBg:#eef4fa;--amber:#c2710c;--amberBg:#fdf3e3;--green:#2f7d4f;--greenBg:#eaf5ee;--red:#c0392b;--redBg:#fdecea}
+:root{--ink:#1f2428;--bg:#eceee9;--navy:#1f4a73;--navyBg:#e3eaf2;--amber:#a35800;--amberBg:#fcefdc;--greenBg:#e2f0e7;--redBg:#fbe8e5}
 body{font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding-bottom:40px}
 .wrap{max-width:640px;margin:0 auto;padding:12px}
 button{font-family:inherit;cursor:pointer}
@@ -188,6 +196,91 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--navy);ba
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 20px;border-radius:24px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;white-space:nowrap}
 .toast.show{opacity:1}
 .center{max-width:380px;margin:40px auto;padding:0 16px}
+
+/* ===== 案2：工事黒板・判子・野帳（11/17） ===== */
+body{font-family:var(--font);background:var(--paper);color:var(--sumi);padding-bottom:calc(var(--nav-h) + 24px + env(safe-area-inset-bottom));font-size:16px}
+.wrap{padding:0 12px 12px}
+.head,.links,.tabs{display:none}
+.card{border:none;border-top:2px solid var(--sumi);border-radius:0;padding:14px 12px;margin-bottom:14px}
+.card-title{font-size:16px;color:var(--sumi);margin-bottom:12px}
+label{font-size:13px;color:var(--sub);letter-spacing:0;margin-bottom:5px}
+input,textarea,select{background:var(--field);border:1px solid #bfc5bd;border-radius:3px;font-size:16px;padding:11px 12px}
+input:focus,textarea:focus,select:focus{border-color:var(--ai);box-shadow:0 0 0 2px var(--ai-bg)}
+.small{font-size:13px;color:var(--faint)}
+.btn{border-radius:var(--r);padding:12px 14px;font-size:15px;min-height:46px}
+.btn-navy{background:var(--ai);box-shadow:0 3px 0 var(--ai-deep)}
+.btn-navy:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ai-deep);opacity:1}
+.btn-light{background:#fff;color:var(--ai);border:1.5px solid var(--ai)}
+.btn-ghost{border:1.5px solid #bfc5bd;color:var(--sub)}
+.btn-red{background:#fff;border:1.5px solid var(--red)}
+.btn-big{min-height:60px;font-size:18px;border-radius:var(--r)}
+.mbtn{border-radius:4px;width:46px;height:46px;border:1.5px solid #bfc5bd}
+.mlabel{font-size:20px;font-weight:700}
+.cell{min-height:62px;border-radius:3px}
+.cell .d{font-size:15px;font-weight:700}
+.cell.today{border:2px solid var(--ai);background:#fff}
+.cell.sel{background:var(--ai-bg)}
+.cell .pc{font-size:11px;border-radius:2px;line-height:17px;font-weight:700}
+.cell .ok{font-size:11px;font-weight:700}
+.wrow div{font-size:13px}
+.legend{font-size:13px}
+.plan{background:#fff;border:none;border-left:none;border-bottom:1px solid var(--line);border-radius:0;padding:12px 4px;margin:0}
+.plan.st-未連絡,.plan.st-連絡済,.plan.st-確定{border-left:none}
+.site-h{font-size:14px;color:var(--sub);margin:14px 0 2px;padding-bottom:4px;border-bottom:2px solid var(--sumi)}
+.p-main{font-size:17px}
+.p-sub{font-size:14px;line-height:1.6}
+.p-memo{font-size:14px}
+.sts{gap:6px;margin-top:10px}
+.st{border:1.5px solid #c9cec7;border-radius:3px;padding:8px 0;font-size:13px;color:var(--faint);background:#fff;min-height:42px}
+.st.on.s-未連絡{background:#fff;border:2px solid var(--red);color:var(--red)}
+.st.on.s-連絡済{background:#fff;border:2px solid var(--orange);color:var(--orange)}
+.st.on.s-確定{background:#fff;border:2px solid var(--green);color:var(--green)}
+.st.on.s-中止{background:#fff;border:2px solid var(--sub);color:var(--sub)}
+.p-acts{gap:8px;margin-top:10px}
+.p-acts a,.p-acts button,.more-acts a,.more-acts button{font-size:14px;border-radius:3px;padding:0 14px;min-height:42px;display:inline-flex;align-items:center;background:#fff;border:1.5px solid #bfc5bd;color:var(--sumi)}
+.p-acts .a-tel{border-color:var(--ai);color:var(--ai)}
+.more-acts .a-del{border-color:var(--red);color:var(--red)}
+.chk-sum{border-radius:3px;padding:10px 12px;font-size:14px;background:#fff;border:1.5px solid var(--ai)}
+.chk-sum.late{background:#fff;border-color:var(--red)}
+.chk{font-size:15px;padding:7px 0}
+.chk input{width:22px;height:22px}
+.alert{background:#fff;color:var(--red);border:2px solid var(--red);border-radius:3px;font-size:15px;padding:12px}
+.info{background:#fff;color:var(--green);border:2px solid var(--green);border-radius:3px;font-size:15px;padding:12px}
+.date-h{font-size:16px;margin:20px 2px 4px;padding-bottom:5px;border-bottom:2px solid var(--sumi)}
+.ost{border-radius:3px;font-size:13px;padding:5px 10px;background:#fff!important;border-width:2px}
+.ord{font-size:15px;padding:9px 0}
+.ord-box{border-radius:3px}
+.sup-btn{border-radius:var(--r);min-height:50px;font-size:15px;box-shadow:0 3px 0 var(--ai-bg)}
+.chip{border-radius:3px;font-size:14px;padding:9px 13px;border-color:#bfc5bd}
+.chip.on{background:#fff;border:2px solid var(--ai)}
+.sev{border-radius:3px;font-size:13px;border:1.5px solid currentColor;background:#fff!important}
+.miss{border-radius:3px;background:#fff;border:1px solid var(--line);border-top:3px solid var(--orange)}
+.miss-n{font-size:14px;color:var(--orange)}
+.x{border-radius:3px;height:44px;background:#fff;border:1.5px solid var(--red)}
+.ph img{border-radius:3px}
+.ph-add{border-radius:3px;height:46px}
+.daynav{margin:14px 0 10px}
+.daynav .t{font-size:18px}
+.mtag{border-radius:2px;font-size:12px}
+.ygrid{gap:10px}.ym{border-radius:3px;border:none;border-top:2px solid var(--sumi)}
+.ym-h{font-size:15px}.ym-w{font-size:10px}.yd{font-size:11px}
+.gantt{border-radius:3px}
+.g-label{font-size:13px}
+.g-bar{border-radius:3px;font-size:11px}
+.toast{border-radius:4px;bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom));font-size:15px}
+.pf-more,.paste-card,.of-row{border-radius:3px}
+.seg{display:flex;margin:14px 0 10px;border:2px solid var(--sumi);border-radius:4px;overflow:hidden}
+.seg button{flex:1;min-height:44px;border:none;background:#fff;font:700 15px var(--font);color:var(--sub)}
+.seg button.on{background:var(--sumi);color:#fff}
+.tk-list{background:#fff}
+.tk{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.tk:last-child{border-bottom:none}
+.tk .m{flex:1;min-width:0}
+.tk .s{font-size:14px;color:var(--sub)}
+.tk .t{font-size:17px;font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tk .tel{flex:none;min-height:46px;padding:0 13px;border:1.5px solid var(--ai);color:var(--ai);font-weight:700;font-size:14px;display:flex;align-items:center;border-radius:3px;background:#fff;text-decoration:none}
+.tk-empty{padding:16px 4px;color:var(--sub);font-size:15px}
+.today-date{font-size:14px;color:var(--sub);margin:16px 2px 8px}
 </style>
 </head>
 <body>
@@ -221,7 +314,7 @@ const db = getDatabase(fbApp);
 const auth = getAuth(fbApp);
 
 // 画面に出す版（更新が反映されたかの確認用）
-const APP_VER = "11/16-2 Claudeで日報";
+const APP_VER = "11/17 新デザイン";
 // ===== 定数 =====
 const WX = ["晴れ","曇り","雨","雪","強風"];
 const MISS_CATS = ["現場管理","安全","工程","資材","職人とのやり取り","その他"];
@@ -317,7 +410,7 @@ const S = {
   names: {},                          // uid -> 表示名
   plans: {},                          // id -> 手配
   myReports: {},                      // date -> 日報
-  view: "cal",                        // cal | day | report | upcoming | names
+  view: "today",                      // cal | day | report | upcoming | names
   cursor: new Date(),
   selDate: today(),
   site: lsGet("kantoku_site_filter", ""),
@@ -445,7 +538,7 @@ function watchMyReports(){
   if(!S.me) return;
   S.unsubReports = onValue(ref(db, `kantoku_reports/${uidOf(S.me)}`), snap => {
     S.myReports = snap.exists() ? snap.val() : {};
-    if((S.view === "cal" || S.view === "day") && !S.planEdit) render();
+    if((S.view === "cal" || S.view === "day" || S.view === "today") && !S.planEdit) render();
   });
 }
 
@@ -468,16 +561,85 @@ function refreshLists(){
 // ===== 共通の上部 =====
 function header(){
   return `
+  <div class="hm-top sumi" style="margin:0 -12px"><div class="hm-top-in">
+    <div class="hm-brand">${HM.mark()}<div style="min-width:0"><div class="hm-name">監督日報・段取り</div><div class="hm-co">株式会社濱崎組${S.me ? "　" + esc(S.me) + "さん" : ""}</div></div></div>
+    <button class="hm-menu-btn" data-act="menu" aria-expanded="${S.menu ? "true" : "false"}">メニュー</button>
+  </div>
+  ${S.menu ? `<div class="hm-menu">
+    <button data-act="names">名前を変える${S.me ? "（" + esc(S.me) + "）" : ""}</button>
+    <button data-act="master">工程ごとの材料・ルール</button>
+    <button data-act="view" data-v="year">年間カレンダー</button>
+    <a href="../">大工日報</a><a href="../kanri/">日報管理</a>
+    <button data-act="pushsetup">通知の設定</button>
+    <button data-act="logout">ログアウト</button>
+    <span class="ver">版 ${APP_VER}</span>
+  </div>` : ""}
+  </div>
+  <div class="hm-rule" style="margin:0 -12px 0"></div>
   <div class="head">
     <div><div class="head-title">現場監督日報・段取り</div><div class="head-sub">株式会社濱崎組</div></div>
     <button class="name-chip" data-act="names">${S.me ? "👤 " + esc(S.me) : "名前を選ぶ"}</button>
   </div>
   <div class="links"><a href="../">大工日報 →</a><a href="../kanri/">日報管理 →</a><a href="#" data-act="master">⚙ 工程ごとの材料・ルール</a><a href="#" data-act="logout" style="color:var(--faint)">ログアウト</a><span style="color:var(--faint);font-size:11px">版 ${APP_VER}</span></div>`;
 }
-function tabs(){
-  const t = (v,l) => `<button class="tab ${S.view===v||(v==="cal"&&S.view==="day")?"on":""}" data-act="view" data-v="${v}">${l}</button>`;
+function tabs(){ return ""; }
+const NAV_ICON = {
+  today:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>',
+  cal:'<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="1"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>',
+  upcoming:'<svg viewBox="0 0 24 24"><path d="M6 6h12M6 12h12M6 18h8"/></svg>',
+  gantt:'<svg viewBox="0 0 24 24"><path d="M4 7h9M8 12h10M6 17h8"/></svg>',
+  reports:'<svg viewBox="0 0 24 24"><path d="M7 3h8l4 4v14H7z"/><path d="M10 12h6M10 16h6"/></svg>'
+};
+function bottomNav(){
+  const on = v => S.view === v || (v === "cal" && (S.view === "day" || S.view === "year"));
   const n = pendingCount();
-  return `<div class="tabs">${t("cal","📅 月")}${t("year","🗓 年間")}${t("gantt","📊 工程")}${t("upcoming", "📋 今後" + (n ? `<span class="badge">${n}</span>` : ""))}${t("reports","📝 日報")}</div>`;
+  const b = (v,l,dot) => `<button class="${on(v)?"on":""}" data-act="view" data-v="${v}" aria-current="${on(v)?"page":"false"}">${NAV_ICON[v]}${l}${dot ? `<span class="hm-dot">${dot}</span>` : ""}</button>`;
+  return `<nav class="hm-nav"><div class="hm-nav-in">${b("today","今日")}${b("cal","カレンダー")}${b("upcoming","今後",n)}${b("gantt","工程表")}${b("reports","日報")}</div></nav>`;
+}
+function calSeg(){
+  return `<div class="seg"><button class="${S.view!=="year"?"on":""}" data-act="view" data-v="cal">月</button><button class="${S.view==="year"?"on":""}" data-act="view" data-v="year">年間</button></div>`;
+}
+// ----- 今日（開くと最初の画面） -----
+function viewToday(){
+  const t = today(), ps = plansOn(t).filter(([,p]) => p.status !== "中止");
+  const al = computeAlerts();
+  const pend = pendingCount();
+  const unord = ordersBetween(addDays(t,-7), addDays(t,3), true).filter(x => (x.o.status||"未発注") === "未発注").length;
+  const over = al.filter(a => a.lv === "over" && !String(a.text).startsWith("材料「")).length;
+  const near = al.filter(a => a.lv === "soon" || a.lv === "mat").length;
+  const dlv = ordersBetween(t, t);
+  const rep = S.myReports[t];
+  const tm = addDays(t,1), tps = plansOn(tm).filter(([,p]) => p.status !== "中止");
+  const row = (k, n, cls, act, extra="") => `<button class="hm-board-row" data-act="${act}" ${extra}><span class="k">${k}</span><span class="n ${n ? cls : "z"}">${n}</span><span class="go">見る</span></button>`;
+  const stCls = s => s === "確定" ? "green" : s === "連絡済" ? "orange" : "red";
+  const item = ([id,p], d) => {
+    const tel = (p.contact || "").replace(/[^0-9+]/g, "");
+    const st = p.status || "未連絡";
+    return `<div class="tk" data-act="day" data-d="${d}">
+      <span class="hm-stamp tilt ${stCls(st)}">${st === "連絡済" ? "連絡<br>済" : esc(st)}</span>
+      <div class="m"><div class="s">${esc(p.site||"現場なし")}${p.time ? "　" + esc(p.time) : ""}</div><div class="t">${esc(p.trade||"")}　${esc(p.company||"")}${p.count ? " " + esc(p.count) + "名" : ""}</div></div>
+      ${tel ? `<a class="tel" href="tel:${esc(tel)}" data-act="noop">電話</a>` : ""}
+    </div>`;
+  };
+  return `
+  <div style="height:14px"></div>
+  <div class="hm-board">
+    <div class="hm-board-t"><b>本日 ${fmtDay(t)}</b><span>${esc(S.me||"")}</span></div>
+    ${row("未連絡の手配", pend, "r", "pendgo")}
+    ${row("未発注の材料", unord, "r", "view", 'data-v="upcoming"')}
+    ${row("期限切れの段取り", over, "r", "view", 'data-v="upcoming"')}
+    ${row("期限が近い段取り", near, "o", "view", 'data-v="upcoming"')}
+    ${row("今日届く材料", dlv.length, "g", "day", `data-d="${t}"`)}
+  </div>
+  <div class="hm-h"><span>今日の手配 ${ps.length}件</span><button data-act="day" data-d="${t}">この日を開く</button></div>
+  <div class="hm-sheet tk-list">${ps.length ? ps.map(x => item(x, t)).join("") : `<div class="tk-empty">今日の手配はありません。</div>`}</div>
+  ${dlv.length ? `<div class="hm-h"><span>今日の納品</span></div><div class="hm-sheet" style="padding:0 4px">${dlv.map(x => ordRow(x)).join("")}</div>` : ""}
+  <div style="margin-top:20px">
+    <button class="hm-key" data-act="todayrep">${rep ? "今日の日報を見る・直す" : "今日の日報を書く"}<small>${rep ? "書いてあります" : "まだ書いていません"}</small></button>
+    ${window.HMPush && HMPush.state() !== "on" ? `<button class="hm-key2" data-act="pushsetup" style="margin-top:12px">書き忘れの通知を受け取る<small>月〜土 17:15</small></button>` : ""}
+  </div>
+  <div class="hm-h"><span>明日 ${fmtDay(tm)} の手配 ${tps.length}件</span><button data-act="day" data-d="${tm}">明日を開く</button></div>
+  <div class="hm-sheet tk-list">${tps.length ? tps.map(x => item(x, tm)).join("") : `<div class="tk-empty">明日の手配はありません。</div>`}</div>`;
 }
 
 // 手配がその日に入っているか（複数日の手配に対応）
@@ -530,7 +692,7 @@ const ordDate = (o, p) => o.deliver || p.date;
 function supplierTel(name){ const c = name && (S.companies||{})[uidOf(name)]; return c && c.contact ? c.contact.replace(/[^0-9+]/g, "") : ""; }
 function orderBlock(id, p){
   const os = ordersOf(p); if(!os.length) return "";
-  return `<div class="ord-box"><div class="ord-h">📦 材料の手配（${os.filter(o => o.status === "納品済").length}/${os.length} 納品済）</div>${os.map((o,i) => { const tel = supplierTel(o.supplier); return `<div class="ord">
+  return `<div class="ord-box"><div class="ord-h">材料の手配（${os.filter(o => o.status === "納品済").length}/${os.length} 納品済）</div>${os.map((o,i) => { const tel = supplierTel(o.supplier); return `<div class="ord">
     <div class="o-main"><b>${esc(o.item||"（材料）")}</b>${o.qty?`　${esc(o.qty)}`:""}<br><span class="small">${o.supplier?esc(o.supplier):"業者未定"}${o.deliver?`・${fmtDay(o.deliver)}納品`:""}${tel?`　<a href="tel:${esc(tel)}">📞</a>`:""}</span></div>
     <button class="ost o-${esc(o.status||"未発注")}" data-act="ordst" data-id="${id}" data-i="${i}" title="タップで次の状況へ">${esc(o.status||"未発注")}</button>
   </div>`; }).join("")}</div>`;
@@ -601,13 +763,13 @@ function alertBanner(){
   const al = computeAlerts();
   if(!al.length) return "";
   const over = al.filter(a => a.lv === "over").length, rest = al.length - over;
-  return `<div class="alert" data-act="view" data-v="upcoming" style="cursor:pointer">⚠ 段取りのアラート：${over ? `期限切れ ${over} 件　` : ""}${rest ? `まもなく・材料 ${rest} 件` : ""} →</div>`;
+  return `<div class="alert" data-act="view" data-v="upcoming" style="cursor:pointer">段取りのアラート：${over ? `期限切れ ${over} 件　` : ""}${rest ? `まもなく・材料 ${rest} 件` : ""} →</div>`;
 }
 function alertList(){
   const al = computeAlerts();
-  if(!al.length) return `<div class="info">✓ 事前の段取り・材料の確認に漏れはありません</div>`;
+  if(!al.length) return `<div class="info">事前の段取り・材料の確認に漏れはありません</div>`;
   return `<div class="card" style="border:2px solid var(--red)">
-    <div class="card-title" style="color:var(--red)">⚠ 段取りのアラート（${al.length}件）</div>
+    <div class="card-title" style="color:var(--red)">段取りのアラート（${al.length}件）</div>
     ${(S.alertAll ? al : al.slice(0,5)).map(a => `<div style="padding:7px 0;border-bottom:1px dashed var(--line);display:flex;justify-content:space-between;gap:8px;align-items:center">
       <div style="font-size:13px;line-height:1.5"><b style="color:${a.lv==="over"?"var(--red)":"var(--amber)"}">${a.lv==="over"?"期限切れ":a.lv==="soon"?"まもなく":a.lv==="order"?"未発注":"材料"}</b>　${esc(a.text)}<br>
       <span class="small">${a.lv==="mat"?"":a.lv==="order"?fmtDay(a.due)+"納品／":fmtDay(a.due)+"まで／"}${esc(a.p.trade||"")} ${esc(a.p.company||"")}（${fmtDay(a.p.date)}・${esc(a.p.site||"")}）</span></div>
@@ -625,16 +787,16 @@ function checkBlock(id, p){
   const late = tpl.prep.some(x => !done.includes("p:"+x.t) && addDays(p.date, -(Number(x.d)||0)) < t) && p.date >= t;
   const open = !!S.openChk[id];
   let html = `<button class="chk-sum ${late?"late":""}" data-act="togglechk" data-id="${id}">
-    ⏰ 事前段取り ${pd2}/${tpl.prep.length}　📦 材料 ${md}/${tpl.materials.length}　⚠ ルール ${tpl.rules.length}${late?"　<b>期限切れあり</b>":""}<span style="float:right">${open?"▲":"▼"}</span></button>`;
+    事前段取り ${pd2}/${tpl.prep.length}　材料 ${md}/${tpl.materials.length}　ルール ${tpl.rules.length}${late?"　<b>期限切れあり</b>":""}<span style="float:right">${open?"▲":"▼"}</span></button>`;
   if(!open) return html;
   const box = (k, label, sub) => `<label class="chk ${done.includes(k)?"on":""}"><input type="checkbox" data-act="chk" data-id="${id}" data-k="${esc(k)}" ${done.includes(k)?"checked":""}><span>${esc(label)}${sub?`<span class="small"> ${sub}</span>`:""}</span></label>`;
   html += `<div class="chk-body"><div class="small" style="margin-bottom:4px">${METHODS[m]}の内容</div>`;
-  if(tpl.prep.length) html += `<div class="chk-h">⏰ 事前の段取り</div>` + tpl.prep.map(x => {
+  if(tpl.prep.length) html += `<div class="chk-h">事前の段取り</div>` + tpl.prep.map(x => {
     const due = addDays(p.date, -(Number(x.d)||0)), k = "p:"+x.t, over = !done.includes(k) && due < t;
     return box(k, x.t, `<span style="color:${over?"var(--red)":"var(--faint)"}">（${fmtDay(due)}まで${over?"・期限切れ":""}）</span>`);
   }).join("");
-  if(tpl.materials.length){ const os = ordersOf(p); html += `<div class="chk-h">📦 必要な材料</div>` + tpl.materials.map(x => { const o = os.find(y => y.item && (y.item === x || x.includes(y.item) || y.item.includes(x))); return box("m:"+x, x, o ? `<span class="ost o-${esc(o.status||"未発注")}" style="padding:1px 7px">${esc(o.status||"未発注")}</span>` : ""); }).join(""); }
-  if(tpl.rules.length) html += `<div class="chk-h">⚠ 気を付けるルール</div><ul class="rules">${tpl.rules.map(r => `<li>${esc(r)}</li>`).join("")}</ul>`;
+  if(tpl.materials.length){ const os = ordersOf(p); html += `<div class="chk-h">必要な材料</div>` + tpl.materials.map(x => { const o = os.find(y => y.item && (y.item === x || x.includes(y.item) || y.item.includes(x))); return box("m:"+x, x, o ? `<span class="ost o-${esc(o.status||"未発注")}" style="padding:1px 7px">${esc(o.status||"未発注")}</span>` : ""); }).join(""); }
+  if(tpl.rules.length) html += `<div class="chk-h">気を付けるルール</div><ul class="rules">${tpl.rules.map(r => `<li>${esc(r)}</li>`).join("")}</ul>`;
   html += `<div class="small" style="margin-top:6px">${tpl.custom?"":"※標準の例です。"}<a href="#" data-act="edittpl" data-t="${esc(p.trade)}" data-m="${m}">「${esc(p.trade)}」の内容を直す</a></div></div>`;
   return html;
 }
@@ -657,7 +819,7 @@ function viewMaster(){
   <button class="btn btn-light btn-block" style="margin-bottom:10px" data-act="view" data-v="cal">← カレンダーに戻る</button>
   <div class="tabs">${Object.entries(METHODS).map(([k,l]) => `<button class="tab ${k===m?"on":""}" data-act="tplmethod" data-m="${k}">${l}</button>`).join("")}</div>
   <div class="card">
-    <div class="card-title">⚙ ${METHODS[m]}の工程（材料・ルール・事前の段取り）</div>
+    <div class="card-title">${METHODS[m]}の工程（材料・ルール・事前の段取り）</div>
     <div class="small" style="margin-bottom:10px">工程名をタップすると中身を直せます。↑↓で順番を入れ替えられます（手配を入れるときの業種の候補もこの順に出ます）。「標準の例」は参考なので、自社のやり方に合わせて直してください。</div>
     ${list.map((n,i) => { const t = getTpl(n, m); return `<div class="tpl-row">
       <button class="tpl-name" data-act="edittpl" data-t="${esc(n)}" data-m="${m}"><span>${i+1}. ${esc(n)}</span><span class="small">${!t ? "未登録" : t.custom ? `自社用（材料${t.materials.length}・ルール${t.rules.length}・段取り${t.prep.length}）` : "標準の例"}</span></button>
@@ -671,7 +833,7 @@ function viewMaster(){
     </div>
   </div>
   <div class="card" id="site-card">
-    <div class="card-title">🏗️ 現場（追加・工法の設定）</div>
+    <div class="card-title">現場（追加・工法の設定）</div>
     <div class="small" style="margin-bottom:8px">手配のチェックリストは、その現場の工法の内容が使われます。</div>
     <div style="display:flex;gap:6px;margin-bottom:12px">
       <input id="new-site" placeholder="現場名（例：〇〇邸新築工事）" style="flex:1">
@@ -698,12 +860,12 @@ function viewTplEdit(){
   return `
   <button class="btn btn-light btn-block" style="margin-bottom:10px" data-act="tplback">← ${S.tplFrom ? "戻る" : "工程の一覧に戻る"}</button>
   <div class="card">
-    <div class="card-title">✏️ ${METHODS[m]}「${esc(n)}」</div>
+    <div class="card-title">${METHODS[m]}「${esc(n)}」</div>
     ${t.custom ? "" : `<div class="info" style="font-weight:600">${getTpl(n, m) ? "今は標準の例です。保存すると自社用になります。" : "まだ登録がありません。"}</div>`}
     ${ot ? `<button class="btn btn-ghost btn-block" style="margin-bottom:10px;font-size:13px" data-act="tplcopy">${METHODS[other]}の内容を下にコピーする</button>` : ""}
-    <div class="field"><label>📦 必要な材料（1行に1つ）</label><textarea id="te-mat" rows="5">${esc(t.materials.join("\n"))}</textarea></div>
-    <div class="field"><label>⚠ 気を付けるルール・検査・仕様（1行に1つ）</label><textarea id="te-rule" rows="5">${esc(t.rules.join("\n"))}</textarea></div>
-    <div class="field"><label>⏰ 事前の段取り（1行に1つ。「7日前：近隣挨拶」の形で）</label><textarea id="te-prep" rows="5">${esc(t.prep.map(x => `${x.d}日前：${x.t}`).join("\n"))}</textarea>
+    <div class="field"><label>必要な材料（1行に1つ）</label><textarea id="te-mat" rows="5">${esc(t.materials.join("\n"))}</textarea></div>
+    <div class="field"><label>気を付けるルール・検査・仕様（1行に1つ）</label><textarea id="te-rule" rows="5">${esc(t.rules.join("\n"))}</textarea></div>
+    <div class="field"><label>事前の段取り（1行に1つ。「7日前：近隣挨拶」の形で）</label><textarea id="te-prep" rows="5">${esc(t.prep.map(x => `${x.d}日前：${x.t}`).join("\n"))}</textarea>
       <div class="small" style="margin-top:4px">日数を書かないと「当日」になります。手配の日から逆算して期限を出し、過ぎたらアラートを出します。</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       ${t.custom ? `<button class="btn btn-red" style="flex:1" data-act="resettpl">${defaultsOf(m)[n]?"標準に戻す":"内容を消す"}</button>` : ""}
@@ -769,15 +931,16 @@ function render(){
   const v = S.view;
   let body = "";
   if(v === "names") body = viewNames();
-  else if(v === "cal") body = viewCal();
+  else if(v === "today") body = viewToday();
+  else if(v === "cal") body = calSeg() + viewCal();
   else if(v === "day") body = viewDay();
   else if(v === "upcoming") body = viewUpcoming();
-  else if(v === "year") body = viewYear();
+  else if(v === "year") body = calSeg() + viewYear();
   else if(v === "master") body = viewMaster();
   else if(v === "reports") body = viewReports();
   else if(v === "gantt") body = viewGantt();
   else if(v === "report") return renderReport();
-  $("#app").innerHTML = `<div class="wrap">${header()}${v==="names"?"":tabs()}${body}</div>`;
+  $("#app").innerHTML = `<div class="wrap">${header()}${v==="names"?"":tabs()}${body}</div>${v==="names"?"":bottomNav()}`;
   if(v === "gantt") scrollGanttToToday();
   if(S.planEdit) showCompChips();
 }
@@ -787,7 +950,7 @@ function viewNames(){
   const list = Object.entries(S.names).sort((a,b)=>a[1].localeCompare(b[1]));
   return `
   <div class="card">
-    <div class="card-title">👤 あなたの名前を選んでください</div>
+    <div class="card-title">あなたの名前を選んでください</div>
     ${list.length ? list.map(([uid,n]) => `<button class="btn ${n===S.me?"btn-navy":"btn-ghost"} btn-block" style="margin-bottom:6px" data-act="pick" data-n="${esc(n)}">${esc(n)}</button>`).join("") : `<div class="small" style="margin-bottom:8px">まだ登録がありません。下から追加してください。</div>`}
     <div style="display:flex;gap:6px;margin-top:10px">
       <input id="new-name" placeholder="名前を追加（例：濱崎）">
@@ -819,7 +982,7 @@ function viewCal(){
   }
   const n = pendingCount();
   return `
-  ${n ? `<div class="alert" data-act="view" data-v="upcoming" style="cursor:pointer">📞 1か月以内に未連絡の手配が ${n} 件あります →</div>` : ""}
+  ${n ? `<div class="alert" data-act="view" data-v="upcoming" style="cursor:pointer">1か月以内に未連絡の手配が ${n} 件あります →</div>` : ""}
   ${alertBanner()}
   ${siteFilter()}
   <div class="card">
@@ -868,15 +1031,15 @@ function viewReports(){
     const vs = toArr(r.visits).length ? toArr(r.visits) : [{ site:r.site, work:r.work, anzen:r.anzen, demen:r.demen, photos:r.photos }];
     vs.forEach(v => {
       const vdm = toArr(v.demen);
-      h += `<div class="site-h" style="margin-top:10px">🏗️ ${esc(v.site||"（現場名なし）")}${vdm.length?`　<span class="small">出面 ${vdm.reduce((n,x)=>n+(parseFloat(x.count)||0),0)}名</span>`:""}</div>`;
+      h += `<div class="site-h" style="margin-top:10px">${esc(v.site||"（現場名なし）")}${vdm.length?`　<span class="small">出面 ${vdm.reduce((n,x)=>n+(parseFloat(x.count)||0),0)}名</span>`:""}</div>`;
       if(vdm.length) h += vdm.map(x => `<div class="p-sub">・${esc(x.trade)} ${esc(x.company)} ${x.count!==""?esc(x.count)+"名":""}</div>`).join("");
       h += sec("現場の様子", v.work) + photoThumbs(v.photos) + sec("安全・検査・打合せ", v.anzen);
     });
-    if(ms.length) h += `<div class="chk-h">⚠️ ミス・問題</div>` + ms.map(z => `<div style="margin:4px 0;padding:6px 8px;background:#fafbfc;border-radius:8px">
+    if(ms.length) h += `<div class="chk-h">ミス・問題</div>` + ms.map(z => `<div style="margin:4px 0;padding:6px 8px;background:#fafbfc;border-radius:8px">
       <div style="font-size:13px">${z.sev?`<span class="sev sev-${esc(z.sev)}">${esc(z.sev)}</span> `:""}${z.site?`<span class="small">［${esc(z.site)}］</span> `:""}${z.big?`<span class="small">${esc(z.big)}</span> `:""}${esc(z.text)}</div>
       ${z.cause?`<div class="p-sub">原因：${esc(z.cause)}</div>`:""}${z.taisaku?`<div class="p-sub" style="color:var(--green)">対策：${esc(z.taisaku)}</div>`:""}${z.redo?`<div class="p-sub">対応時間：${esc(z.redo)}分</div>`:""}${photoThumbs(z.photos)}
     </div>`).join("");
-    h += sec("💡 学び・気づき", r.learn) + sec("🎯 申し送り", r.next);
+    h += sec("学び・気づき", r.learn) + sec("申し送り", r.next);
     if((r.name || "") === S.me) h += `<button class="btn btn-light btn-block" style="margin-top:8px" data-act="repedit" data-d="${d}">自分の日報なので開いて直す</button>`;
     return h + `</div></div>`;
   };
@@ -1035,23 +1198,23 @@ function planCard(id, p, showDate){
   <div class="plan st-${esc(p.status||"未連絡")}">
     <div class="p-main">${esc(p.trade||"（業種なし）")}${p.company?`　${esc(p.company)}`:""}${p.count?`　${esc(p.count)}名`:""}</div>
     <div class="p-sub">
-      ${p.time ? `🕗 ${esc(p.time)}　` : ""}🏗️ ${esc(p.site||"（現場なし）")}　<span class="mtag mt-${methodOf(p)}">${methodShort(methodOf(p))}</span>
-      ${multi ? `<br>📆 ${fmtDay(p.date)} 〜 ${fmtDay(p.dateTo)}` : ""}
-      ${p.contact ? `<br>📞 ${esc(p.contact)}` : ""}
+      ${esc(p.site||"（現場なし）")}${p.time ? `　${esc(p.time)}` : ""}　<span class="mtag mt-${methodOf(p)}">${methodShort(methodOf(p))}</span>
+      ${multi ? `<br>期間 ${fmtDay(p.date)} 〜 ${fmtDay(p.dateTo)}` : ""}
+      ${p.contact ? `<br>電話 ${esc(p.contact)}` : ""}
     </div>
     ${p.memo ? `<div class="p-memo">${esc(p.memo)}</div>` : ""}
     ${p.status !== "中止" ? orderBlock(id, p) : ""}
     ${p.status !== "中止" ? checkBlock(id, p) : ""}
     <div class="sts">${STATUSES.map(s => `<button class="st s-${s} ${ (p.status||"未連絡")===s?"on":""}" data-act="status" data-id="${id}" data-s="${s}">${s}</button>`).join("")}</div>
     <div class="p-acts">
-      ${tel ? `<a class="a-tel" href="tel:${esc(tel)}">📞 電話</a>` : ""}
-      <button class="a-edit" data-act="editplan" data-id="${id}">✏️ 編集・材料</button>
+      ${tel ? `<a class="a-tel" href="tel:${esc(tel)}">電話</a>` : ""}
+      <button class="a-edit" data-act="editplan" data-id="${id}">編集・材料</button>
       <button class="a-edit" data-act="moreacts" data-id="${id}">${S.openMore && S.openMore[id] ? "▲ 閉じる" : "⋯ ほか"}</button>
     </div>
     ${S.openMore && S.openMore[id] ? `<div class="more-acts">
-      <a class="a-gcal" href="${gcalUrl(p)}" target="_blank" rel="noopener">📅 予定に追加</a>
-      <button class="a-edit" data-act="copyplan" data-id="${id}">📄 複製</button>
-      <button class="a-del" data-act="delplan" data-id="${id}">🗑 削除</button>
+      <a class="a-gcal" href="${gcalUrl(p)}" target="_blank" rel="noopener">予定に追加</a>
+      <button class="a-edit" data-act="copyplan" data-id="${id}">複製</button>
+      <button class="a-del" data-act="delplan" data-id="${id}">削除</button>
     </div>` : ""}
     ${p.updatedBy ? `<div class="small" style="margin-top:6px">最終更新：${esc(p.updatedBy)}</div>` : ""}
   </div>`;
@@ -1067,7 +1230,7 @@ function planForm(){
   const p = isNew && S.planCopy ? { ...S.planCopy, date:S.selDate, dateTo:"", status:"未連絡", orders: ordersOf(S.planCopy).map(o => ({ ...o, deliver:"", status:"未発注" })) } : isNew ? { date:S.selDate, dateTo:"", site:S.site || lsGet("kantoku_last_site",""), trade:"", company:"", count:"", time:"", contact:"", memo:"", status:"未連絡" } : { ...S.plans[S.planEdit] };
   return `
   <div class="card" id="plan-form" style="border:2px solid var(--navy)">
-    <div class="card-title">${isNew ? (S.planCopy ? "📄 手配を複製（日付を変えて保存）" : "＋ 手配を追加") : "✏️ 手配を編集"}</div>
+    <div class="card-title">${isNew ? (S.planCopy ? "手配を複製（日付を変えて保存）" : "＋ 手配を追加") : "手配を編集"}</div>
     <div class="row2">
       <div class="field"><label>開始日</label><input type="date" id="pf-date" value="${esc(p.date)}"></div>
       <div class="field"><label>終了日（複数日なら）</label><input type="date" id="pf-dateTo" value="${esc(p.dateTo||"")}"></div>
@@ -1090,7 +1253,7 @@ function planForm(){
       <div class="field"><label>連絡先（電話番号）</label><input id="pf-contact" type="tel" value="${esc(p.contact)}" placeholder="例：090-xxxx-xxxx"></div>
       <div class="field" style="margin-bottom:0"><label>メモ（段取り・持ち物・注意点など）</label><textarea id="pf-memo" rows="2">${esc(p.memo)}</textarea></div>
     </details>
-    <div class="field"><label>📦 材料の手配（材料・数量・手配する業者・納品日）</label>
+    <div class="field"><label>材料の手配（材料・数量・手配する業者・納品日）</label>
       <div class="small" style="margin:-2px 0 6px">納品日を空にすると、手配の開始日に届く扱いになります。</div>
       <div id="pf-orders">${orderRowsHtml(ordersOf(p)) || `<div class="small" style="margin-bottom:6px">材料の手配はまだありません。</div>`}</div>
       <div style="display:flex;gap:6px"><button type="button" class="btn btn-light" style="flex:1;font-size:13px" data-act="ordadd">＋ 材料を追加</button><button type="button" class="btn btn-ghost" style="flex:1;font-size:13px" data-act="ordtpl">この工程の材料を入れる</button></div>
@@ -1117,14 +1280,14 @@ function viewDay(){
   <button class="btn btn-light btn-block" style="margin-bottom:10px" data-act="view" data-v="cal">← カレンダーに戻る</button>
   ${siteFilter()}
   <div class="card">
-    <div class="card-title"><span>👷 この日の手配（段取り）</span><span>${ps.length}件${ps.length ? ` <button class="btn btn-light" style="padding:4px 10px;font-size:12px;margin-left:6px" data-act="share" data-scope="day">📤 共有</button>` : ""}</span></div>
-    ${ps.length ? Object.entries(bySite).map(([site, list]) => `<div class="site-h">🏗️ ${esc(site)}</div>${list.map(([id,p]) => planCard(id,p)).join("")}`).join("") : `<div class="small">この日の手配はまだありません。</div>`}
+    <div class="card-title"><span>この日の手配（段取り）</span><span>${ps.length}件${ps.length ? ` <button class="btn btn-light" style="padding:4px 10px;font-size:12px;margin-left:6px" data-act="share" data-scope="day">共有</button>` : ""}</span></div>
+    ${ps.length ? Object.entries(bySite).map(([site, list]) => `<div class="site-h">${esc(site)}</div>${list.map(([id,p]) => planCard(id,p)).join("")}`).join("") : `<div class="small">この日の手配はまだありません。</div>`}
     ${S.planEdit ? "" : `<button class="btn btn-light btn-block" style="margin-top:8px" data-act="newplan">＋ 手配を追加</button>`}
   </div>
   ${S.planEdit ? planForm() : ""}
-  ${(() => { const dl = ordersBetween(d, d); return dl.length ? `<div class="card"><div class="card-title"><span>🚚 この日の納品</span><span>${dl.length}件</span></div>${dl.map(x => ordRow(x)).join("")}<div class="small" style="margin-top:6px">状況のボタンをタップ：未発注 → 発注済 → 納品済</div></div>` : ""; })()}
+  ${(() => { const dl = ordersBetween(d, d); return dl.length ? `<div class="card"><div class="card-title"><span>この日の納品</span><span>${dl.length}件</span></div>${dl.map(x => ordRow(x)).join("")}<div class="small" style="margin-top:6px">状況のボタンをタップ：未発注 → 発注済 → 納品済</div></div>` : ""; })()}
   <div class="card">
-    <div class="card-title"><span>📝 ${esc(S.me)}さんの日報</span>${rep ? `<span style="color:var(--green)">✓ 記入済み</span>` : `<span>未記入</span>`}</div>
+    <div class="card-title"><span>${esc(S.me)}さんの日報</span>${rep ? `<span style="color:var(--green)">✓ 記入済み</span>` : `<span>未記入</span>`}</div>
     ${rep ? `<div class="p-sub" style="margin-bottom:8px">${esc((rep.work||"").slice(0,80))}${(rep.work||"").length>80?"…":""}</div>` : ""}
     <button class="btn btn-navy btn-big" data-act="report">${rep ? "日報を見る・直す" : "この日の日報を書く"}</button>
   </div>`;
@@ -1139,19 +1302,19 @@ function viewUpcoming(){
   const n = pendingCount();
   let html = siteFilter();
   html += `<div class="small" style="margin:0 2px 8px">今日から1か月後（${fmtDay(end)}）までの手配${S.site ? `（${esc(S.site)}だけ）` : ""}</div>`;
-  html += n ? `<div class="alert">📞 未連絡が ${n} 件あります。早めに連絡を。</div>` : `<div class="info">✓ 1か月以内の手配はすべて連絡済みです</div>`;
+  html += n ? `<div class="alert">未連絡が ${n} 件あります。早めに連絡を。</div>` : `<div class="info">1か月以内の手配はすべて連絡済みです</div>`;
   html += alertList();
   { const ol = ordersBetween(addDays(t,-7), end, true);
     const sups = {}; ol.filter(x => (x.o.status||"未発注") === "未発注").forEach(x => { const k = x.o.supplier || ""; (sups[k] = sups[k] || []).push(x); });
-    const supHtml = Object.keys(sups).length ? `<div class="sup-list"><div class="small"><b>📨 業者ごとに発注の文を作る</b>（未発注の材料をまとめてLINE・メールに送れます）</div>${Object.entries(sups).sort((a,b) => (a[0]?0:1) - (b[0]?0:1) || a[0].localeCompare(b[0], "ja")).map(([k,list]) => k
-      ? `<button class="sup-btn" data-act="ordmsg" data-sup="${esc(k)}">📨 ${esc(k)}<span>未発注 ${list.length}件・${fmtDay(list[0].d)}〜</span></button>`
-      : `<div class="small" style="color:var(--red)">業者が決まっていない材料が ${list.length} 件あります（✏️ 編集・材料 で業者を入れる）</div>`).join("")}</div>` : "";
-    html += ol.length ? `<div class="card"><div class="card-title"><span>📦 材料の手配（まだ納品されていないもの）</span><span>${ol.length}件</span></div>${ol.map(x => ordRow(x, true)).join("")}${supHtml}</div>`
-      : `<div class="info">📦 1か月以内に納品待ちの材料はありません</div>`; }
+    const supHtml = Object.keys(sups).length ? `<div class="sup-list"><div class="small"><b>業者ごとに発注の文を作る</b>（未発注の材料をまとめてLINE・メールに送れます）</div>${Object.entries(sups).sort((a,b) => (a[0]?0:1) - (b[0]?0:1) || a[0].localeCompare(b[0], "ja")).map(([k,list]) => k
+      ? `<button class="sup-btn" data-act="ordmsg" data-sup="${esc(k)}">${esc(k)} に発注の文を作る<span>未発注 ${list.length}件・${fmtDay(list[0].d)}〜</span></button>`
+      : `<div class="small" style="color:var(--red)">業者が決まっていない材料が ${list.length} 件あります（「編集・材料」で業者を入れる）</div>`).join("")}</div>` : "";
+    html += ol.length ? `<div class="card"><div class="card-title"><span>材料の手配（まだ納品されていないもの）</span><span>${ol.length}件</span></div>${ol.map(x => ordRow(x, true)).join("")}${supHtml}</div>`
+      : `<div class="info">1か月以内に納品待ちの材料はありません</div>`; }
   html += `<div style="display:flex;gap:6px;margin-bottom:10px">
     <button class="btn ${S.onlyPending?"btn-ghost":"btn-navy"}" style="flex:1" data-act="pendfilter" data-v="0">すべて</button>
     <button class="btn ${S.onlyPending?"btn-navy":"btn-ghost"}" style="flex:1" data-act="pendfilter" data-v="1">未連絡だけ</button>
-    <button class="btn btn-light" style="flex:1" data-act="share" data-scope="upcoming">📤 共有</button>
+    <button class="btn btn-light" style="flex:1" data-act="share" data-scope="upcoming">共有</button>
   </div>`;
   let any = false;
   days.forEach(d => {
@@ -1232,7 +1395,7 @@ function companyCard(){
   const trades = Object.keys(byTrade).sort((a,b) => { const ia = order.indexOf(a), ib = order.indexOf(b); return (ia<0?999:ia) - (ib<0?999:ib) || a.localeCompare(b,"ja"); });
   const ed = S.compEdit, ec = ed && ed !== "new" ? S.companies[ed] : null;
   const form = ed ? `<div class="card" style="border:2px solid var(--navy);margin:8px 0">
-      <div class="card-title">${ed === "new" ? "＋ 業者を登録" : "✏️ 業者を編集"}</div>
+      <div class="card-title">${ed === "new" ? "＋ 業者を登録" : "業者を編集"}</div>
       <div class="field"><label>業者・職人名</label><input id="cf-name" value="${esc(ec ? ec.name : "")}" placeholder="例：〇〇電気"></div>
       <div class="field"><label>業種（複数ならカンマ区切り）</label><input id="cf-trades" list="dl-trades" value="${esc(ec ? compTrades(ec).join("、") : "")}" placeholder="例：電気"></div>
       <div class="row2">
@@ -1246,7 +1409,7 @@ function companyCard(){
       </div>
     </div>` : "";
   return `<div class="card" id="comp-card">
-    <div class="card-title"><span>👷 業者の登録</span>${ed ? "" : `<button class="btn btn-light" style="padding:5px 10px;font-size:12px" data-act="compnew">＋ 業者を登録</button>`}</div>
+    <div class="card-title"><span>業者の登録</span>${ed ? "" : `<button class="btn btn-light" style="padding:5px 10px;font-size:12px" data-act="compnew">＋ 業者を登録</button>`}</div>
     <div class="small" style="margin-bottom:8px">手配を保存すると自動で登録されます。手配を入れるとき、業種を選ぶとここの業者が出てきます。</div>
     ${(() => { const n = companiesFor("").filter(c => !c.saved).length; return n && !ed ? `<button class="btn btn-ghost btn-block" style="margin-bottom:8px;font-size:13px" data-act="compimport">以前の手配に出てくる業者 ${n} 件をまとめて登録</button>` : ""; })()}
     ${form}
@@ -1393,7 +1556,7 @@ async function deletePhotoByUrl(url){
 // 写真の並び（サムネイル＋追加ボタン）。where は "r"（日報全体）か ミスの番号
 function photoPicker(list, where){
   return `<div class="ph-row">${(list||[]).map((u,i) => `<span class="ph"><img src="${esc(u)}" data-act="lb" data-u="${esc(u)}" loading="lazy"><button class="ph-x" data-act="phdel" data-w="${where}" data-i="${i}">×</button></span>`).join("")}
-    <button type="button" class="ph-add" data-act="phpick" data-w="${where}">📷 写真を追加</button><input type="file" accept="image/*" multiple data-phadd="${where}" style="display:none"></div>`;
+    <button type="button" class="ph-add" data-act="phpick" data-w="${where}">写真を追加</button><input type="file" accept="image/*" multiple data-phadd="${where}" style="display:none"></div>`;
 }
 function photoThumbs(list){
   list = toArr(list); if(!list.length) return "";
@@ -1594,7 +1757,7 @@ function renderReport(){
       </div>`).join("");
     return `
     <div class="card visit">
-      <div class="card-title"><span>🏗️ 現場 ${vi+1}${v.site?`：${esc(v.site)}`:""}</span>${r.visits.length > 1 ? `<button class="x" style="width:auto;padding:0 10px;height:30px;font-size:12px" data-act="vdel" data-v="${vi}">この現場を外す</button>` : ""}</div>
+      <div class="card-title"><span>現場 ${vi+1}${v.site?`：${esc(v.site)}`:""}</span>${r.visits.length > 1 ? `<button class="x" style="width:auto;padding:0 10px;height:30px;font-size:12px" data-act="vdel" data-v="${vi}">この現場を外す</button>` : ""}</div>
       <div class="field"><label>現場名</label><input list="dl-sites" data-v="${vi}:site" value="${esc(v.site)}" placeholder="例：〇〇邸新築工事"></div>
       <div class="field"><label>出面（業者・人数）　計 ${total} 名</label>
         ${dm || `<div class="small" style="margin-bottom:6px">まだありません。</div>`}
@@ -1634,19 +1797,19 @@ function renderReport(){
     </div>
     ${S.reportNote ? `<div class="info">${esc(S.reportNote)}</div>` : ""}
     <details class="card paste-card" id="paste-card" ${S.pasteOpen ? "open" : ""}>
-      <summary>🤖 Claudeで日報を作る（話して → 貼るだけ）</summary>
+      <summary>Claudeで日報を作る（話して、貼るだけ）</summary>
       <ol class="small paste-steps">
         <li>「依頼文をコピー」を押して、Claudeに貼る（今日の手配も一緒に入る）</li>
         <li>続けて、今日あったことをざっくり話す・書く</li>
         <li>Claudeが返した「【監督日報】」の文をコピーして、下の欄に貼る</li>
         <li>「入力欄に入れる」→ 中身を確かめて「保存」</li>
       </ol>
-      <button class="btn btn-light btn-block" data-act="aiprompt">📋 Claude用の依頼文をコピー</button>
+      <button class="btn btn-light btn-block" data-act="aiprompt">Claude用の依頼文をコピー</button>
       <textarea id="paste-text" rows="5" placeholder="ここにClaudeが返した【監督日報】の文を貼り付け" style="margin-top:8px"></textarea>
       <button class="btn btn-navy btn-block" data-act="pasteapply" style="margin-top:8px">⬇ 入力欄に入れる</button>
     </details>
     <div class="card">
-      <div class="card-title"><span>📋 基本情報</span><span class="small">${r.visits.length}現場・出面 計${allTotal}名</span></div>
+      <div class="card-title"><span>基本情報</span><span class="small">${r.visits.length}現場・出面 計${allTotal}名</span></div>
       <div class="row2">
         <div class="field" style="margin-bottom:0"><label>天候</label><select data-f="weather"><option value="">選択</option>${WX.map(w=>`<option ${w===r.weather?"selected":""}>${w}</option>`).join("")}</select></div>
         <div class="field" style="margin-bottom:0"><label>記入者</label><input value="${esc(S.me)}" disabled></div>
@@ -1655,22 +1818,23 @@ function renderReport(){
     ${visits}
     <button class="btn btn-light btn-block" style="margin-bottom:12px;border:1.5px dashed var(--navy)" data-act="vadd">＋ 回った現場を追加</button>
     <div class="card">
-      <div class="card-title">⚠️ ミス・問題・気づき</div>
+      <div class="card-title">ミス・問題・気づき</div>
       ${misses}
       <button class="btn btn-light btn-block" data-act="madd">＋ ミス・問題を追加</button>
       <div class="small" style="margin-top:6px">深刻度は大工日報と同じ基準で自動判定（30分未満＝軽微／2時間未満＝中程度／2時間以上＝重大）。</div>
     </div>
     <div class="card">
-      <div class="card-title">💡 今日の学び・気づき</div>
+      <div class="card-title">今日の学び・気づき</div>
       <textarea rows="3" data-f="learn" placeholder="監督として今日感じたこと、次に活かしたいこと">${esc(r.learn)}</textarea>
     </div>
     <div class="card">
-      <div class="card-title">🎯 次回に向けて（申し送り）</div>
+      <div class="card-title">次回に向けて（申し送り）</div>
       <textarea rows="3" data-f="next" placeholder="明日以降の申し送り、確認すべきことなど">${esc(r.next)}</textarea>
     </div>
     <button class="btn btn-navy btn-big" id="save-rep" data-act="saverep">${S.reportExists ? "日報を更新する" : "日報を保存する"}</button>
     <div class="small" style="text-align:center;margin-top:8px">入力中の内容はこの端末に自動で下書き保存されます</div>
   </div>`;
+  HM.mics($("#app"), "#paste-text");
 }
 async function saveReport(){
   const r = S.report;
@@ -1745,11 +1909,11 @@ document.addEventListener("click", async e => {
     try{ await set(ref(db, `kantoku_meta/names/${uidOf(n)}`), n); S.me = n; lsSet("kantoku_me", n); watchMyReports(); S.view = "cal"; render(); }
     catch(err){ alert("追加に失敗しました：" + err.message); }
   }
-  else if(a === "view"){ S.view = el.dataset.v; S.planEdit = null; if(S.view === "reports") S.allReports = null; if(S.view === "year") S.year = S.cursor.getFullYear(); render(); window.scrollTo(0,0); }
+  else if(a === "view"){ S.menu = false; S.view = el.dataset.v; S.planEdit = null; if(S.view === "reports") S.allReports = null; if(S.view === "year") S.year = S.cursor.getFullYear(); render(); window.scrollTo(0,0); }
   else if(a === "year"){ S.year = (S.year || S.cursor.getFullYear()) + Number(el.dataset.n); render(); }
   else if(a === "openmonth"){ S.cursor = new Date(S.year || S.cursor.getFullYear(), Number(el.dataset.m), 1); S.view = "cal"; render(); }
   else if(a === "month"){ S.cursor = new Date(S.cursor.getFullYear(), S.cursor.getMonth() + Number(el.dataset.n), 1); render(); }
-  else if(a === "day"){ S.selDate = el.dataset.d; S.cursor = pd(S.selDate); S.view = "day"; S.planEdit = null; render(); window.scrollTo(0,0); }
+  else if(a === "day"){ S.menu = false; S.selDate = el.dataset.d; S.cursor = pd(S.selDate); S.view = "day"; S.planEdit = null; render(); window.scrollTo(0,0); }
   else if(a === "dshift"){ S.selDate = addDays(S.selDate, Number(el.dataset.n)); S.cursor = pd(S.selDate); S.planEdit = null; render(); }
   else if(a === "newplan"){ S.planEdit = "new"; S.planCopy = null; render(); $("#plan-form")?.scrollIntoView({behavior:"smooth"}); }
   else if(a === "editplan"){ S.planEdit = el.dataset.id; if(S.view === "upcoming"){ S.selDate = S.plans[el.dataset.id].date; S.view = "day"; } render(); $("#plan-form")?.scrollIntoView({behavior:"smooth"}); }
@@ -1845,6 +2009,10 @@ document.addEventListener("click", async e => {
   else if(a === "status"){ await setStatus(el.dataset.id, el.dataset.s); }
   else if(a === "delplan"){ await delPlan(el.dataset.id); }
   else if(a === "report"){ await openReport(); window.scrollTo(0,0); }
+  else if(a === "todayrep"){ S.selDate = today(); S.cursor = pd(S.selDate); await openReport(); window.scrollTo(0,0); }
+  else if(a === "pendgo"){ S.onlyPending = true; S.view = "upcoming"; render(); window.scrollTo(0,0); }
+  else if(a === "menu"){ S.menu = !S.menu; render(); }
+  else if(a === "pushsetup"){ S.menu = false; HM.pushSetup({ app:"kantoku", name:S.me, onChange: render }); }
   else if(a === "repback"){ if(S.reportDirty && !confirm("保存していない内容は下書きとして端末に残ります。戻りますか？")) return; S.view = "day"; render(); }
   else if(a === "saverep"){ await saveReport(); }
   else if(a === "aiprompt"){ await copyAiPrompt(); }

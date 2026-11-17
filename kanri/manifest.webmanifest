@@ -1,0 +1,23 @@
+{
+ "name": "日報管理｜濱崎組",
+ "short_name": "日報管理",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#eef0ec",
+ "theme_color": "#78562a",
+ "lang": "ja",
+ "icons": [
+  {
+   "src": "../assets/icon-kanri-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "../assets/icon-kanri-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any maskable"
+  }
+ ]
+}

@@ -1,0 +1,23 @@
+{
+ "name": "現場監督日報・段取り｜濱崎組",
+ "short_name": "監督日報",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#eef0ec",
+ "theme_color": "#1f2428",
+ "lang": "ja",
+ "icons": [
+  {
+   "src": "../assets/icon-kantoku-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "../assets/icon-kantoku-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any maskable"
+  }
+ ]
+}

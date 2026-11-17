@@ -4,12 +4,36 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
 <title>作業日報 | 株式会社濱崎組</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/icon-daiku-180.png">
+<meta name="theme-color" content="#1f4a73">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="大工日報">
+<link rel="stylesheet" href="assets/brand.css">
+<script src="assets/brand.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{background:#f4f6f8}
-#root{font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;color:#1c2530;max-width:480px;margin:0 auto;min-height:100vh}
-textarea:focus,input:focus,select:focus{outline:none;border-color:#1f4e7a;background:#fff}
-button:active{opacity:.7}
+html,body{background:var(--paper)}
+#root{font-family:var(--font);color:var(--sumi);max-width:560px;margin:0 auto;min-height:100vh}
+#root button,#root input,#root textarea,#root select{font-family:var(--font)!important}
+textarea:focus,input:focus,select:focus{outline:none;border-color:var(--ai)!important;background:#fff!important;box-shadow:0 0 0 2px var(--ai-bg)}
+button:active{opacity:.8}
+.dk-top{margin:0}
+.dk-pad{padding:0 14px}
+.dk-today{background:#fff;border-top:2px solid var(--sumi);padding:14px 4px 18px;margin-top:16px}
+.dk-today .k{font-size:14px;color:var(--sub)}
+.dk-today .v{font-size:21px;font-weight:700;margin:3px 0 14px}
+.dk-stat{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-top:2px solid var(--sumi);border-bottom:1px solid var(--line)}
+.dk-stat div{padding:10px 0;text-align:center;border-left:1px solid var(--line)}
+.dk-stat div:first-child{border-left:none}
+.dk-stat b{display:block;font-size:24px}
+.dk-stat span{font-size:12px;color:var(--sub)}
+.dk-rec{display:flex;gap:10px;align-items:center;width:100%;background:#fff;border:none;border-bottom:1px solid var(--line);padding:12px 4px;text-align:left;cursor:pointer}
+.dk-rec .d{flex:none;width:92px;white-space:nowrap;font-size:14px;font-weight:700;color:var(--sub)}
+.dk-rec .m{flex:1;min-width:0;font-size:15px;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#root{padding-bottom:calc(var(--nav-h) + 20px + env(safe-area-inset-bottom))}
+.toast{border-radius:4px!important;bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom))!important}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1c2530;color:#fff;padding:10px 20px;border-radius:24px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:100;white-space:nowrap}
 .toast.show{opacity:1}
 .lb-overlay{display:none;position:fixed;inset:0;background:rgba(20,26,34,.9);z-index:999;align-items:center;justify-content:center;padding:20px}
@@ -58,8 +82,8 @@ const WX=["晴れ","曇り","雨","雪"];
 const COMMON={"屋根":["小屋組","母屋・棟木","野地板張り","ルーフィング"],"外部・サッシ":["サッシ取付","防水・透湿シート","外壁下地","バルコニー防水"],"ボード":["壁ボード張り","天井ボード張り","ボード割付・採寸"],"床":["2階床組","フローリング張り","捨て張り"],"造作・仕上げ":["階段","建具枠取付","巾木・廻縁","窓枠・額縁","収納・棚","無垢材の納まり"],"その他":["材料違い・寸法間違い","道具・段取り","安全・KY","その他"]};
 const BASE={zairai:{"基礎・土台まわり":["墨出し","土台敷き","アンカーボルト・ホールダウン","大引き・束","床下断熱"],"軸組・建て方":["刻み・加工","建て方（柱・梁）","建入れ直し","仮筋交い","本筋交い","金物取付（羽子板・かすがい等）"],"断熱・下地":["壁断熱（充填）","間柱・窓台・まぐさ","天井下地","壁下地（胴縁・受け材）"],...COMMON},se:{"基礎・土台まわり":["墨出し","土台敷き","SE用アンカーボルト設置","柱脚金物（ベースプレート）取付","大引き・束","床下断熱"],"建て方":["SE柱・梁の建て方","番付確認","接合部ボルト締め","トルク管理・締め忘れ確認","集成材の養生・傷防止","建入れ直し"],"金物":["SE金物・ドリフトピン打ち込み","接合部の隙間確認","羽子板・かすがい"],"耐力壁・下地":["耐力壁（外部）","耐力壁（内部）","耐力壁下地（受け材・間柱・胴縁）","釘ピッチ・釘の打ち込み"],"断熱":["壁断熱（充填）","付加断熱（外張り）","天井断熱"],...COMMON}};
 const METHOD_LABEL={zairai:"在来工法",se:"SE工法"};
-const REDO=[{label:"30分未満",max:30,sev:"軽微",color:"#2f7d4f",bg:"#eaf5ee"},{label:"30分〜2時間",max:120,sev:"中程度",color:"#c2710c",bg:"#fdf3e3"},{label:"2時間以上",max:99999,sev:"重大",color:"#c0392b",bg:"#fdecea"}];
-const C={ink:"#1c2530",sub:"#6b7785",faint:"#9aa5b1",line:"#e3e7ec",bg:"#f4f6f8",card:"#ffffff",navy:"#1f4e7a",navyBg:"#eef4fa",amber:"#c2710c",amberBg:"#fdf3e3",green:"#2f7d4f",greenBg:"#eaf5ee",red:"#c0392b"};
+const REDO=[{label:"30分未満",max:30,sev:"軽微",color:"#2a6f46",bg:"#e2f0e7"},{label:"30分〜2時間",max:120,sev:"中程度",color:"#a35800",bg:"#fcefdc"},{label:"2時間以上",max:99999,sev:"重大",color:"#b3302a",bg:"#fbe8e5"}];
+const C={ink:"#1f2428",sub:"#56606a",faint:"#7a838b",line:"#d6dad4",bg:"#eceee9",card:"#ffffff",navy:"#1f4a73",navyBg:"#e3eaf2",amber:"#a35800",amberBg:"#fcefdc",green:"#2a6f46",greenBg:"#e2f0e7",red:"#b3302a"};
 
 function sevOf(min){const v=parseFloat(min);if(!v||v<=0)return null;for(const r of REDO)if(v<=r.max)return r;return REDO[REDO.length-1]}
 const pad=n=>String(n).padStart(2,"0");
@@ -84,7 +108,15 @@ document.getElementById("lb-overlay").addEventListener("click",(e)=>{if(e.target
 function $(id){return document.getElementById(id)}
 // 数字だけの指定（fontSize:13 など）は px を付けないとブラウザに無視されるので、ここで付ける
 const UNITLESS=new Set(["lineHeight","fontWeight","opacity","zIndex","flex","flexGrow","flexShrink","order"]);
-function applyStyle(el,v){Object.entries(v).forEach(([k,x])=>{el.style[k]=(typeof x==="number"&&!UNITLESS.has(k))?x+"px":x})}
+// 新デザイン：小さい文字は一回り大きく、角の丸みは小さく（現場で読みやすく、押せる所が分かるように）
+function tune(k,x){
+  if(k==="fontSize"){const n=typeof x==="number"?x:parseFloat(x);if(n){return (n<=9?11:n<=12?n+2:n<=15?n+1:n)+"px"}}
+  if(k==="borderRadius"&&typeof x==="number"&&x>=7)return "4px";
+  if(k==="borderRadius"&&typeof x==="string"&&/^(1\d|2\d)px$/.test(x))return "4px";
+  if((k==="background"||k==="borderColor")&&x==="#f8fafc")return "#fbfbf8";
+  return (typeof x==="number"&&!UNITLESS.has(k))?x+"px":x;
+}
+function applyStyle(el,v){Object.entries(v).forEach(([k,x])=>{el.style[k]=tune(k,x)})}
 function mk(tag,attrs={},children=[]){const el=document.createElement(tag);Object.entries(attrs).forEach(([k,v])=>{if(k==="style"&&typeof v==="object")applyStyle(el,v);else if(k.startsWith("on"))el.addEventListener(k.slice(2).toLowerCase(),v);else el.setAttribute(k,v)});if(!Array.isArray(children))children=[children];children.forEach(c=>el.appendChild(typeof c==="string"?document.createTextNode(c):c));return el}
 
 // ==== 写真：リサイズしてCloudflare Worker経由でR2にアップロード ====
@@ -196,13 +228,74 @@ function renderNameEntry(root){
   inp.focus();
 }
 
+// ==== 新デザイン：上の帯・下のボタン列・今日の画面 ====
+let menuOpen=false;
+function topBar(sub){
+  const top=mk("div",{class:"hm-top dk-top"});
+  const inner=mk("div",{class:"hm-top-in"});
+  const brand=mk("div",{class:"hm-brand"});brand.innerHTML=HM.mark()+`<div style="min-width:0"><div class="hm-name">作業日報</div><div class="hm-co"></div></div>`;
+  brand.querySelector(".hm-co").textContent=sub||"株式会社濱崎組";
+  const mb=mk("button",{class:"hm-menu-btn","aria-expanded":String(menuOpen),onClick:()=>{menuOpen=!menuOpen;reloadMain()}},"メニュー");
+  inner.append(brand,mb);top.appendChild(inner);
+  if(menuOpen){
+    const m=mk("div",{class:"hm-menu"});
+    m.append(
+      mk("button",{onClick:()=>{menuOpen=false;localStorage.removeItem("nippo_user");currentUser="";renderApp()}},"名前を変える"),
+      mk("button",{onClick:()=>{menuOpen=false;HM.pushSetup({app:"daiku",name:currentUser,onChange:reloadMain})}},"通知の設定"),
+      mk("a",{href:"kantoku/"},"監督日報"),mk("a",{href:"kanri/"},"日報管理"));
+    top.appendChild(m);
+  }
+  const wrap=mk("div");wrap.append(top,mk("div",{class:"hm-rule"}));return wrap;
+}
+const DK_ICON={today:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>',cal:'<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="1"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>',analysis:'<svg viewBox="0 0 24 24"><path d="M5 19V9M10 19V5M15 19v-7M20 19v-4"/></svg>',learn:'<svg viewBox="0 0 24 24"><path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8z"/></svg>',tejun:'<svg viewBox="0 0 24 24"><path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h10"/></svg>'};
+function bottomNav(nMiss,nLearn){
+  const nav=mk("nav",{class:"hm-nav"});const inn=mk("div",{class:"hm-nav-in"});
+  [["today","今日"],["cal","カレンダー"],["analysis","分析"],["learn","学び"],["tejun","手順書"]].forEach(([k,l])=>{
+    const b=mk("button",{class:monthTab===k?"on":"","aria-current":monthTab===k?"page":"false",onClick:()=>{monthTab=k;menuOpen=false;reloadMain();window.scrollTo(0,0)}});
+    b.innerHTML=DK_ICON[k];b.appendChild(document.createTextNode(l));inn.appendChild(b);
+  });
+  nav.appendChild(inn);return nav;
+}
+// 直近の自分の日報（今日より前）
+function lastReport(myEntries){const t=todayKey();const prev=myEntries.filter(([k])=>k<t);return prev.length?prev[prev.length-1]:null}
+function renderTodayPanel(body,myRecs,myEntries,totalNinku,nMiss,nLearn){
+  const t=todayKey(),r=myRecs[t];
+  const box=mk("div",{class:"dk-today"});
+  box.appendChild(mk("div",{class:"k"},`今日 ${fmtFull(t).replace(/^\d+年/,"")}`));
+  box.appendChild(mk("div",{class:"v"},r?`書きました（${r.site||"現場なし"}）`:"まだ書いていません"));
+  const k1=mk("button",{class:"hm-key",onClick:()=>openEdit(t)});k1.append(r?"今日の日報を見る・直す":"今日の日報を書く",mk("small",{},"›"));
+  box.appendChild(k1);
+  const last=lastReport(myEntries);
+  if(!r&&last){
+    const [lk,lv]=last;
+    const k2=mk("button",{class:"hm-key2",style:{marginTop:"12px"},onClick:()=>openEdit(t,{copyFrom:lv})});
+    k2.append(`${fmtShort(lk)}と同じ現場・メンバーで書く`,mk("small",{},lv.site||""));
+    box.appendChild(k2);
+  }
+  if(window.HMPush&&HMPush.state()!=="on"){const k3=mk("button",{class:"hm-key2",style:{marginTop:"12px"},onClick:()=>HM.pushSetup({app:"daiku",name:currentUser,onChange:reloadMain})});k3.append("書き忘れの通知を受け取る",mk("small",{},"月〜土 17:15"));box.appendChild(k3)}
+  body.appendChild(box);
+  const y=cursor.getFullYear(),m=cursor.getMonth();
+  body.appendChild(mk("div",{class:"hm-h"},`${m+1}月の記録`));
+  const st=mk("div",{class:"dk-stat"});
+  [[myEntries.length,"出勤日数",C.navy],[totalNinku,"のべ人工",C.ink],[nMiss,"ミス",C.amber],[nLearn,"学び",C.green]].forEach(([v,l,c])=>{const d=mk("div");d.append(mk("b",{style:{color:c}},String(v)),mk("span",{},l));st.appendChild(d)});
+  body.appendChild(st);
+  const recent=myEntries.slice(-5).reverse();
+  if(recent.length){
+    const h=mk("div",{class:"hm-h"});h.append(mk("span",{},"最近の日報"));h.appendChild(mk("button",{onClick:()=>{monthTab="cal";reloadMain();window.scrollTo(0,0)}},"カレンダーで見る"));
+    body.appendChild(h);
+    const sh=mk("div",{class:"hm-sheet"});
+    recent.forEach(([k,v])=>{const b=mk("button",{class:"dk-rec",onClick:()=>openEdit(k)});b.append(mk("span",{class:"d"},`${fmtShort(k)}（${wdOf(k)}）`),mk("span",{class:"m"},`${v.site||""}　${(v.work||"").split("\n")[0]}`));if((v.misses||[]).length)b.appendChild(mk("span",{class:"hm-stamp sm orange"},`ミス${v.misses.length}`));sh.appendChild(b)});
+    body.appendChild(sh);
+  }
+}
+
 let editKey=null;
 let fWeather="晴れ",fSite="",fNinku="",fMembers="",fWork="",fMisses=[],fLearn="",fNext="",fLearnPhotos=[],fMethod="zairai";
 let viewMethod="";
 let editExisted=false; // この日の日報がもう保存されているか（削除ボタンを出す） // 分析・学びタブの絞り込み（""=すべて）
 let mMethod="zairai",mBig="",mDetail="",mText="",mCause="",mRedo="",mPhotos=[];
 let cursor=new Date();
-let monthTab="cal";
+let monthTab="today";
 let recs={};
 
 async function loadMonthRecs(){
@@ -274,15 +367,12 @@ function renderMain(root){
   const monthLearn=viewMethod?monthLearnAll.filter(([,v])=>v.method===viewMethod):monthLearnAll;
   const totalNinku=myEntries.reduce((s,[,v])=>s+(parseFloat(v.ninku)||0),0);
 
-  const head=mk("div",{style:{background:C.card,padding:"16px 18px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`1px solid ${C.line}`}});
+  const head=topBar(currentUser+"さん");
   const headL=mk("div");
-  headL.appendChild(mk("div",{style:{fontSize:18,fontWeight:800,letterSpacing:".05em"}},"作業日報"));
-  headL.appendChild(mk("div",{style:{fontSize:11,color:C.faint,marginTop:2}},currentUser));
-  const headR=mk("div",{style:{display:"flex",gap:8}});
+  const headR=mk("div",{style:{display:"none"}});
   const todayBtn=mk("button",{style:{background:C.navy,color:"#fff",border:"none",borderRadius:10,padding:"10px 14px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"},onClick:()=>openEdit(todayKey())},"＋ 今日");
   const logoutBtn=mk("button",{style:{background:C.navyBg,color:C.navy,border:"none",borderRadius:10,padding:"0 12px",height:42,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"},onClick:()=>{localStorage.removeItem("nippo_user");currentUser="";renderApp()}},"変更");
   headR.append(logoutBtn,todayBtn);
-  head.append(headL,headR);
 
   const monthBar=mk("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:24,padding:"14px 0 10px"}});
   const prev=mk("button",{style:{background:C.card,border:`1px solid ${C.line}`,borderRadius:10,width:40,height:40,fontSize:20,color:C.navy,cursor:"pointer"},onClick:()=>{cursor=new Date(y,m-1,1);reloadMain()}},"‹");
@@ -298,7 +388,7 @@ function renderMain(root){
     sumRow.appendChild(s);
   });
 
-  const tabs=mk("div",{style:{display:"flex",gap:6,padding:"0 14px 10px"}});
+  const tabs=mk("div",{style:{display:"none"}});
   [["cal","カレンダー"],["analysis",`分析（${allMissesAll.length}）`],["learn",`学び（${monthLearnAll.length}）`],["tejun","手順書"]].forEach(([k,l])=>{
     const b=mk("button",{style:{flex:1,background:monthTab===k?C.navy:"transparent",color:monthTab===k?"#fff":C.sub,border:`1.5px solid ${monthTab===k?C.navy:C.line}`,borderRadius:10,padding:"9px 0",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"},onClick:()=>{monthTab=k;reloadMain()}},l);
     tabs.appendChild(b);
@@ -333,7 +423,7 @@ function renderMain(root){
       cell.appendChild(mk("span",{style:{fontSize:14,fontWeight:r||isT?700:500,color:isT?"#fff":dow===0?"#c0392b":dow===6?C.navy:C.ink}},String(d)));
       if(r&&r.ninku){cell.appendChild(mk("span",{style:{fontSize:9,color:isT?"#cfe0ef":C.sub,lineHeight:1}},`${r.ninku}人工`))}
       else if(r){const dot=mk("span",{style:{width:5,height:5,borderRadius:"50%",background:isT?"#fff":C.navy}});cell.appendChild(dot)}
-      if(nMiss>0){const md=mk("span",{style:{position:"absolute",top:4,right:4,minWidth:14,height:14,borderRadius:7,fontSize:9,fontWeight:800,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px",background:isT?"#ffd9a8":C.amber}},String(nMiss));cell.appendChild(md)}
+      if(nMiss>0){const md=mk("span",{style:{position:"absolute",top:1,right:1,minWidth:14,height:14,borderRadius:7,fontSize:9,fontWeight:800,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px",background:isT?"#ffd9a8":C.amber}},String(nMiss));cell.appendChild(md)}
       grid.appendChild(cell);
     }
     const legend=mk("div",{style:{display:"flex",gap:14,justifyContent:"center",marginTop:12,fontSize:11,color:C.sub}});
@@ -405,10 +495,13 @@ function renderMain(root){
     }
   }
 
-  if(monthTab==="tejun"){renderTejunList(body)}
+  if(monthTab==="tejun"){body.style.paddingTop="14px";renderTejunList(body)}
 
+  if(monthTab==="today")renderTodayPanel(body,myRecs,myEntries,totalNinku,allMissesAll.length,monthLearnAll.length);
   const spacer=mk("div",{style:{height:30}});body.appendChild(spacer);
-  root.append(head,monthBar,sumRow,tabs,body);
+  if(monthTab==="today"||monthTab==="tejun"){root.append(head,body)}
+  else root.append(head,monthBar,sumRow,tabs,body);
+  root.appendChild(bottomNav(allMissesAll.length,monthLearnAll.length));
 }
 
 async function reloadMain(){
@@ -419,7 +512,8 @@ async function reloadMain(){
   renderMain(root);
 }
 
-function openEdit(key){
+function openEdit(key,opts){
+  opts=opts||{};
   editKey=key;
   const existing=null;
   const dbRef=ref(db,`reports/${currentUser}/${key}`);
@@ -430,6 +524,7 @@ function openEdit(key){
     fMembers=r.members||"";fWork=r.work||"";fMisses=Array.isArray(r.misses)?r.misses:[];
     fLearn=r.learn||"";fNext=r.next||"";fLearnPhotos=Array.isArray(r.learnPhotos)?r.learnPhotos:[];
     fMethod=r.method||methodOfSite(fSite)||localStorage.getItem("nippo_method")||"zairai";
+    if(!snap.exists()&&opts.copyFrom){const c=opts.copyFrom;fSite=c.site||fSite;fMembers=c.members||"";fNinku=c.ninku!=null?String(c.ninku):"";fMethod=c.method||fMethod;fWeather=c.weather||fWeather;setTimeout(()=>showToast("前回の現場・メンバー・人工を入れました"),300);}
     const initM=fMethod;
     mMethod=initM;const cats=catsFor(initM);const fb=Object.keys(cats)[0]||"";
     mBig=fb;mDetail=(cats[fb]&&cats[fb][0])||"";mText="";mCause="";mRedo="";mPhotos=[];
@@ -447,13 +542,13 @@ function renderEdit(){
   const root=document.getElementById("root");root.innerHTML="";
   const app=mk("div",{style:{minHeight:"100vh",background:C.bg}});
 
-  const head=mk("div",{style:{background:C.card,padding:"14px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`1px solid ${C.line}`,position:"sticky",top:0,zIndex:10}});
-  const back=mk("button",{style:{background:"transparent",border:"none",color:C.navy,fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",width:56,textAlign:"left"},onClick:()=>reloadMain()},"‹ もどる");
-  head.append(back,mk("div",{style:{fontSize:15,fontWeight:700}},fmtFull(editKey)),mk("div",{style:{width:56}}));
+  const head=mk("div",{style:{background:"#fff",padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"2px solid var(--sumi)",position:"sticky",top:0,zIndex:10}});
+  const back=mk("button",{class:"hm-key2",style:{width:"auto",minHeight:"44px",padding:"0 14px",boxShadow:"none"},onClick:()=>reloadMain()},"← もどる");
+  head.append(back,mk("div",{style:{fontSize:17,fontWeight:700}},fmtFull(editKey).replace(/^\d+年/,"")),mk("div",{style:{width:60}}));
 
   const body=mk("div",{style:{padding:"14px 14px 0"}});
 
-  function card(...children){const c=mk("div",{style:{background:C.card,borderRadius:14,padding:"14px 15px",marginBottom:12,border:`1px solid ${C.line}`}});children.forEach(x=>c.appendChild(x));return c}
+  function card(...children){const c=mk("div",{style:{background:C.card,borderRadius:0,padding:"14px 12px",marginBottom:14,borderTop:"2px solid var(--sumi)"}});children.forEach(x=>c.appendChild(x));return c}
   function label(txt,color=C.faint){return mk("div",{style:{fontSize:11,fontWeight:700,color,letterSpacing:".05em",marginBottom:5}},txt)}
   function input(val,ph,onChange){const el=mk("input",{type:"text",placeholder:ph,style:{width:"100%",background:"#f8fafc",border:`1.5px solid ${C.line}`,borderRadius:10,padding:"11px 12px",fontSize:15,color:C.ink,fontFamily:"inherit",boxSizing:"border-box"}});el.value=val;el.addEventListener("input",e=>onChange(e.target.value));return el}
   function textarea(val,ph,rows,onChange){const el=mk("textarea",{placeholder:ph,rows:String(rows),style:{width:"100%",background:"#f8fafc",border:`1.5px solid ${C.line}`,borderRadius:10,padding:"11px 12px",fontSize:15,color:C.ink,fontFamily:"inherit",resize:"none",boxSizing:"border-box",lineHeight:1.5}});el.value=val;el.addEventListener("input",e=>onChange(e.target.value));return el}
@@ -472,10 +567,10 @@ function renderEdit(){
   body.appendChild(card(label("天候"),wxRow,mk("div",{style:{height:10}}),label("現場名"),siteEl,mk("div",{style:{height:10}}),label("この現場の工法（ミスと学びはこの工法で記録されます）"),methodRowTop,mk("div",{style:{height:10}}),label("人工数"),ninEl,mk("div",{style:{height:10}}),label("一緒に作業した人"),memEl));
 
   function sectionCard(n,title,color,...children){
-    const c=mk("div",{style:{background:C.card,borderRadius:14,padding:"14px 15px",marginBottom:12,border:`1px solid ${C.line}`}});
-    const h=mk("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:10}});
-    const nb=mk("span",{style:{width:22,height:22,borderRadius:7,background:color,color:"#fff",fontSize:13,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},n);
-    h.append(nb,mk("span",{style:{fontSize:14,fontWeight:700,color:C.ink}},title));
+    const c=mk("div",{style:{background:C.card,borderRadius:0,padding:"14px 12px",marginBottom:14,borderTop:`3px solid ${color}`}});
+    const h=mk("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:10}});
+    const nb=mk("span",{style:{width:26,height:26,borderRadius:3,border:`2px solid ${color}`,color:color,fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},n);
+    h.append(nb,mk("span",{style:{fontSize:16,fontWeight:700,color:C.ink}},title));
     c.appendChild(h);children.forEach(x=>c.appendChild(x));return c;
   }
 
@@ -622,7 +717,7 @@ function renderEdit(){
   const nextTA=textarea(fNext,"明日やること・注意点",2,v=>{fNext=v});
   body.appendChild(sectionCard("4","明日やること・申し送り",C.sub,nextTA));
 
-  const saveBtn=mk("button",{style:{width:"100%",background:C.navy,color:"#fff",border:"none",borderRadius:12,padding:"15px 0",fontSize:16,fontWeight:800,cursor:"pointer",fontFamily:"inherit",marginTop:4},onClick:async()=>{
+  const saveBtn=mk("button",{class:"hm-key",style:{justifyContent:"center",marginTop:"8px"},onClick:async()=>{
     // 「＋ このミスを追加」を押し忘れたミスを取りこぼさない
     if(mText.trim()){
       if(confirm("「＋ このミスを追加」を押していないミスがあります。\nこのミスも入れて保存しますか？\n（キャンセル＝このミスは入れずに保存）")){
@@ -657,17 +752,18 @@ function renderEdit(){
         await set(ref(db,`reports/${currentUser}/${editKey}`),null);
         const urls=[...(old.learnPhotos||[]),...((old.misses||[]).flatMap(m=>m.photos||[]))];
         urls.forEach(deletePhotoByUrl);
-      }catch(e){delBtn.disabled=false;delBtn.textContent="🗑 この日の日報を削除";showToast("削除できませんでした。電波を確認してもう一度");return;}
+      }catch(e){delBtn.disabled=false;delBtn.textContent="この日の日報を削除";showToast("削除できませんでした。電波を確認してもう一度");return;}
       stopDraft();try{localStorage.removeItem(draftKey())}catch(e){}
       editExisted=false;showToast("削除しました");
       setTimeout(()=>reloadMain(),600);
-    }},"🗑 この日の日報を削除");
+    }},"この日の日報を削除");
     body.appendChild(delBtn);
     body.appendChild(mk("div",{style:{fontSize:11,color:C.faint,textAlign:"center",marginTop:6}},"違う日に書いてしまったときなどに使います。直すだけなら、書き直して「保存する」。"));
   }
   body.appendChild(mk("div",{style:{height:30}}));
   app.append(head,body);
   root.appendChild(app);
+  HM.mics(app);
 }
 
 // ==== ログイン（会社のアカウントを知っている人だけ使える） ====
