@@ -208,10 +208,35 @@ button,select,input,textarea{font-family:var(--font)}
   .stat-num{font-size:22px}
   .stat-lbl{font-size:12px}
   .filt-toggle{background:rgba(255,255,255,.12)!important;border:1.5px solid rgba(255,255,255,.45)!important;border-radius:3px!important}
-  .ts-table th:nth-child(2),.ts-table td:nth-child(2){display:none}
+  #today-status .ts-table th:nth-child(2),#today-status .ts-table td:nth-child(2){display:none}
   .tab-btn,.tabs a.tab-btn{font-size:14px;padding:13px 12px}
 }
 @media print{.hm-rule{display:none}.head{background:#fff}}
+
+/* 日ごとの出勤カレンダー */
+.dc-nav{display:flex;align-items:center;gap:10px;font-size:16px}
+.dc-nav button{width:40px;height:38px;border:1.5px solid #bfc5bd;background:#fff;border-radius:3px;font-size:18px;color:var(--ai);cursor:pointer}
+.dc-nav b{min-width:96px;text-align:center}
+.dc-grid{display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.dc-w{font-size:13px;font-weight:700;color:var(--sub);text-align:center;padding:6px 0;background:#f6f7f4;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.dc-w.sun{color:var(--red)}.dc-w.sat{color:var(--ai)}
+.dc-d{position:relative;min-height:78px;padding:5px 6px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:#fff;text-align:left;font-family:var(--font);cursor:pointer;display:flex;flex-direction:column;border-top:none;border-left:none}
+.dc-d.empty{background:#f6f7f4;cursor:default}
+.dc-d.out{background:#f6f7f4;color:var(--faint)}
+.dc-d .n{font-size:13px;font-weight:700;color:var(--sub)}
+.dc-d.sun .n{color:var(--red)}.dc-d.sat .n{color:var(--ai)}
+.dc-d .ppl{margin-top:auto;font-size:24px;font-weight:700;color:var(--ai);line-height:1}
+.dc-d .ppl small{font-size:12px;font-weight:700;margin-left:2px}
+.dc-d .nk{font-size:11px;color:var(--sub);margin-top:2px}
+.dc-d .ms i{font-style:normal}
+.dc-d .ms{position:absolute;top:5px;right:5px;font-size:11px;font-weight:700;color:var(--orange);border:1.5px solid var(--orange);border-radius:2px;padding:0 4px;line-height:15px;background:#fff}
+.dc-d.today{box-shadow:inset 0 0 0 2px var(--ai)}
+.dc-d.sel{background:var(--ai-bg)}
+.dc-sum{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;color:var(--sub);margin:10px 2px 0}
+.dc-sum b{color:var(--sumi);font-size:16px}
+.dc-detail{margin-top:14px}
+.dc-detail h5{font-size:15px;margin:0 0 6px}
+@media(max-width:600px){.dc-d{min-height:62px;padding:4px}.dc-d .ppl{font-size:19px}.dc-d .nk{display:none}.dc-d .ms{top:3px;right:3px;font-size:11px;padding:0 3px}.dc-d .ms i{display:none}}
 </style>
 </head>
 <body>
@@ -291,6 +316,13 @@ window.addEventListener('unhandledrejection', function(e){
 
   <div class="print-only" id="print-title">日報サマリー</div>
   <div id="tab-summary">
+    <div class="card" id="day-cal-card">
+      <div class="card-title" style="justify-content:space-between">日ごとの出勤カレンダー
+        <span class="dc-nav"><button type="button" id="dc-prev" aria-label="前の月">‹</button><b id="dc-month"></b><button type="button" id="dc-next" aria-label="次の月">›</button></span>
+      </div>
+      <div id="day-cal"></div>
+      <div id="day-cal-detail"></div>
+    </div>
     <div class="card">
       <div class="card-title"><span class="card-title-icon" style="background:#eef4fa">⏱️</span>やり直し時間（この期間の合計）
         <button id="money-toggle" style="float:right;background:#eef4fa;color:#1f4e7a;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">金額を表示</button>
@@ -914,6 +946,7 @@ window.loadData=async function(){
   allMissesCache=allMisses;
   allLearnsCache=allLearns;
   currentRangeCache={from,to};
+  initDayCal(from,to);
 
   document.getElementById("s-members").textContent=activePersons.size;
   document.getElementById("s-days").textContent=totalDays;
@@ -1786,6 +1819,71 @@ document.getElementById("tejun-method").addEventListener("change",renderTejun);
 let tejunSearchTimer=null;
 document.getElementById("tejun-search").addEventListener("input",()=>{clearTimeout(tejunSearchTimer);tejunSearchTimer=setTimeout(renderTejun,250);});
 document.getElementById("print-btn").addEventListener("click",()=>window.print());
+
+// ==== 日ごとの出勤カレンダー（今の絞り込み：期間・人・工法 に合わせる） ====
+let dcMonth=null, dcSel=null;
+function dcKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+function initDayCal(from,to){
+  const now=new Date();
+  let base;
+  if(now>=from&&now<=to) base=now;
+  else{ const ks=allEntriesCache.map(e=>e.dateKey).sort(); base=ks.length?new Date(ks[ks.length-1]):new Date(Math.min(to.getTime(),now.getTime())); }
+  if(to.getFullYear()<2090&&from.getFullYear()>2020&&from.getMonth()===to.getMonth()&&from.getFullYear()===to.getFullYear()) base=from;
+  dcMonth=new Date(base.getFullYear(),base.getMonth(),1); dcSel=null; renderDayCal();
+}
+function renderDayCal(){
+  const box=document.getElementById("day-cal"); if(!box||!dcMonth) return;
+  const y=dcMonth.getFullYear(), m=dcMonth.getMonth();
+  document.getElementById("dc-month").textContent=`${y}年${m+1}月`;
+  const byDay={}, pre=`${y}-${String(m+1).padStart(2,"0")}`;
+  const fP=document.getElementById("filter-person").value, fM=(document.getElementById("filter-method")||{}).value||"";
+  Object.entries(rawReportsCache||{}).forEach(([uid,days])=>{
+    if(fP&&uid!==fP) return;
+    Object.entries(days||{}).forEach(([k,v])=>{
+      if(!v||!k.startsWith(pre)) return;
+      if(fM){ const ms=(v.misses||[]).filter(x=>(x.method||v.method||"zairai")===fM); if(v.method!==fM&&!ms.length) return; v={...v,misses:ms}; }
+      (byDay[k]=byDay[k]||[]).push({uid,displayName:v.name||uid,dateKey:k,rec:v});
+    });
+  });
+  const first=new Date(y,m,1).getDay(), last=new Date(y,m+1,0).getDate(), tk=dcKey(new Date());
+  let h=["日","月","火","水","木","金","土"].map((w,i)=>`<div class="dc-w ${i===0?"sun":i===6?"sat":""}">${w}</div>`).join("");
+  for(let i=0;i<first;i++) h+=`<div class="dc-d empty"></div>`;
+  let tPeople=0,tNinku=0,tMiss=0,days=0;
+  for(let d=1; d<=last; d++){
+    const k=`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`, list=byDay[k]||[], wd=(first+d-1)%7;
+    const ppl=new Set(list.map(e=>e.uid)).size;
+    const nk=list.reduce((n,e)=>n+(parseFloat(e.rec.ninku)||0),0);
+    const ms=list.reduce((n,e)=>n+(e.rec.misses||[]).length,0);
+    const inR=true;
+    if(ppl){days++;tPeople+=ppl;tNinku+=nk;tMiss+=ms;}
+    h+=`<button type="button" class="dc-d ${wd===0?"sun":wd===6?"sat":""} ${k===tk?"today":""} ${k===dcSel?"sel":""} ${inR?"":"out"}" data-dc="${k}" ${ppl?"":'aria-label="'+d+'日 日報なし"'}>
+      <span class="n">${d}</span>${ms?`<span class="ms"><i>ミス</i>${ms}</span>`:""}
+      ${ppl?`<span class="ppl">${ppl}<small>人</small></span>${nk?`<span class="nk">${Math.round(nk*10)/10}人工</span>`:""}`:""}
+    </button>`;
+  }
+  const tail=(7-((first+last)%7))%7; for(let i=0;i<tail;i++) h+=`<div class="dc-d empty"></div>`;
+  box.innerHTML=`<div class="dc-grid">${h}</div>
+    <div class="dc-sum"><span>日報が出た日 <b>${days}</b>日</span><span>のべ人数 <b>${tPeople}</b>人</span><span>のべ人工 <b>${Math.round(tNinku*10)/10}</b></span><span>ミス <b>${tMiss}</b>件</span></div>
+    <div style="font-size:12px;color:var(--faint);margin-top:4px">数字はその日に日報を出した人数。日付を押すと、入った人と現場が出ます。上の「人」「工法」の絞り込みに合わせて変わります（期間に関係なく、‹ › で前後の月も見られます）。</div>`;
+  renderDayCalDetail(byDay);
+}
+function renderDayCalDetail(byDay){
+  const el=document.getElementById("day-cal-detail"); if(!el) return;
+  if(!dcSel){ el.innerHTML=""; return; }
+  const list=(byDay[dcSel]||[]).slice().sort((a,b)=>(a.rec.site||"").localeCompare(b.rec.site||"","ja")||a.displayName.localeCompare(b.displayName,"ja"));
+  const d=new Date(dcSel), wd=["日","月","火","水","木","金","土"][d.getDay()];
+  if(!list.length){ el.innerHTML=`<div class="dc-detail"><h5>${d.getMonth()+1}月${d.getDate()}日（${wd}）</h5><div style="color:var(--sub)">この日の日報はありません。</div></div>`; return; }
+  const sites={}; list.forEach(e=>{const s=e.rec.site||"（現場なし）";sites[s]=(sites[s]||0)+1});
+  el.innerHTML=`<div class="dc-detail"><h5>${d.getMonth()+1}月${d.getDate()}日（${wd}）　${list.length}人　<span style="font-weight:400;color:var(--sub);font-size:14px">${Object.entries(sites).map(([s,n])=>`${esc(s)} ${n}人`).join("／")}</span></h5>
+  <table class="ts-table"><tr><th>名前</th><th>現場</th><th>人工</th><th>ミス</th></tr>
+  ${list.map(e=>{const ms=(e.rec.misses||[]).length;return `<tr><td>${esc(e.displayName)}</td><td>${esc(e.rec.site||"―")}</td><td>${esc(e.rec.ninku||"―")}</td><td>${ms?`<span class="hm-stamp sm orange">${ms}件</span>`:"―"}</td></tr>`}).join("")}</table></div>`;
+}
+document.addEventListener("click",ev=>{
+  const c=ev.target.closest&&ev.target.closest("[data-dc]");
+  if(c){ dcSel=dcSel===c.dataset.dc?null:c.dataset.dc; renderDayCal(); return; }
+  if(ev.target.id==="dc-prev"&&dcMonth){ dcMonth=new Date(dcMonth.getFullYear(),dcMonth.getMonth()-1,1); dcSel=null; renderDayCal(); }
+  if(ev.target.id==="dc-next"&&dcMonth){ dcMonth=new Date(dcMonth.getFullYear(),dcMonth.getMonth()+1,1); dcSel=null; renderDayCal(); }
+});
 
 // ==== 今日の提出状況（直近30日に日報を書いた人が対象） ====
 async function renderTodayStatus(allData){
