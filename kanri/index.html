@@ -201,6 +201,19 @@ button,select,input,textarea{font-family:var(--font)}
 .ts-table td{padding:10px;border-bottom:1px solid var(--line)}
 .ts-table td:last-child{width:96px}
 .ts-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sn-seg{display:inline-flex;border:2px solid var(--sumi);border-radius:4px;overflow:hidden}
+.sn-seg button{min-height:38px;padding:0 14px;border:none;background:#fff;font:700 14px var(--font);color:var(--sub);cursor:pointer}
+.sn-seg button.on{background:var(--sumi);color:#fff}
+.sn-cap{font-size:14px;color:var(--sub);margin-bottom:8px}
+.sn-table td.num,.sn-table th.num{text-align:right;white-space:nowrap}
+.sn-table td.site{font-weight:700}
+.sn-table tr.tot td{border-top:2px solid var(--sumi);font-weight:700;background:#f6f7f4}
+.sn-table .bar{display:block;height:6px;background:var(--ai);margin-top:5px;border-radius:0}
+.sn-table .range{font-size:12px;color:var(--faint);font-weight:400;display:block;margin-top:2px}
+.sn-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.sn-acts button{min-height:40px;padding:0 14px;border:1.5px solid var(--ai);border-radius:3px;background:#fff;color:var(--ai);font:700 14px var(--font);cursor:pointer}
+.sn-note{font-size:12px;color:var(--faint);margin-top:8px;line-height:1.6}
+@media(max-width:600px){.sn-table th.hide-sp,.sn-table td.hide-sp{display:none}}
 @media(max-width:600px){
   .head{padding:12px 14px}
   .stats{grid-template-columns:repeat(5,1fr)}
@@ -322,6 +335,12 @@ window.addEventListener('unhandledrejection', function(e){
       </div>
       <div id="day-cal"></div>
       <div id="day-cal-detail"></div>
+    </div>
+    <div class="card" id="site-ninku-card">
+      <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px">現場ごとの人工
+        <span class="sn-seg"><button type="button" data-sn="month" class="on">この月</button><button type="button" data-sn="all">全期間</button></span>
+      </div>
+      <div id="site-ninku"></div>
     </div>
     <div class="card">
       <div class="card-title"><span class="card-title-icon" style="background:#eef4fa">⏱️</span>やり直し時間（この期間の合計）
@@ -1866,7 +1885,67 @@ function renderDayCal(){
     <div class="dc-sum"><span>日報が出た日 <b>${days}</b>日</span><span>のべ人数 <b>${tPeople}</b>人</span><span>のべ人工 <b>${Math.round(tNinku*10)/10}</b></span><span>ミス <b>${tMiss}</b>件</span></div>
     <div style="font-size:12px;color:var(--faint);margin-top:4px">数字はその日に日報を出した人数。日付を押すと、入った人と現場が出ます。上の「人」「工法」の絞り込みに合わせて変わります（期間に関係なく、‹ › で前後の月も見られます）。</div>`;
   renderDayCalDetail(byDay);
+  renderSiteNinku();
 }
+// ==== 現場ごとの人工（この月／全期間） ====
+let snMode="month";
+const snName=s=>String(s||"").normalize("NFKC").replace(/\s+/g,"").trim()||"（現場なし）";
+const snNum=v=>{const n=parseFloat(String(v==null?"":v).normalize("NFKC"));return isFinite(n)&&n>0?n:0};
+const r1=n=>Math.round(n*10)/10;
+function siteNinkuRows(prefix){
+  const fP=document.getElementById("filter-person").value, fM=(document.getElementById("filter-method")||{}).value||"";
+  const by={};
+  Object.entries(rawReportsCache||{}).forEach(([uid,days])=>{
+    if(fP&&uid!==fP) return;
+    Object.entries(days||{}).forEach(([k,v])=>{
+      if(!v||(prefix&&!k.startsWith(prefix))) return;
+      if(fM&&(v.method||"zairai")!==fM) return;
+      const key=snName(v.site);
+      const x=by[key]||(by[key]={site:(v.site||"").trim()||"（現場なし）",days:new Set(),people:new Set(),reports:0,ninku:0,blank:0,first:k,last:k});
+      x.days.add(k); x.people.add(v.name||uid); x.reports++;
+      const n=snNum(v.ninku); if(n) x.ninku+=n; else x.blank++;
+      if(k<x.first)x.first=k; if(k>x.last)x.last=k;
+    });
+  });
+  return Object.values(by).sort((a,b)=>b.ninku-a.ninku||b.reports-a.reports||a.site.localeCompare(b.site,"ja"));
+}
+function renderSiteNinku(){
+  const el=document.getElementById("site-ninku"); if(!el) return;
+  document.querySelectorAll("[data-sn]").forEach(b=>b.classList.toggle("on",b.dataset.sn===snMode));
+  const m=dcMonth||new Date();
+  const prefix=snMode==="month"?`${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,"0")}`:"";
+  const rows=siteNinkuRows(prefix);
+  const fP=document.getElementById("filter-person"), fM=document.getElementById("filter-method");
+  const who=fP&&fP.value?fP.options[fP.selectedIndex].text:"全員";
+  const mth=fM&&fM.value?fM.options[fM.selectedIndex].text:"";
+  const cap=(snMode==="month"?`${m.getFullYear()}年${m.getMonth()+1}月`:"全期間（記録があるすべての日）")+`・${who}${mth?"・"+mth:""}`;
+  if(!rows.length){ el.innerHTML=`<div class="sn-cap">${esc(cap)}</div><div class="no-data">この期間の日報はありません。</div>`; return; }
+  const tot=rows.reduce((t,r)=>({ninku:t.ninku+r.ninku,reports:t.reports+r.reports,blank:t.blank+r.blank}),{ninku:0,reports:0,blank:0});
+  const max=Math.max(...rows.map(r=>r.ninku),1);
+  const fd=k=>{const [y,mo,d]=k.split("-");return snMode==="all"?`${y}/${Number(mo)}/${Number(d)}`:`${Number(mo)}/${Number(d)}`};
+  el.innerHTML=`<div class="sn-cap">${esc(cap)}　${rows.length}現場</div>
+  <table class="ts-table sn-table">
+    <tr><th>現場</th><th class="num">人工</th><th class="num">のべ人数</th><th class="num hide-sp">日数</th><th class="num hide-sp">入った人</th></tr>
+    ${rows.map(r=>`<tr><td class="site">${esc(r.site)}<span class="range">${fd(r.first)}${r.first!==r.last?"〜"+fd(r.last):""}</span><span class="bar" style="width:${Math.round(r.ninku/max*100)}%"></span></td>
+      <td class="num"><b>${r1(r.ninku)}</b>${r.blank?`<span class="range">未記入${r.blank}件</span>`:""}</td>
+      <td class="num">${r.reports}人</td><td class="num hide-sp">${r.days.size}日</td><td class="num hide-sp">${r.people.size}人</td></tr>`).join("")}
+    <tr class="tot"><td>合計</td><td class="num">${r1(tot.ninku)}</td><td class="num">${tot.reports}人</td><td class="num hide-sp"></td><td class="num hide-sp"></td></tr>
+  </table>
+  <div class="sn-acts"><button type="button" id="sn-copy">表をコピー（Excelに貼れる）</button></div>
+  <div class="sn-note">人工＝大工日報の「人工数」の合計。のべ人数＝その現場の日報の件数（1人1日で1）。<br>「人工数」が空の日報は人工に入れず「未記入」に数えています。同じ現場で何人もが班の人工を入れていると、人工が重なって多く出ます。<br>上の「人」「工法」で絞り込めます。月は出勤カレンダーの ‹ › で変わります。</div>`;
+  el._rows=rows; el._cap=cap;
+}
+document.addEventListener("click",async ev=>{
+  const b=ev.target.closest&&ev.target.closest("[data-sn]");
+  if(b){ snMode=b.dataset.sn; renderSiteNinku(); return; }
+  if(ev.target.id==="sn-copy"){
+    const el=document.getElementById("site-ninku"), rows=el._rows||[];
+    const txt=[el._cap,["現場","人工","のべ人数","日数","入った人","人工未記入","最初の日","最後の日"].join("\t"),
+      ...rows.map(r=>[r.site,r1(r.ninku),r.reports,r.days.size,r.people.size,r.blank,r.first,r.last].join("\t")),
+      ["合計",r1(rows.reduce((n,r)=>n+r.ninku,0)),rows.reduce((n,r)=>n+r.reports,0)].join("\t")].join("\n");
+    try{ await navigator.clipboard.writeText(txt); ev.target.textContent="コピーしました"; setTimeout(()=>ev.target.textContent="表をコピー（Excelに貼れる）",1500);}catch(e){ prompt("コピーしてください",txt); }
+  }
+});
 function renderDayCalDetail(byDay){
   const el=document.getElementById("day-cal-detail"); if(!el) return;
   if(!dcSel){ el.innerHTML=""; return; }
